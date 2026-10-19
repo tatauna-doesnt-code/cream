@@ -1,4 +1,4 @@
-# CREAM 1.1.0
+# CREAM 1.1.1
 
 Plugin Python para Adobe Substance 3D Painter 12.1.3, Windows x64.
 Converte uma planilha de backers em skins ZIP, usando o projeto aberto e um ZIP base.

@@ -13,6 +13,7 @@ import zipfile
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from kr7_batch import bootstrap, core, updater
 from scripts.build_release import build
+from kr7_batch.version import VERSION
 
 
 class UpdateTests(unittest.TestCase):
@@ -50,7 +51,7 @@ class UpdateTests(unittest.TestCase):
             target.mkdir(parents=True)
             (target/'__init__.py').write_text('original')
             data = root/'data'
-            release = {'id': 1, 'version': '1.1.0', 'size': len(payload), 'sha256': bootstrap.sha256(archive)}
+            release = {'id': 1, 'version': VERSION, 'size': len(payload), 'sha256': bootstrap.sha256(archive)}
             with patch.object(updater, '_request', return_value=io.BytesIO(payload)):
                 updater.stage_release(release, target, threading.Event(), data, token='test')
             self.assertEqual((target/'__init__.py').read_text(), 'original')
@@ -63,7 +64,7 @@ class UpdateTests(unittest.TestCase):
                 bootstrap.apply_pending(target, data)
             self.assertEqual((target/'__init__.py').read_text(), 'original')
             result = bootstrap.apply_pending(target, data)
-            self.assertEqual(result['version'], '1.1.0')
+            self.assertEqual(result['version'], VERSION)
             self.assertEqual((Path(result['backup'])/'__init__.py').read_text(), 'original')
             self.assertFalse(bootstrap.pending_path(target, data).exists())
 

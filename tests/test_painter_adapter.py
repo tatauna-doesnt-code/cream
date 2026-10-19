@@ -124,5 +124,13 @@ class AdapterTests(unittest.TestCase):
         self.assertEqual(maps[0]['parameters']['fileFormat'], 'tga')
         self.assertEqual(config['exportPresets'][0]['maps'][0]['channels'], maps[0]['channels'])
 
+    def test_padding_is_explicit_without_mutating_resource_maps(self):
+        # Resource map definitions can omit the export dialog's padding setting.
+        maps = [{'fileName': '$textureSet_B', 'channels': [], 'parameters': {}}]
+        config = painter.export_config(maps, 'Skin', 'B', 2048, 'output')
+        self.assertEqual(config['exportParameters'][0]['parameters']['paddingAlgorithm'], 'infinite')
+        self.assertEqual(config['exportPresets'][0]['maps'][0]['parameters']['paddingAlgorithm'], 'infinite')
+        self.assertEqual(maps[0]['parameters'], {})
+
 if __name__ == '__main__':
     unittest.main(verbosity=2)
