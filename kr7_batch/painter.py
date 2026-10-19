@@ -134,7 +134,11 @@ def export_config(maps, texture_set, suffix, size, directory):
     output = copy.deepcopy(matched[0])
     output["fileName"] = texture_set + "_" + suffix
     width, height = dimensions(texture_set, size)
+    # ResourceExportPreset.list_output_maps() supplies map definitions, but
+    # does not guarantee the export dialog's padding setting. Inline presets
+    # must resolve it explicitly, including during list_project_textures().
     params = {"fileFormat": "png", "bitDepth": "8", "dithering": False,
+              "paddingAlgorithm": "infinite",
               "sizeLog2": [width.bit_length() - 1, height.bit_length() - 1]}
     output.setdefault("parameters", {}).update(params)
     return {"exportPath": str(directory), "exportShaderParams": False,
