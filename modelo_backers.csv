@@ -1,0 +1,4 @@
+﻿ativo;id;nome_player;nome_arquivo;cor_1;cor_2;cor_3
+sim;001;Joseph;;#FF8800;;
+sim;002;Joseph;;#00AAFF;;
+não;003;Player Three;;#AA00FF;#202020;#FFFFFF
