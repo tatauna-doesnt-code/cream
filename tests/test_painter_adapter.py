@@ -118,11 +118,32 @@ class AdapterTests(unittest.TestCase):
         self.assertEqual(self.color.color.value_raw, (1.0, 0.0, 0.0))
 
     def test_export_dimensions_and_preset_unchanged(self):
-        maps = [{'fileName':'$textureSet_N', 'channels':[{'srcMapName':'Normal_DirectX'}], 'parameters':{'fileFormat':'tga'}}]
+        maps = [{'fileName':'$textureSet_N', 'channels':[
+            {'srcMapName':'Normal_DirectX', 'srcMapType':'virtualMap', 'destChannel':c, 'srcChannel':c}
+            for c in 'RGB'], 'parameters':{'fileFormat':'tga'}}]
         config = painter.export_config(maps, 'Wheels', 'N', 2048, 'output')
         self.assertEqual(config['exportPresets'][0]['maps'][0]['parameters']['sizeLog2'], [9,11])
         self.assertEqual(maps[0]['parameters']['fileFormat'], 'tga')
-        self.assertEqual(config['exportPresets'][0]['maps'][0]['channels'], maps[0]['channels'])
+        channels = config['exportPresets'][0]['maps'][0]['channels']
+        self.assertTrue(all(c['srcMapName'] == 'Normal_OpenGL' for c in channels))
+        self.assertTrue(all(c['srcMapName'] == 'Normal_DirectX' for c in maps[0]['channels']))
+        self.assertEqual([c['srcChannel'] for c in channels], list('RGB'))
+
+    def test_existing_opengl_normal_is_preserved(self):
+        maps = [{'fileName':'$textureSet_N', 'channels':[
+            {'srcMapName':'Normal_OpenGL', 'srcMapType':'virtualMap', 'destChannel':c, 'srcChannel':c}
+            for c in 'RGB']}]
+        original = copy.deepcopy(maps)
+        config = painter.export_config(maps, 'Skin', 'N', 2048, 'output')
+        self.assertEqual(config['exportPresets'][0]['maps'][0]['channels'], original[0]['channels'])
+        self.assertEqual(maps, original)
+
+    def test_unrecognized_normal_source_requires_preset_correction(self):
+        maps = [{'fileName':'$textureSet_N', 'channels':[
+            {'srcMapName':'Normal', 'srcMapType':'meshMap', 'destChannel':c, 'srcChannel':c}
+            for c in 'RGB']}]
+        with self.assertRaisesRegex(ValueError, 'Normal OpenGL'):
+            painter.export_config(maps, 'Skin', 'N', 2048, 'output')
 
     def test_padding_is_explicit_without_mutating_resource_maps(self):
         # Resource map definitions can omit the export dialog's padding setting.

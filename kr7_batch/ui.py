@@ -103,7 +103,7 @@ class Window(W.QDialog):
         self.tabs.addTab(page, "Backers")
         page = W.QWidget()
         box = W.QVBoxLayout(page)
-        box.addWidget(W.QLabel("Preset TM2020 • DDS sem mipmaps • verde de _N invertido • Glass não recebe nomes/cores"))
+        box.addWidget(W.QLabel("Preset TM2020 • DDS sem mipmaps • normals OpenGL na exportação • Glass não recebe nomes/cores"))
         self.maps = W.QTableWidget(0, 5)
         self.maps.setHorizontalHeaderLabels(["Exportar", "Texture set", "Textura", "Resolução final", "DDS"])
         self.maps.setEditTriggers(W.QAbstractItemView.NoEditTriggers)
@@ -344,7 +344,8 @@ class Window(W.QDialog):
         base = Path(self.fields["base"].text())
         return core.fingerprint({"project": painter.project_path(), "base": str(base.resolve()),
                                  "base_size": base.stat().st_size, "base_mtime": base.stat().st_mtime_ns,
-                                 "maps": self.selections(), "preset": painter.preset_maps(), "normal_invert": "bc5_post_conversion"})
+                                 "maps": self.selections(), "preset": painter.preset_maps(), "normal_invert": False,
+                                 "normal_export": "Normal_OpenGL"})
 
     def check(self):
         if not painter.ready():

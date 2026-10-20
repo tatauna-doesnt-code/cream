@@ -238,62 +238,11 @@ def convert(texconv, source, output, suffix, width, height, cancel):
         if len(candidates) != 1:
             raise RuntimeError("O conversor não produziu o DDS esperado.")
         validate_dds(candidates[0], suffix, width, height)
-        if suffix == "N":
-            invert_bc5_green(candidates[0], cancel)
-            validate_dds(candidates[0], suffix, width, height)
         return candidates[0]
     finally:
         if process.poll() is None:
             process.kill()
             process.wait()
-
-
-def _index_table(mapping):
-    return tuple(sum(mapping[(value >> bit) & 7] << bit for bit in (0, 3, 6, 9))
-                 for value in range(4096))
-
-
-_BC4_EIGHT = _index_table((1, 0, 7, 6, 5, 4, 3, 2))
-_BC4_SIX = _index_table((1, 0, 5, 4, 3, 2, 7, 6))
-
-
-def invert_bc5_green(path, cancel):
-    """Invert green AFTER DDS generation, without decompressing/recompressing BC5.
-
-    BC5 stores red then green as independent 8-byte BC4 UNORM blocks. Reflect and
-    swap the green endpoints, and remap all sixteen 3-bit indices. Both BC4 modes
-    are preserved. Red blocks and the DDS header remain bit-for-bit identical.
-    GPU integer interpolation can differ by one LSB when rounding complements.
-    """
-    path = Path(path)
-    data = bytearray(path.read_bytes())
-    if len(data) < 128 or data[:4] != b"DDS " or data[84:88] not in (b"BC5U", b"ATI2"):
-        raise ValueError("A inversão pós-conversão requer DDS BC5 UNORM com cabeçalho legado.")
-    height, width = struct.unpack_from("<II", data, 12)
-    mips = struct.unpack_from("<I", data, 28)[0]
-    if mips not in (0, 1) or len(data) != 128 + ((width + 3) // 4) * ((height + 3) // 4) * 16:
-        raise ValueError("DDS BC5 incompleto ou com mipmaps não suportados.")
-    temporary = path.with_name(path.name + ".green-" + uuid.uuid4().hex + ".tmp")
-    try:
-        for offset in range(136, len(data), 16):
-            if (offset - 136) % 65536 == 0:
-                check_cancel(cancel)
-            high, low = data[offset], data[offset + 1]
-            table = _BC4_EIGHT if high > low else _BC4_SIX
-            indices = int.from_bytes(data[offset + 2:offset + 8], "little")
-            mapped = (table[indices & 4095] | (table[(indices >> 12) & 4095] << 12)
-                      | (table[(indices >> 24) & 4095] << 24) | (table[indices >> 36] << 36))
-            data[offset:offset + 2] = bytes((255 - low, 255 - high))
-            data[offset + 2:offset + 8] = mapped.to_bytes(6, "little")
-        check_cancel(cancel)
-        with temporary.open("wb") as handle:
-            handle.write(data)
-            handle.flush()
-            os.fsync(handle.fileno())
-        check_cancel(cancel)
-        os.replace(temporary, path)
-    finally:
-        temporary.unlink(missing_ok=True)
 
 
 def build_zip(base, replacements, destination, cancel):

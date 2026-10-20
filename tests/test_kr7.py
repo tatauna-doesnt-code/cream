@@ -126,7 +126,7 @@ class CoreTests(unittest.TestCase):
         self.assertEqual(core.dimensions('Wheels', 2048), (512, 2048))
         self.assertEqual(core.dimensions('Skin', 2048), (2048, 2048))
 
-    def test_real_normal_green_inversion(self):
+    def test_real_normal_green_preserved(self):
         source = self.root / 'Skin_N.png'
         Image.new('RGB', (4, 4), (128, 64, 255)).save(source)
         dds = core.convert(TEXCONV, source, self.root / 'compressed', 'N', 4, 4, threading.Event())
@@ -135,7 +135,7 @@ class CoreTests(unittest.TestCase):
         subprocess.run([str(TEXCONV), '-nologo', '-y', '-ft', 'png', '-f', 'R8G8B8A8_UNORM', '-o', str(decoded), str(dds)], check=True, capture_output=True)
         pixel = Image.open(decoded / 'Skin_N.png').getpixel((0, 0))
         self.assertLessEqual(abs(pixel[0] - 128), 2)
-        self.assertLessEqual(abs(pixel[1] - 191), 2)
+        self.assertLessEqual(abs(pixel[1] - 64), 2)
 
     def test_real_emissive_rgb_survives_zero_alpha(self):
         source = self.root / 'Skin_I.png'

@@ -25,10 +25,15 @@ continua disponível. O botão manual permite repetir a consulta.
 
 ## Normals
 
-A textura é convertida para DDS BC5 primeiro. Depois, somente o bloco verde é
-invertido, incluindo seus índices de interpolação. Não há segunda compressão;
-o canal vermelho e o cabeçalho permanecem idênticos. A interpolação inteira do
-decodificador pode causar diferença de até 1 unidade em 255.
+O CREAM solicita `Normal_OpenGL` ao Painter antes de exportar a textura e a converte
+para DDS BC5, preservando o canal verde. Não há inversão posterior. A saída virtual
+usada pelo plugin é ajustada mesmo se o TM2020 salvo ainda usar `Normal_DirectX`.
+
+Para os exports manuais, abra **File → Export Textures → Output Templates → TM2020**.
+Na saída `$textureSet_N`, arraste **Converted maps → Normal OpenGL** para RGB.
+Preserve os demais mapas e configurações. Faça um teste no jogo para confirmar o relevo.
+A API pública não altera o template `.spexp` salvo: essa edição é feita pela interface.
+O preset incluído no pacote continua sendo a referência original do usuário.
 
 ## Desenvolvimento
 

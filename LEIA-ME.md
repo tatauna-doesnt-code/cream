@@ -1,4 +1,4 @@
-# CREAM 1.1.1
+# CREAM 1.1.2
 
 Plugin Python para Adobe Substance 3D Painter 12.1.3, Windows x64.
 Converte uma planilha de backers em skins ZIP, usando o projeto aberto e um ZIP base.
@@ -79,7 +79,7 @@ Os novos ZIPs contêm apenas o conteúdo base e as texturas, sem relatórios ou 
 | B | BC1 | RGB, alpha forçado a opaco |
 | R | BC5 | Canais do preset TM2020 preservados |
 | I | BC3 | RGB e alpha preservados, inclusive RGB onde alpha é zero |
-| N | BC5 | Verde invertido uma vez, depois da conversão para DDS, diretamente nos blocos BC5 |
+| N | BC5 | Normal OpenGL gerada pelo Painter; verde preservado na conversão |
 | CoatR | BC4 | Canal único |
 | DirtMask | BC4 | Canal único |
 | AO | BC1 | RGB, alpha forçado a opaco |
@@ -87,7 +87,9 @@ Os novos ZIPs contêm apenas o conteúdo base e as texturas, sem relatórios ou 
 Todos são DDS com cabeçalho legado e um único nível (sem mipmaps adicionais), como a referência.
 PNG intermediário de 8 bits é exportado pelo Painter e removido depois da conversão.
 A inversão de normal se aplica somente aos `_N` gerados; normals preservadas do ZIP base não mudam.
-Não inverta também o preset: o plugin pressupõe seu TM2020 original.
+O CREAM usa Normal OpenGL no preset virtual de exportação, inclusive se o TM2020 salvo ainda usar DirectX.
+Para exports manuais: File → Export Textures → Output Templates → TM2020; na saída `$textureSet_N`,
+use RGB de Converted maps → Normal OpenGL. A alteração do template salvo é feita pela interface do Painter.
 
 Details, Glass e Skin: 1024×1024, 2048×2048 ou 4096×4096.
 Wheels: 256×1024, 512×2048 ou 1024×4096 para todas as texturas, incluindo DirtMask.
@@ -126,7 +128,7 @@ usuais até finalizar ou cancelar.
 ## Verificação desta entrega
 
 - Conversão real com texconv: sete tipos de saída, dimensões e cabeçalhos DDS conferidos.
-- Normal: valor verde 64 convertido para aproximadamente 191 após BC5.
+- Normal: canal verde preservado na conversão para BC5; OpenGL solicitado ao Painter antes da exportação.
 - Emissivo: RGB preservado com alpha zero.
 - Testes de CSV/XLSX, nomes repetidos, arquivo existente, cancelamento na montagem e ZIP base intacto.
 - Testes do adaptador com API simulada: quatro fontes de máscara, Glass ignorado, restauração de cores,

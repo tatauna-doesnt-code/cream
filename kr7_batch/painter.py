@@ -133,6 +133,17 @@ def export_config(maps, texture_set, suffix, size, directory):
         raise ValueError(f"O preset TM2020 não contém uma única saída {template}.")
     output = copy.deepcopy(matched[0])
     output["fileName"] = texture_set + "_" + suffix
+    if suffix == "N":
+        # Ask Painter for the target convention at export time. Never flip
+        # pixels after export, including when TM2020 is already OpenGL.
+        for channel in output.get("channels", []):
+            if (channel.get("srcMapType") == "virtualMap"
+                    and channel.get("srcMapName") == "Normal_DirectX"):
+                channel["srcMapName"] = "Normal_OpenGL"
+        rgb = [c for c in output.get("channels", []) if c.get("destChannel") in ("R", "G", "B")]
+        if ({c.get("destChannel") for c in rgb} != {"R", "G", "B"}
+                or any(c.get("srcMapType") != "virtualMap" or c.get("srcMapName") != "Normal_OpenGL" for c in rgb)):
+            raise ValueError("Configure a saída _N do preset TM2020 com RGB de Converted maps → Normal OpenGL.")
     width, height = dimensions(texture_set, size)
     # ResourceExportPreset.list_output_maps() supplies map definitions, but
     # does not guarantee the export dialog's padding setting. Inline presets

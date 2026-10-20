@@ -2,7 +2,6 @@ import io
 import os
 import json
 from pathlib import Path
-import struct
 import sys
 import tempfile
 import threading
@@ -82,37 +81,6 @@ class UpdateTests(unittest.TestCase):
         self.assertIsNone(result.get_header('Authorization'))
         with self.assertRaises(RuntimeError):
             updater._GitHubRedirect().redirect_request(req, None, 302, '', {}, 'https://example.org/asset')
-
-
-class NormalTests(unittest.TestCase):
-    def test_both_modes_and_roundtrip(self):
-        def palette(a, b):
-            if a > b:
-                return [a, b] + [((7-i)*a+i*b)/7 for i in range(1, 7)]
-            return [a, b] + [((5-i)*a+i*b)/5 for i in range(1, 5)] + [0, 255]
-        with tempfile.TemporaryDirectory() as directory:
-            path = Path(directory)/'normal.dds'
-            for a,b in ((230, 20), (20, 230), (80,80), (0,255), (255,0)):
-                header = bytearray(128)
-                header[:4] = b'DDS '
-                header[84:88] = b'ATI2'
-                struct.pack_into('<II',header,12,4,4)
-                indices = sum((i%8) << (3*i) for i in range(16))
-                original = bytes(header)+b'RED-BLOC'+bytes((a,b))+indices.to_bytes(6,'little')
-                path.write_bytes(original)
-                core.invert_bc5_green(path,threading.Event())
-                changed = path.read_bytes()
-                self.assertEqual(original[:136], changed[:136])
-                remapped = int.from_bytes(changed[138:144],'little')
-                colors = palette(changed[136],changed[137])
-                for i in range(16):
-                    self.assertAlmostEqual(colors[(remapped>>(3*i))&7],255-palette(a,b)[i%8])
-                core.invert_bc5_green(path,threading.Event())
-                self.assertEqual(path.read_bytes(),original)
-                cancel=threading.Event();cancel.set()
-                with self.assertRaises(core.Cancelled):
-                    core.invert_bc5_green(path,cancel)
-                self.assertEqual(path.read_bytes(),original)
 
 
 if __name__ == '__main__':
