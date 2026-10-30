@@ -4,15 +4,17 @@ from pathlib import Path
 import sys
 import types
 import unittest
+from unittest.mock import patch
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 sp = types.ModuleType('substance_painter')
 sp.__path__ = []
 sys.modules['substance_painter'] = sp
-for name in ['project', 'layerstack', 'textureset', 'colormanagement', 'source', 'export']:
+for name in ['application', 'project', 'layerstack', 'textureset', 'colormanagement', 'source', 'export']:
     module = types.ModuleType('substance_painter.' + name)
     setattr(sp, name, module)
     sys.modules[module.__name__] = module
+sp.application.version_info = lambda: (12, 1, 3)
 
 class Space(Enum):
     sRGB = 1
@@ -79,6 +81,7 @@ sp.textureset.ChannelType = types.SimpleNamespace(BaseColor='base')
 sp.project.is_open = lambda: True
 sp.project.file_path = lambda: 'example.spp'
 from kr7_batch import painter
+from kr7_batch.compatibility import Capabilities
 
 class AdapterTests(unittest.TestCase):
     def setUp(self):
@@ -92,6 +95,43 @@ class AdapterTests(unittest.TestCase):
         sp.textureset.all_texture_sets = lambda: [types.SimpleNamespace(name='Skin', all_stacks=lambda: [stack]),
                                                   types.SimpleNamespace(name='Glass', all_stacks=lambda: [glass_stack])]
         sp.layerstack.get_root_layer_nodes = lambda s: s.roots
+
+    def test_export_only_never_reads_or_writes_layers(self):
+        with patch('kr7_batch.compatibility.current', return_value=Capabilities((9, 0, 0))), \
+             patch.object(painter, 'nodes', side_effect=AssertionError('No layer API in Painter 9')):
+            saved = painter.snapshot()
+            self.assertEqual(saved['targets'], [])
+            painter.apply(saved, {'name': 'Ignored on car', 'colors': ['#FF0000', None, None]})
+            painter.apply(saved)
+            self.assertEqual(painter.filename_color_defaults(saved), [None, None])
+
+    def test_color_only_project_does_not_require_font_fill(self):
+        self.root.masks = []
+        saved = painter.snapshot()
+        self.assertEqual(len(saved['targets']), 1)
+        painter.apply(saved, {'name': 'No font', 'colors': ['#FF0000', None, None]})
+        self.assertEqual(self.color.color.value_raw, (1.0, 0.0, 0.0))
+        painter.apply(saved)
+        self.assertEqual(self.color.color.value_raw, (.25, .5, .75))
+
+    def test_legacy_export_preserves_preset_and_packing(self):
+        maps = {'legacy_preset': 'resource://user/TM2020'}
+        for suffix in ('B', 'R', 'I', 'CoatR', 'DirtMask', 'AO'):
+            config = painter.export_config(maps, 'Wheels', suffix, 2048, 'out')
+            self.assertEqual(config['defaultExportPreset'], maps['legacy_preset'])
+            self.assertEqual(config['exportList'][0]['filter']['outputMaps'], ['$textureSet_' + suffix])
+            self.assertEqual(config['exportParameters'][0]['parameters']['sizeLog2'], [9, 11])
+        normal = painter.export_config(maps, 'Skin', 'N', 1024, 'out')
+        channels = normal['exportPresets'][0]['maps'][0]['channels']
+        self.assertTrue(all(c['srcMapName'] == 'Normal_OpenGL' for c in channels))
+
+    def test_legacy_texture_set_names_are_traversed(self):
+        sets = sp.textureset.all_texture_sets()
+        for item in sets:
+            name = item.name
+            item.name = lambda n=name: n
+        sp.textureset.all_texture_sets = lambda: sets
+        self.assertEqual(len(painter.snapshot()['targets']), 5)
 
     def test_all_masks_and_colors_restore_exactly(self):
         saved = painter.snapshot()

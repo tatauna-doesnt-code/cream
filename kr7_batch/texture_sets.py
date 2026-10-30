@@ -1,5 +1,5 @@
 """Collapsible texture-set export controls, independent of the Painter API."""
-from PySide6 import QtCore, QtWidgets as W
+from .qt import QtCore, QtWidgets as W
 
 from . import core
 

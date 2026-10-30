@@ -1,13 +1,15 @@
 # Changes
 
-## Unreleased — local development tooling
+## 1.10.0 beta
 
-- Add Dev.cmd and a Python CLI to stage uncommitted source builds for the existing
-  transactional reload flow, without GitHub, commits or version bumps.
-- Locate Painter's bundled Python automatically and honor redirected Documents paths.
-- Validate source syntax, preserve downloaded pending updates by default, and use
-  the actual Painter process ID so protected changes really require a restart.
-- Document contributor setup and include the launcher in future release packages.
+- Add Painter 9.x export-only mode with DDS conversion, ZIP packaging and TM filename styling.
+- Detect Painter capabilities, gray out unsupported customization controls, and explain the limitations at launch.
+- Warn on Painter versions below 10.1.2; adapt PySide2/PySide6 and pre-11 texture-set names.
+- Use installed export presets directly when the older API cannot read map definitions; explicitly export OpenGL normals.
+- Make car customization optional, including on newer Painter versions. Color-only projects no longer need a font fill.
+- Register a Window-menu action at Painter startup and open CREAM only when requested.
+- Rewrite the README with installation, usage, development instructions, a Righteous logo and a compatibility matrix.
+- Requires one Painter restart because the startup loader changed. Older Painter releases still need native beta testing.
 
 ## 1.9.5
 

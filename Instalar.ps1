@@ -33,7 +33,7 @@ try {
     Write-Host ''
     Write-Host ('Installed in: ' + $kr7Target)
     Write-Host 'Open Painter and enable kr7_batch in the Python menu.'
-    Write-Host 'To reopen the window: Window > CREAM - Batch Exporter.'
+    Write-Host 'Open CREAM from Window > CREAM - Batch Exporter. Its window does not open automatically.'
     Write-Host 'The existing TM2020 preset was preserved.'
 } catch {
     Write-Host ('Installation failed: ' + $_.Exception.Message) -ForegroundColor Red

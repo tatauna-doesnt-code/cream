@@ -9,7 +9,7 @@ _action = None
 _reload_scheduled = False
 
 
-def start_plugin(apply_update=True):
+def start_plugin(apply_update=True, show=False):
     global _window, _action
     from pathlib import Path
     from . import bootstrap
@@ -24,23 +24,32 @@ def start_plugin(apply_update=True):
                         globals().pop(name.rsplit('.', 1)[-1], None)
         except Exception as exc:
             print("CREAM: update not applied; previous version retained:", exc)
-    from PySide6.QtGui import QAction
+    from .qt import QAction
     import substance_painter.ui as ui
-    from .ui import Window
-    if _window is not None:
-        _window.show()
-        return
-    _window = Window(reload_callback=request_reload)
-    _action = QAction("CREAM — Batch Exporter", ui.get_main_window())
-    _action.triggered.connect(_window.show)
-    ui.add_action(ui.ApplicationMenu.Window, _action)
+    if _action is None:
+        _action = QAction("CREAM — Batch Exporter", ui.get_main_window())
+        _action.triggered.connect(show_window)
+        ui.add_action(ui.ApplicationMenu.Window, _action)
+    if show:
+        show_window()
+
+
+def show_window():
+    """Painter enables the plugin at startup; only a menu click opens its UI."""
+    global _window
+    if _window is None:
+        from .ui import Window
+        _window = Window(reload_callback=request_reload)
     _window.show()
+    _window.raise_()
+    _window.activateWindow()
+    _window.show_compatibility_warning()
 
 
 def request_reload():
     """Leave the old button's signal stack before replacing its Python module."""
     global _reload_scheduled
-    from PySide6.QtCore import QTimer
+    from .qt import QtCore
     if _reload_scheduled or _window is None:
         return
     reason = _window.reload_block_reason()
@@ -48,7 +57,7 @@ def request_reload():
         _window.update_status.setText(reason)
         return
     _reload_scheduled = True
-    QTimer.singleShot(0, _reload_now)
+    QtCore.QTimer.singleShot(0, _reload_now)
 
 
 def _reload_now():
@@ -89,7 +98,7 @@ def _reload_now():
             globals().pop(name.rsplit(".", 1)[-1], None)
         importlib.invalidate_caches()
         _window = None
-        start_plugin()
+        start_plugin(show=True)
         _window.restore_reload_state(state)
         _window.update_status.setText("CREAM updated. Painter did not need to restart.")
         ui.delete_ui_element(old)
@@ -117,7 +126,7 @@ def _reload_now():
                 _window.stop_background_tasks()
                 ui.delete_ui_element(_window)
             _window = None
-            start_plugin(apply_update=False)
+            start_plugin(apply_update=False, show=True)
             _window.restore_reload_state(state)
             ui.delete_ui_element(old)
         if _window is not None:

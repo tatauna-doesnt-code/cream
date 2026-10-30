@@ -1,5 +1,5 @@
 """Column selection UI; independent of the Painter API."""
-from PySide6 import QtCore, QtWidgets as W
+from .qt import QtCore, QtWidgets as W
 
 from . import core
 
@@ -25,7 +25,7 @@ def column_letter(index):
 
 
 class ColumnDialog(W.QDialog):
-    def __init__(self, table, saved=None, parent=None):
+    def __init__(self, table, saved=None, parent=None, customize=True):
         super().__init__(parent)
         self.setWindowTitle("CREAM — Spreadsheet columns")
         self.resize(850, 650)
@@ -42,6 +42,8 @@ class ColumnDialog(W.QDialog):
             "Choose a column for each field. The first spreadsheet row contains the headers.\n"
             "Only the name is required. Colors must be #RRGGBB; blank cells use the project original.")
         description.setWordWrap(True)
+        if not customize:
+            description.setText(description.text() + '\nExport-only mode: names and colors 1–2 are filename data. They do not change the car.')
         layout.addWidget(description)
         form = W.QFormLayout()
         layout.addLayout(form)
@@ -62,6 +64,9 @@ class ColumnDialog(W.QDialog):
             combo.currentIndexChanged.connect(self.validate_selection)
             form.addRow(label, combo)
             self.combos[field] = combo
+            if field == 'cor_3' and not customize:
+                combo.setEnabled(False)
+                combo.setToolTip('Color 3 only applies to skin customization, which is disabled in export-only mode.')
         layout.addWidget(W.QLabel("Spreadsheet preview (up to 5 rows):"))
         samples = table[1:6]
         self.preview = W.QTableWidget(len(samples), len(headers))

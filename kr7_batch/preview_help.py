@@ -1,5 +1,5 @@
 """Cursor-following explanations, including controls Qt disables during a preview."""
-from PySide6 import QtCore, QtGui, QtWidgets as W
+from .qt import QtCore, QtGui, QtWidgets as W
 
 
 class PreviewHelp(QtCore.QObject):

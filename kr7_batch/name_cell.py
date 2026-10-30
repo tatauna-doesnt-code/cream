@@ -1,5 +1,5 @@
 """Inline per-backer player-name editor and icon-only reset control."""
-from PySide6 import QtCore, QtGui, QtWidgets as W
+from .qt import QtCore, QtGui, QtWidgets as W
 
 
 class PlayerNameDelegate(W.QStyledItemDelegate):

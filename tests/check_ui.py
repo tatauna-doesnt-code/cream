@@ -21,10 +21,11 @@ main = W.QMainWindow()
 sp = types.ModuleType('substance_painter')
 sp.__path__ = []
 sys.modules['substance_painter'] = sp
-for name in ['ui', 'project', 'layerstack', 'textureset', 'colormanagement', 'source', 'export']:
+for name in ['application', 'ui', 'project', 'layerstack', 'textureset', 'colormanagement', 'source', 'export']:
     module = types.ModuleType('substance_painter.' + name)
     setattr(sp, name, module)
     sys.modules[module.__name__] = module
+sp.application.version_info = lambda: (12, 1, 3)
 sp.ui.get_main_window = lambda: main
 sys.path.insert(0, str(ROOT))
 from kr7_batch import ui
@@ -56,7 +57,7 @@ with tempfile.TemporaryDirectory() as temp:
     assert 'converter' not in window.fields
     state = {'name': None, 'color': None, 'waits': 0}
     painter.project_path = lambda: str(Path(temp) / 'project.spp')
-    painter.snapshot = lambda: {'project': painter.project_path(), 'targets': []}
+    painter.snapshot = lambda customize=True: {'project': painter.project_path(), 'targets': []}
     def ready():
         state['waits'] += 1
         return state['waits'] > 3
@@ -88,7 +89,7 @@ with tempfile.TemporaryDirectory() as temp:
             window.name_originals = core.name_originals(window.rows)
             window.install_name_cells()
             window.name_cells[0].editor.setText('Bompi')
-        window.saved = {'project':painter.project_path(), 'targets':[]}
+        window.saved = {'project':painter.project_path(), 'targets':[{'kind': 'simulated'}]}
         core.atomic_json(window.recovery_path(), window.saved)
         window.report = {'rows':[], 'status':'running'}
         window.report_path = output / 'report.json'

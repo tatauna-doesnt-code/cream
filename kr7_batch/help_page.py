@@ -1,5 +1,5 @@
 """In-product setup guide and feature FAQ."""
-from PySide6 import QtCore, QtGui, QtWidgets as W
+from .qt import QtCore, QtGui, QtWidgets as W
 from pathlib import Path
 
 
@@ -66,7 +66,7 @@ def add_help(window):
     layout.addWidget(title)
     intro = FAQ[0][1]
     intro = intro.replace('Load the spreadsheet in <b>1 Setup</b>, match the columns, select a player in\n    <b>2 Skins</b> and choose maps in <b>3 Textures</b>.', 'In <b>Settings</b>, choose your base ZIP and output folder. In <b>1 Skins</b>, use <b>Add skin</b> to enter a name and colors, or <b>Import CSV / XLSX</b> to append a spreadsheet. Choose maps in <b>2 Textures</b> and set filenames in <b>3 ZIP names</b>.')
-    intro = '<p>CREAM creates personalized Trackmania 2020 skin ZIPs from your open Painter project. Start with one skin, then build a batch when you are ready.</p>' + intro
+    intro = '<p>CREAM exports Trackmania 2020 skin ZIPs from your open Painter project. Start with one skin, then build a batch when you are ready.</p><p><b>Export only:</b> in Skins, turn off <b>Customize names and colors on the car</b>. Set up your base ZIP, textures and ZIP filename; no special layers are needed. Painter 9.x always uses this mode. Names and colors style filenames only.</p><p><b>Optional customization (Painter 10.0+):</b> enable that checkbox and prepare any name/color targets below. Color-only projects do not require name fills. Builds older than 10.1.2 show a compatibility warning.</p>' + intro
     intro = intro.replace('<code>', '<b><span style="color: #a9d7f5; font-family: Consolas;">').replace('</code>', '</span></b>')
     guide = W.QLabel(intro)
     guide.setWordWrap(True)

@@ -18,7 +18,7 @@ Source: https://github.com/JulietaUla/Montserrat
 DirectXTex: https://github.com/microsoft/DirectXTex
 
 Substance 3D Painter and its SDK are supplied by Adobe and are not redistributed
-by CREAM. PySide6/Qt are provided by the host installation and retain their own
+by CREAM. PySide2 or PySide6/Qt are provided by the host installation and retain their own
 licenses. The GPL license applies to CREAM's original code, not Adobe's software.
 
 Bornie demo fonts and the former rendered Bornie wordmark are not part of this
