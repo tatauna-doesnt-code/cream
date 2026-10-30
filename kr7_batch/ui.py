@@ -13,6 +13,7 @@ import substance_painter as sp
 import substance_painter.ui
 
 from . import core, painter, updater, bootstrap
+from .columns import ColumnDialog
 from .version import VERSION
 
 DATA = Path(os.environ.get("LOCALAPPDATA", str(Path.home()))) / "KR7BatchExporter"
@@ -56,6 +57,7 @@ class Window(W.QDialog):
         self.setWindowTitle("CREAM — " + VERSION)
         self.resize(1040, 820)
         self.rows = []
+        self.column_profile = None
         self.saved = None
         self.runner = None
         self.future = None
@@ -100,6 +102,9 @@ class Window(W.QDialog):
         self.backers.horizontalHeader().setStretchLastSection(True)
         box.addWidget(self.backers)
         box.addWidget(W.QLabel("Nomes: até 20 caracteres. Cores vazias: original do projeto. Repetidos recebem 2, 3… no ZIP."))
+        upload_note = W.QLabel("Para enviar ao jogo, copie os ZIPs diretamente para CarSport; o upload pode falhar em subpastas como KR7BACKERS.")
+        upload_note.setWordWrap(True)
+        box.addWidget(upload_note)
         self.tabs.addTab(page, "Backers")
         page = W.QWidget()
         box = W.QVBoxLayout(page)
@@ -274,9 +279,20 @@ class Window(W.QDialog):
 
     def load_sheet(self):
         try:
-            rows, warnings = core.read_rows(self.fields["sheet"].text())
+            if self.runner is not None or self.saved is not None:
+                raise ValueError("Encerre o lote e restaure a prévia antes de carregar outra planilha.")
+            path = Path(self.fields["sheet"].text())
+            stamp = path.stat().st_mtime_ns
+            table = core.read_table(path)
+            dialog = ColumnDialog(table, self.column_profile, self)
+            if dialog.exec() != W.QDialog.Accepted:
+                return
+            if path.stat().st_mtime_ns != stamp:
+                raise ValueError("A planilha mudou durante a seleção. Carregue novamente.")
+            rows, warnings = dialog.rows, dialog.warnings
+            self.column_profile = {"headers": table[0], "mapping": dialog.mapping}
             self.rows = rows
-            self.loaded_sheet = (self.fields["sheet"].text(), Path(self.fields["sheet"].text()).stat().st_mtime_ns)
+            self.loaded_sheet = (self.fields["sheet"].text(), stamp)
             self.backers.setRowCount(len(rows))
             for i, row in enumerate(rows):
                 self.backers.setItem(i, 0, self.check_item(True))
@@ -305,12 +321,14 @@ class Window(W.QDialog):
 
     def save_settings(self):
         core.atomic_json(DATA / "settings.json", {"fields": {k: v.text() for k, v in self.fields.items()},
+                         "column_profile": self.column_profile,
                          "maps": [{"checked": self.maps.item(i, 0).checkState() == QtCore.Qt.Checked,
                                    "size": self.maps.cellWidget(i, 3).currentData()} for i in range(self.maps.rowCount())]})
 
     def load_settings(self):
         try:
             settings = json.loads((DATA / "settings.json").read_text(encoding="utf-8"))
+            self.column_profile = settings.get("column_profile")
             for key, value in settings.get("fields", {}).items():
                 if key in self.fields:
                     self.fields[key].setText(value)
@@ -345,6 +363,7 @@ class Window(W.QDialog):
         return core.fingerprint({"project": painter.project_path(), "base": str(base.resolve()),
                                  "base_size": base.stat().st_size, "base_mtime": base.stat().st_mtime_ns,
                                  "maps": self.selections(), "preset": painter.preset_maps(), "normal_invert": False,
+                                 "dds_headers": "BC4U_BC5U",
                                  "normal_export": "Normal_OpenGL"})
 
     def check(self):

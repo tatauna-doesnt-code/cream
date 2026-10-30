@@ -123,8 +123,39 @@ class CoreTests(unittest.TestCase):
                 output = self.root / suffix
                 result = core.convert(TEXCONV, image, output, suffix, 16, 64, threading.Event())
                 core.validate_dds(result, suffix, 16, 64)
+                self.assertEqual(result.read_bytes()[84:88],
+                                 {'B': b'DXT1', 'R': b'BC5U', 'I': b'DXT5', 'N': b'BC5U',
+                                  'CoatR': b'BC4U', 'DirtMask': b'BC4U', 'AO': b'DXT1'}[suffix])
         self.assertEqual(core.dimensions('Wheels', 2048), (512, 2048))
         self.assertEqual(core.dimensions('Skin', 2048), (2048, 2048))
+
+    def test_header_normalization_preserves_payload_and_is_idempotent(self):
+        source = self.root / 'Skin.png'
+        Image.new('RGB', (16, 16), (128, 64, 192)).save(source)
+        for suffix, alias, expected in [('CoatR', b'ATI1', b'BC4U'), ('R', b'ATI2', b'BC5U')]:
+            output = self.root / suffix
+            output.mkdir()
+            subprocess.run(core.conversion_args(TEXCONV, source, output, suffix), check=True, capture_output=True)
+            path = output / 'Skin.dds'
+            original = path.read_bytes()
+            self.assertEqual(original[84:88], alias)
+            with self.assertRaises(ValueError):
+                core.validate_dds(path, suffix, 16, 16)
+            core.normalize_dds_header(path, suffix)
+            patched = path.read_bytes()
+            self.assertEqual(patched, original[:84] + expected + original[88:])
+            core.normalize_dds_header(path, suffix)
+            self.assertEqual(path.read_bytes(), patched)
+            core.validate_dds(path, suffix, 16, 16)
+
+    def test_header_normalization_rejects_incompatible_formats(self):
+        for fourcc in (b'BC4S', b'BC5S', b'DX10', b'DXT1', b'ATI1'):
+            path = self.root / 'wrong.dds'
+            data = b'DDS ' + bytes(80) + fourcc + bytes(48)
+            path.write_bytes(data)
+            with self.assertRaises(ValueError):
+                core.normalize_dds_header(path, 'R')
+            self.assertEqual(path.read_bytes(), data)
 
     def test_real_normal_green_preserved(self):
         source = self.root / 'Skin_N.png'

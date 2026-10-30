@@ -1,4 +1,4 @@
-# CREAM 1.1.2
+# CREAM 1.2.1
 
 Plugin Python para Adobe Substance 3D Painter 12.1.3, Windows x64.
 Converte uma planilha de backers em skins ZIP, usando o projeto aberto e um ZIP base.
@@ -34,6 +34,14 @@ Instalação manual: copie a pasta `kr7_batch` inteira para
 ## Planilha
 
 Use `modelo_backers.csv` como exemplo. CSV deve ser UTF-8; aceita vírgula, ponto e vírgula ou tabulação.
+Os cabeçalhos podem ter qualquer nome e ordem. Ao clicar **Carregar planilha**, escolha
+as colunas na janela **Colunas da planilha** e confira a amostra antes de carregar.
+A primeira linha deve conter os cabeçalhos; as letras A, B, C… distinguem colunas repetidas.
+O CREAM sugere os cabeçalhos do modelo e lembra o último mapeamento para cabeçalhos idênticos.
+Somente **Nome na skin** exige uma coluna. Os campos abaixo são informações de destino,
+não nomes obrigatórios para os cabeçalhos. Uma coluna pode alimentar mais de um campo.
+Sem coluna: cores usam o original do projeto, ID usa o número da linha, nome do ZIP usa
+o nome na skin e todas as linhas são ativas. Colunas não selecionadas são ignoradas.
 Também é possível abrir o CSV no Excel e salvar como XLSX. Para XLSX, use a aba **Backers** ou a primeira aba.
 Não use fórmulas nas células dessa aba: o plugin as rejeita para evitar valores de cache desatualizados.
 
@@ -57,7 +65,7 @@ Arquivos já existentes nunca são sobrescritos. Caracteres inválidos de arquiv
 
 ## Usar
 
-1. Escolha a planilha e clique **Carregar planilha**.
+1. Escolha a planilha, clique **Carregar planilha**, associe as colunas e clique **Carregar backers**.
 2. Selecione o ZIP base da skin KR7. O ZIP de referência BIBLIOTECHA serviu para analisar o formato; ele não foi definido como base automaticamente.
 3. Confira a pasta de saída. O padrão é `%USERPROFILE%\Documents\Trackmania\Skins\Models\CarSport\KR7BACKERS`.
 4. Na aba **Texturas**, marque as saídas que variam entre backers e escolha a resolução de cada uma.
@@ -65,6 +73,9 @@ Arquivos já existentes nunca são sobrescritos. Caracteres inválidos de arquiv
 6. Selecione um backer e clique **Prévia do backer selecionado** para conferir no modelo. Depois clique **Restaurar nomes e cores**.
 7. Marque apenas um ou dois backers para o primeiro teste e clique **Exportar backers marcados**.
 8. Confira esses ZIPs no Trackmania antes de executar as ~200 linhas.
+
+Para enviar ao jogo, copie os ZIPs diretamente para `Trackmania\Skins\Models\CarSport`.
+O upload pode falhar com `C-AA-00-03` em subpastas como `KR7BACKERS`, mesmo com preview funcionando.
 
 Todas as texturas começam desmarcadas. A configuração é lembrada entre sessões.
 As seleções e resoluções se aplicam igualmente a todos os backers do lote.
@@ -85,6 +96,11 @@ Os novos ZIPs contêm apenas o conteúdo base e as texturas, sem relatórios ou 
 | AO | BC1 | RGB, alpha forçado a opaco |
 
 Todos são DDS com cabeçalho legado e um único nível (sem mipmaps adicionais), como a referência.
+R e N usam FourCC `BC5U`; CoatR e DirtMask usam `BC4U`. O conversor produz aliases
+`ATI2`/`ATI1`, que o CREAM substitui no cabeçalho antes da validação, sem recomprimir
+ou alterar pixels/canais. Arquivos preservados do ZIP base não são modificados.
+Relatórios de lotes anteriores a 1.2.1 não podem ser retomados nesta versão; gere novamente
+as linhas necessárias para obter os novos cabeçalhos.
 PNG intermediário de 8 bits é exportado pelo Painter e removido depois da conversão.
 A inversão de normal se aplica somente aos `_N` gerados; normals preservadas do ZIP base não mudam.
 O CREAM usa Normal OpenGL no preset virtual de exportação, inclusive se o TM2020 salvo ainda usar DirectX.

@@ -1,5 +1,22 @@
 # Changes
 
+## 1.2.1
+
+- Write BC4U and BC5U legacy DDS FourCC identifiers after texconv conversion,
+  matching the working TM2020 skin. ATI1/ATI2 aliases are replaced without changing
+  compressed pixels, dimensions, mipmaps, or channels. Validate canonical identifiers.
+- Apply to CoatR/DirtMask (BC4U) and R/N (BC5U). Other formats remain unchanged.
+- Invalidate old batch-resume signatures so previous ATI-header outputs are not skipped.
+- Note in the UI that ZIPs must be copied directly to CarSport for in-game upload.
+
+## 1.2.0
+
+- Map spreadsheet columns to player name, three colors, ID, ZIP name and active
+  flag when loading CSV or XLSX. Preview the first five data rows before import.
+- Keep the last mapping for identical headers and suggest the original template
+  columns automatically. Optional fields can remain unmapped; existing defaults apply.
+- Address columns by position, including repeated or empty header labels.
+
 ## 1.1.2
 
 - Request Normal OpenGL from Painter at export time, including with the original

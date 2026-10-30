@@ -30,7 +30,7 @@ class UpdateTests(unittest.TestCase):
         release = {'tag_name': 'v1.2.0', 'assets': [{'name': 'CREAM-plugin.zip', 'state': 'uploaded',
                    'digest': 'sha256:' + 'a'*64, 'id': 123, 'size': 100}]}
         with patch.object(updater, '_request', return_value=io.BytesIO(json.dumps(release).encode())):
-            self.assertEqual(updater.check_latest(token='test')['version'], '1.2.0')
+            self.assertEqual(updater.check_latest(current='1.1.2', token='test')['version'], '1.2.0')
         with patch.object(updater, '_request', return_value=io.BytesIO(json.dumps(release).encode())):
             self.assertIsNone(updater.check_latest(current='1.2.0', token='test'))
 

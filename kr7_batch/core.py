@@ -19,6 +19,8 @@ import xml.etree.ElementTree as ET
 
 MAPS = {"B": "BC1_UNORM", "R": "BC5_UNORM", "I": "BC3_UNORM",
         "N": "BC5_UNORM", "CoatR": "BC4_UNORM", "DirtMask": "BC4_UNORM", "AO": "BC1_UNORM"}
+DDS_FOURCC = {"BC1_UNORM": b"DXT1", "BC3_UNORM": b"DXT5",
+              "BC4_UNORM": b"BC4U", "BC5_UNORM": b"BC5U"}
 HEADERS = ["ativo", "id", "nome_player", "nome_arquivo", "cor_1", "cor_2", "cor_3"]
 NS = {"m": "http://schemas.openxmlformats.org/spreadsheetml/2006/main"}
 
@@ -85,7 +87,8 @@ def read_xlsx(path):
         return rows
 
 
-def read_rows(path):
+def read_table(path):
+    """Read a header row and raw cells, without requiring CREAM column names."""
     path = Path(path)
     if path.suffix.lower() == ".xlsx":
         table = read_xlsx(path)
@@ -100,14 +103,43 @@ def read_rows(path):
         raise ValueError("Selecione CSV UTF-8 ou XLSX.")
     if not table:
         raise ValueError("Planilha vazia.")
-    headers = [h.strip().lower() for h in table[0]]
-    if "nome_player" not in headers or len(headers) != len(set(headers)):
-        raise ValueError("Cabeçalhos inválidos: nome_player é obrigatório; colunas não podem se repetir.")
+    return table
+
+
+def suggest_columns(headers):
+    """Use only unambiguous original headers; other columns need user selection."""
+    normalized = [str(h).strip().casefold() for h in headers]
+    return {field: normalized.index(field) if normalized.count(field) == 1 else None
+            for field in HEADERS}
+
+
+def validate_columns(headers, mapping):
+    unknown = set(mapping) - set(HEADERS)
+    if unknown:
+        raise ValueError("Campos de importação desconhecidos: " + ", ".join(sorted(unknown)))
+    result = {field: mapping.get(field) for field in HEADERS}
+    for field, index in result.items():
+        if index is not None and (type(index) is not int or not 0 <= index < len(headers)):
+            raise ValueError(f"Coluna inválida para {field}. Selecione novamente as colunas.")
+    if result["nome_player"] is None:
+        raise ValueError("Selecione a coluna que contém o nome do player.")
+    return result
+
+
+def read_rows(path, mapping=None):
+    return rows_from_table(read_table(path), mapping)
+
+
+def rows_from_table(table, mapping=None):
+    if not table:
+        raise ValueError("Planilha vazia.")
+    mapping = validate_columns(table[0], suggest_columns(table[0]) if mapping is None else mapping)
     rows, warnings, ids = [], [], set()
     for number, cells in enumerate(table[1:], 2):
         if not any(str(v).strip() for v in cells):
             continue
-        record = dict(zip(headers, cells))
+        record = {field: str(cells[index]) if index is not None and index < len(cells) else ""
+                  for field, index in mapping.items()}
         active = record.get("ativo", "sim").strip().casefold()
         if active in ("não", "nao", "no", "false", "0", "n"):
             continue
@@ -190,14 +222,34 @@ def validate_dds(path, suffix, width, height):
     actual_h, actual_w = struct.unpack_from("<II", header, 12)
     mips = struct.unpack_from("<I", header, 28)[0]
     fourcc = header[84:88]
-    expected = {"BC1_UNORM": (b"DXT1",), "BC3_UNORM": (b"DXT5",),
-                "BC4_UNORM": (b"BC4U", b"ATI1"), "BC5_UNORM": (b"BC5U", b"ATI2")}[MAPS[suffix]]
-    if (actual_w, actual_h) != (width, height) or mips not in (0, 1) or fourcc not in expected:
+    expected = DDS_FOURCC[MAPS[suffix]]
+    if (actual_w, actual_h) != (width, height) or mips not in (0, 1) or fourcc != expected:
         raise ValueError(f"DDS fora da configuração: {Path(path).name}: {actual_w}×{actual_h}, {fourcc!r}, mips={mips}")
     block_bytes = 8 if suffix in ("B", "AO", "CoatR", "DirtMask") else 16
     expected_bytes = 128 + ((width + 3) // 4) * ((height + 3) // 4) * block_bytes
     if Path(path).stat().st_size != expected_bytes:
         raise ValueError(f"Tamanho DDS incorreto ou arquivo incompleto: {path}")
+
+
+def normalize_dds_header(path, suffix):
+    """Use the TM2020-compatible unsigned BC4/5 identifiers, without recompression.
+
+    texconv -dx9 writes ATI1/ATI2 for BC4/BC5. The working skin and in-game
+    verification require BC4U/BC5U. Only the four FourCC bytes may change.
+    Signed formats and DX10 headers are never relabeled.
+    """
+    expected = DDS_FOURCC[MAPS[suffix]]
+    alias = {b"BC4U": b"ATI1", b"BC5U": b"ATI2"}.get(expected)
+    with Path(path).open("r+b") as handle:
+        header = handle.read(128)
+        if len(header) != 128 or header[:4] != b"DDS ":
+            raise ValueError(f"DDS inválido: {path}")
+        if header[84:88] == expected:
+            return
+        if alias is None or header[84:88] != alias:
+            raise ValueError(f"Formato DDS inesperado: {header[84:88]!r}; esperado {expected!r}.")
+        handle.seek(84)
+        handle.write(expected)
 
 
 def conversion_args(texconv, source, output, suffix):
@@ -237,6 +289,7 @@ def convert(texconv, source, output, suffix, width, height, cancel):
         candidates = [p for p in output.iterdir() if p.stem.casefold() == Path(source).stem.casefold() and p.suffix.lower() == ".dds"]
         if len(candidates) != 1:
             raise RuntimeError("O conversor não produziu o DDS esperado.")
+        normalize_dds_header(candidates[0], suffix)
         validate_dds(candidates[0], suffix, width, height)
         return candidates[0]
     finally:

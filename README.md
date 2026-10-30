@@ -8,6 +8,10 @@ exportação de texturas para Trackmania 2020, conversão DDS e um ZIP por backe
 Leia [LEIA-ME.md](LEIA-ME.md) para instalação e uso. Referência: Painter 12.1.3;
 API utilizada disponível a partir de 11.0, ainda sem validação real nessa versão mínima.
 
+Ao carregar uma planilha CSV ou XLSX, selecione qual coluna contém o nome, cada cor,
+ID, nome do ZIP e indicador de linha ativa. Há uma amostra dos dados; somente a coluna
+do nome é obrigatória. O último mapeamento é lembrado para cabeçalhos idênticos.
+
 ## Atualizações privadas
 
 A versão 1.1.0 deve ser instalada uma vez com `Instalar.cmd`, com o Painter fechado.
@@ -28,6 +32,11 @@ continua disponível. O botão manual permite repetir a consulta.
 O CREAM solicita `Normal_OpenGL` ao Painter antes de exportar a textura e a converte
 para DDS BC5, preservando o canal verde. Não há inversão posterior. A saída virtual
 usada pelo plugin é ajustada mesmo se o TM2020 salvo ainda usar `Normal_DirectX`.
+
+Os DDS gerados usam os identificadores legados `BC5U` (R/N) e `BC4U` (CoatR/DirtMask),
+conforme a skin validada no jogo. Somente os aliases de cabeçalho ATI2/ATI1 são
+substituídos após a conversão; os dados comprimidos permanecem iguais.
+Para upload no jogo, copie os ZIPs diretamente para `CarSport`, fora de subpastas.
 
 Para os exports manuais, abra **File → Export Textures → Output Templates → TM2020**.
 Na saída `$textureSet_N`, arraste **Converted maps → Normal OpenGL** para RGB.
