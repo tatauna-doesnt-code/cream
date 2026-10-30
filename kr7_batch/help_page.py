@@ -18,7 +18,7 @@ FAQ = [
     then <b>Restore original</b>. Export a test skin and check it in Trackmania before running the full batch.</p>"""),
     ("What spreadsheet do I need?", "<p>Use CSV or XLSX with column headers in the first row. Match any column names when loading. Only the player name is required; colors 1–3, row ID, ZIP name and active flag are optional. Colors use <code>#RRGGBB</code>. Blank or unmapped colors keep the project originals. XLSX uses the Backers sheet, or the first sheet; formulas are rejected.</p>"),
     ("Can I edit a player's name without changing the spreadsheet?", "<p>Yes. Edit the input in the Player name column. Overrides are <b><i>bold italic</i></b>; the refresh icon resets the imported name. Names preserve case and are truncated to 20 characters. Trackmania styling codes are not accepted for the text printed on the car. Edits last for this session and survive CREAM reloads. Reloading the spreadsheet resets them.</p>"),
-    ("Does the final ZIP filename support TM styling?", "<p>Yes. In <b>4 ZIP names</b>, enable <b>Use Trackmania text styling</b>. Select text and apply bold, italic, uppercase, shadow, width or color. Text colors require exactly <b>three hex digits</b>, such as <code>$F80</code>. You can also edit raw codes. The Montserrat preview approximates in-game rendering; italic is shown normally in the editor. Styling affects ZIP names only.</p>"),
+    ("Does the final ZIP filename support TM styling?", "<p>Yes. In <b>3 ZIP names</b>, enable <b>Use Trackmania text styling</b>. Select text and apply bold, italic, uppercase, shadow, width or color. Text colors require exactly <b>three hex digits</b>, such as <code>$F80</code>. You can also edit raw codes. The Montserrat preview approximates in-game rendering; italic is shown normally in the editor. Styling affects ZIP names only.</p>"),
     ("How can I use each player's chosen color in the ZIP filename?", "<p>Open <b>Text color…</b> in the styling helper and choose <b>Use skin primary color</b> or <b>Use skin secondary color</b>. These insert <code>{primary}</code> or <code>{secondary}</code>, resolved independently from spreadsheet colors 1 and 2 for each skin. Example: <code>{primary}Event - {name}$z</code>. Skin colors are rounded to Trackmania's three-digit palette. Blank colors use the original project color; differing originals across sets must be resolved before export.</p>"),
     ("How do filename patterns and duplicate names work?", "<p>Use <code>{name}</code> for the ZIP-name column or player fallback, <code>{player}</code> for the printed player name, <code>{id}</code> for row ID and <code>{row}</code> for spreadsheet row. Add a prefix such as <code>Event - {name}</code>. The .zip extension is automatic. Duplicate or existing names receive 2, 3…; existing ZIPs are preserved. An explicit ZIP-name column is independent of manual player-name edits.</p>"),
     ("Which textures and resolutions can I export?", "<p>Check a set to select every map, or expand it to select maps individually. Set resolution applies to all maps in the set; individual overrides are supported and show as Mixed. Sizes are 1024, 2048 or 4096; Wheels keeps a 1:4 ratio. Compression is automatic for Trackmania 2020. OpenGL normals are exported directly, without a later green-channel inversion.</p>"),
@@ -26,7 +26,7 @@ FAQ = [
     ("Why are some controls locked during a preview?", "<p>A preview temporarily changes names and colors in your open project. Editing names, importing, resuming and exporting are locked to protect the original state. Hover a locked control for an explanation. Click <b>Restore original</b> beside Preview or in the banner to continue. Do not save the preview over your base project. After a crash, use <b>Logs → Restore original / recover project</b>.</p>"),
     ("Can I cancel or resume a batch?", "<p>Use <b>Cancel safely</b>. CREAM waits for the current operation, restores the original project and keeps completed ZIPs. To resume, load the same spreadsheet and settings, then choose <b>Resume a previous batch…</b> and a JSON report from <code>_CREAM_reports</code> inside the output folder. Successful rows whose ZIPs still exist are unchecked; review the remaining selection and export again. A report must match the project and export configuration.</p>"),
     ("Where do I put skins for Trackmania uploads?", "<p>Save or copy ZIPs directly into <code>Documents/Trackmania/Skins/Models/CarSport</code>. Uploads from subfolders can fail even when the skin previews correctly. Check your ZIP size against the game's upload limit.</p>"),
-    ("How do updates and GitHub access work?", "<p>Click <b>Check for updates…</b> at the top right. If the repository is private, CREAM asks for a fine-grained GitHub token with <b>Contents: Read-only</b> access to the CREAM repository when needed. Windows protects the saved token for your user. Public releases require no token. Download the release, then follow the Apply/restart instruction. Active previews and batches must finish before applying updates.</p>"),
+    ("How do updates and GitHub access work?", "<p>Click <b>Settings</b> and use <b>Check for updates</b>. If the repository is private, CREAM asks for a fine-grained GitHub token with <b>Contents: Read-only</b> access to the CREAM repository when needed. Windows protects the saved token for your user. Public releases require no token. Download the release, then follow the Apply/restart instruction. Active previews and batches must finish before applying updates.</p>"),
 ]
 
 
@@ -39,10 +39,24 @@ def add_help(window):
     content.setAttribute(QtCore.Qt.WA_StyledBackground, True)
     layout = W.QVBoxLayout(content)
     layout.setContentsMargins(18, 18, 18, 18)
-    title = W.QLabel("Help · Project setup and FAQ")
+    title = W.QLabel("Getting started with CREAM")
     title.setStyleSheet("font-size: 18px; font-weight: 600;")
     layout.addWidget(title)
-    for question, answer in FAQ:
+    intro = FAQ[0][1]
+    intro = intro.replace('Load the spreadsheet in <b>1 Setup</b>, match the columns, select a player in\n    <b>2 Skins</b> and choose maps in <b>3 Textures</b>.', 'In <b>Settings</b>, choose your base ZIP and output folder. In <b>1 Skins</b>, use <b>Add skin</b> to enter a name and colors, or <b>Import CSV / XLSX</b> to append a spreadsheet. Choose maps in <b>2 Textures</b> and set filenames in <b>3 ZIP names</b>.')
+    intro = '<p>CREAM creates personalized Trackmania 2020 skin ZIPs from your open Painter project. Start with one skin, then build a batch when you are ready.</p>' + intro
+    intro = intro.replace('<code>', '<b><span style="color: #a9d7f5; font-family: Consolas;">').replace('</code>', '</span></b>')
+    guide = W.QLabel(intro)
+    guide.setWordWrap(True)
+    guide.setTextFormat(QtCore.Qt.RichText)
+    guide.setTextInteractionFlags(QtCore.Qt.TextSelectableByMouse)
+    layout.addWidget(guide)
+    faq_heading = W.QLabel('Frequently asked questions')
+    faq_heading.setStyleSheet('font-size: 17px; font-weight: 600; padding-top: 16px;')
+    layout.addWidget(faq_heading)
+    entries = [('What does CREAM mean?', '<p><b>Color Replacement &amp; Export Automation Manager.</b> CREAM automates player names, skin colors, texture exports, DDS conversion and final ZIP packaging.</p>'),
+        ('Can I enter data without a spreadsheet?', '<p>Yes. In <b>1 Skins</b>, click <b>Add skin</b>, enter a name and up to three colors, then Save. Use <b>Edit skin</b> to change a highlighted entry or <b>Remove</b> to delete it. Blank colors keep the project original. Manual lists are saved locally. Import CSV / XLSX appends spreadsheet rows without replacing the current list.</p>')]
+    for question, answer in entries + FAQ[1:]:
         toggle = W.QToolButton()
         toggle.setText(question)
         toggle.setCheckable(True)
@@ -76,4 +90,19 @@ def add_help(window):
     window.help_link.setStyleSheet("QToolButton { padding: 4px 16px; background: #222426; border: 1px solid #494c50; border-bottom: none; } QToolButton:checked { background: #292b2e; border-top: 2px solid #6ca8cf; }")
     window.help_link.clicked.connect(lambda: window.tabs.setCurrentWidget(scroll))
     window.tabs.currentChanged.connect(lambda current: window.help_link.setChecked(current == index))
-    window.tabs.setCornerWidget(window.help_link, QtCore.Qt.TopRightCorner)
+    corner = W.QWidget()
+    links = W.QHBoxLayout(corner)
+    links.setContentsMargins(0, 0, 0, 0)
+    links.setSpacing(0)
+    window.settings_link = W.QToolButton()
+    window.settings_link.setText('Settings')
+    window.settings_link.setCheckable(True)
+    window.settings_link.setFixedHeight(38)
+    window.settings_link.setStyleSheet(window.help_link.styleSheet())
+    settings_index = window.tabs.indexOf(window.settings_page)
+    window.tabs.tabBar().setTabVisible(settings_index, False)
+    window.settings_link.clicked.connect(lambda: window.tabs.setCurrentWidget(window.settings_page))
+    window.tabs.currentChanged.connect(lambda current: window.settings_link.setChecked(current == settings_index))
+    links.addWidget(window.settings_link)
+    links.addWidget(window.help_link)
+    window.tabs.setCornerWidget(corner, QtCore.Qt.TopRightCorner)

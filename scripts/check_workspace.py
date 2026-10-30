@@ -21,10 +21,10 @@ with tempfile.TemporaryDirectory() as folder, patch.object(ui, "DATA", Path(fold
     window = ui.Window(auto_update=False)
     window.show()
     app.processEvents()
-    assert window.tabs.currentWidget() is window.setup_page
+    assert window.tabs.currentWidget() is window.skins_page
     assert not window.export_button.isEnabled()
     assert not window.preview_button.isEnabled()
-    assert window.updates_dialog.isHidden()
+    assert window.tabs.indexOf(window.settings_page) == 4
     window.grab().save(str(ROOT / "dist/workspace-01-setup.png"))
     window.tabs.setCurrentWidget(window.skins_page)
     app.processEvents()
@@ -67,8 +67,8 @@ with tempfile.TemporaryDirectory() as folder, patch.object(ui, "DATA", Path(fold
     assert not window.preview_banner.isVisible()
     assert not window.inline_restore.isEnabled()
     assert not window.preview_help.timer.isActive()
-    assert window.tabs.tabText(3) == '4  ZIP names'
-    assert window.tabs.tabText(4) == 'Logs'
+    assert window.tabs.tabText(2) == '3  ZIP names'
+    assert window.tabs.tabText(3) == 'Logs'
     window.tabs.setCurrentWidget(window.textures_page)
     skin.expand.click()
     app.processEvents()
@@ -83,11 +83,11 @@ with tempfile.TemporaryDirectory() as folder, patch.object(ui, "DATA", Path(fold
     assert window.name_style.geometry().bottom() < window.naming_page.height()
     assert window.export_button.geometry().right() < window.width()
     window.grab().save(str(ROOT / "dist/workspace-06-small.png"))
-    window.updates_link.click()
+    window.tabs.setCurrentWidget(window.settings_page)
     app.processEvents()
-    assert window.updates_dialog.isVisible()
-    window.updates_dialog.grab().save(str(ROOT / "dist/workspace-07-updates.png"))
-    window.updates_dialog.hide()
+    assert window.tabs.currentWidget() is window.settings_page
+    window.grab().save(str(ROOT / "dist/workspace-07-updates.png"))
+
     window.help_link.click()
     app.processEvents()
     assert window.tabs.currentWidget() is window.help_page

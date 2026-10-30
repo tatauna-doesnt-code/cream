@@ -1,5 +1,16 @@
 # Changes
 
+## 1.9.3
+
+- Present CREAM beta 1.9.3 with manual skin entry as the primary workflow. Add, edit
+  and remove entries; choose colors via pickers or hex fields. Save manual/mixed lists locally.
+- Move CSV/XLSX import to the list's top right and append imports to the current list.
+- Move base/output paths and all update controls into the right-side Settings tab.
+- Remove the title-bar em dash and give the in-window CREAM heading a retro serif treatment.
+- Make Help's setup guide a formatted introduction; add meaning and direct-entry FAQs.
+- Refresh installation/beta documentation and specify Windows/Painter 12.1.3 as the
+  supported minimum; older versions remain unverified.
+
 ## 1.9.2
 
 - Start the TM styling helper disabled in each new session, even if old preferences

@@ -59,7 +59,7 @@ class Progress(W.QDialog):
 class Window(W.QDialog):
     def __init__(self, auto_update=True, reload_callback=None):
         super().__init__(sp.ui.get_main_window())
-        self.setWindowTitle("CREAM — " + VERSION)
+        self.setWindowTitle("CREAM beta " + VERSION)
         self.resize(1040, 820)
         self.rows = []
         self.name_originals = []
@@ -113,9 +113,6 @@ class Window(W.QDialog):
         self.check_button.clicked.connect(lambda: self.check_updates(interactive=True))
         self.access_button.clicked.connect(self.configure_access)
         self.update_button.clicked.connect(self.update_clicked)
-        close = W.QDialogButtonBox(W.QDialogButtonBox.Close)
-        close.rejected.connect(self.updates_dialog.hide)
-        self.updates_layout.addWidget(close)
         self.backers.itemChanged.connect(self.refresh_workflow)
         self.backers.currentCellChanged.connect(self.refresh_workflow)
         for section in self.texture_sets.groups.values():
@@ -123,6 +120,7 @@ class Window(W.QDialog):
         for field in self.fields.values():
             field.textChanged.connect(self.refresh_workflow)
         self.refresh_workflow()
+        self.restore_draft()
         self.update_timer = QtCore.QTimer(self)
         self.update_timer.setInterval(200)
         self.update_timer.timeout.connect(self.poll_update)
@@ -162,10 +160,10 @@ class Window(W.QDialog):
         self.summary.setText(f"{count} skins selected  ·  {maps} textures per skin  ·  {count * maps} texture exports")
         self.export_button.setText(f"Export {count} skin" + ("s" if count != 1 else ""))
         configured = bool(self.fields["base"].text().strip() and self.fields["output"].text().strip())
-        next_step = ("Load a spreadsheet in Setup." if not loaded else
-                     "Choose a base ZIP and output folder in Setup." if not configured else
+        next_step = ("Add a skin or import a spreadsheet." if not loaded else
+                     "Choose a base ZIP and output folder in Settings." if not configured else
                      "Select skins to export." if not count else
-                     "Choose textures in step 3." if not maps else
+                     "Choose textures in step 2." if not maps else
                      "Fix or reset the invalid player name." if self.invalid_names else
                      "Restore the preview before exporting." if preview else "")
         if next_step:
@@ -175,22 +173,25 @@ class Window(W.QDialog):
         self.preview_button.setEnabled(loaded and self.backers.currentRow() >= 0 and not busy and not preview and not self.invalid_names)
         self.preview_banner.setVisible(preview and not busy)
         self.load_button.setEnabled(not busy and not preview)
+        self.add_button.setEnabled(not busy and not preview)
+        self.edit_button.setEnabled(loaded and self.backers.currentRow() >= 0 and not busy and not preview)
+        self.remove_button.setEnabled(loaded and self.backers.currentRow() >= 0 and not busy and not preview)
         self.resume_button.setEnabled(loaded and not busy and not preview)
         self.inline_restore.setEnabled(preview and not busy)
         locked = {self.export_button: "Export", self.validate_button: "Configuration checking",
+                  self.add_button: "Adding a skin", self.edit_button: "Editing skin data", self.remove_button: "Removing a skin",
                   self.preview_button: "Applying another preview", self.load_button: "Loading a spreadsheet",
                   self.resume_button: "Resuming a batch"}
         for cell in self.name_cells.values():
             locked[cell.editor] = "Editing this player name"
             locked[cell.reset] = "Resetting this player name"
         self.preview_help.update(locked, preview and not busy)
-        self.setup_hint.setText("Spreadsheet loaded. Review Skins, choose Textures, then export." if loaded
-                                else "Next: load your spreadsheet and match its columns.")
+        self.setup_hint.setText("Settings apply to every selected skin. Review Skins, Textures and ZIP names before exporting.")
 
     def refresh_update_notice(self):
         pending = bootstrap.pending_path(Path(__file__).parent).exists()
-        self.updates_link.setText("Update ready…" if pending else "Update available…" if self.available_release else "Check for updates…")
-        self.updates_link.setToolTip(self.update_status.text())
+        self.tabs.setTabText(self.tabs.indexOf(self.settings_page), "Settings · Update ready" if pending else "Settings · Update available" if self.available_release else "Settings")
+        self.settings_link.setText("Settings · Update ready" if pending else "Settings · Update available" if self.available_release else "Settings")
 
     def configure_access(self):
         if self.update_future is not None:
@@ -333,7 +334,7 @@ class Window(W.QDialog):
         if state["selected"] >= 0:
             self.backers.selectRow(state["selected"])
         self.log.setPlainText(state["log"])
-        self.tabs.setCurrentIndex(state.get("page", 1 if self.rows else 0))
+        self.tabs.setCurrentIndex(state.get("page", 0))
         self.refresh_workflow()
 
     def stop_updater(self):
@@ -392,7 +393,71 @@ class Window(W.QDialog):
         for i in range(self.backers.rowCount()):
             self.backers.item(i, 0).setCheckState(QtCore.Qt.Checked if checked else QtCore.Qt.Unchecked)
 
-    def load_sheet(self):
+    def add_skin(self):
+        if self.saved is not None or self.runner is not None:
+            return
+        from .manual_entry import SkinDialog
+        dialog = SkinDialog(self)
+        if dialog.exec() != W.QDialog.Accepted:
+            return
+        state = self.capture_reload_state()
+        ids = {r['id'] for r in self.rows}
+        number = 1
+        while f'manual-{number}' in ids:
+            number += 1
+        row = dict(dialog.row, id=f'manual-{number}', line=max((r['line'] for r in self.rows), default=0) + 1)
+        state['rows'] = [*self.rows, row]
+        state['name_originals'] = [*self.name_originals, *core.name_originals([row])]
+        state['checked'] = [*state['checked'], True]
+        state.update(loaded_sheet=None, selected=len(self.rows), page=self.tabs.indexOf(self.skins_page))
+        self.restore_reload_state(state)
+        self.save_settings()
+
+    def edit_skin(self):
+        index = self.backers.currentRow()
+        if index < 0 or self.saved is not None or self.runner is not None:
+            return
+        from .manual_entry import SkinDialog
+        dialog = SkinDialog(self, self.rows[index])
+        if dialog.exec() != W.QDialog.Accepted:
+            return
+        self.edit_player_name(index, dialog.row['name'])
+        self.rows[index]['colors'] = dialog.row['colors']
+        state = self.capture_reload_state()
+        state['loaded_sheet'] = None
+        self.restore_reload_state(state)
+        self.save_settings()
+
+    def remove_skin(self):
+        index = self.backers.currentRow()
+        if index < 0 or self.saved is not None or self.runner is not None:
+            return
+        state = self.capture_reload_state()
+        for key in ('rows', 'name_originals', 'checked'):
+            state[key] = [value for i, value in enumerate(state[key]) if i != index]
+        state.update(loaded_sheet=None, selected=min(index, len(state['rows']) - 1))
+        self.restore_reload_state(state)
+        self.save_settings()
+
+    def import_sheet(self):
+        if self.saved is not None or self.runner is not None:
+            return
+        path, _ = W.QFileDialog.getOpenFileName(self, 'Import skins', self.fields['sheet'].text(), 'Spreadsheets (*.csv *.xlsx)')
+        if path:
+            self.fields['sheet'].setText(path)
+            self.load_sheet(append=True)
+
+    def restore_draft(self):
+        try:
+            state = json.loads((DATA / 'settings.json').read_text(encoding='utf-8')).get('draft')
+            if state:
+                state['tm_styling'] = False
+                self.restore_reload_state(state)
+                self.tabs.setCurrentWidget(self.skins_page)
+        except (OSError, ValueError, KeyError, TypeError):
+            pass
+
+    def load_sheet(self, append=False):
         try:
             if self.runner is not None or self.saved is not None:
                 raise ValueError("Finish the batch and restore the preview before loading another spreadsheet.")
@@ -410,8 +475,21 @@ class Window(W.QDialog):
                 raise ValueError("The spreadsheet changed during column selection. Load it again.")
             rows, warnings = dialog.rows, dialog.warnings
             self.column_profile = {"headers": table[0], "mapping": dialog.mapping}
+            originals = core.name_originals(rows, table, dialog.mapping.get("nome_arquivo"))
+            previous = self.capture_reload_state() if append and self.rows else None
+            if previous:
+                ids = {r['id'] for r in self.rows}
+                for row in rows:
+                    if row['id'] in ids:
+                        number = 1
+                        while f'import-{number}' in ids:
+                            number += 1
+                        row['id'] = f'import-{number}'
+                    ids.add(row['id'])
+                rows = [*self.rows, *rows]
+                originals = [*self.name_originals, *originals]
             self.rows = rows
-            self.name_originals = core.name_originals(rows, table, dialog.mapping.get("nome_arquivo"))
+            self.name_originals = originals
             self.loaded_sheet = (self.fields["sheet"].text(), stamp)
             self.backers.setRowCount(len(rows))
             for i, row in enumerate(rows):
@@ -422,9 +500,13 @@ class Window(W.QDialog):
             self.install_name_cells()
             self.refresh_destinations()
             self.backers.selectRow(0)
+            if previous:
+                for i, checked in enumerate(previous['checked']):
+                    self.backers.item(i, 0).setCheckState(QtCore.Qt.Checked if checked else QtCore.Qt.Unchecked)
+                self.loaded_sheet = None
             for warning in warnings:
                 self.say(warning)
-            self.say(f"{len(rows)} backers loaded. {len(warnings)} warnings in Activity.")
+            self.say(f"{len(rows)} skins ready. {len(warnings)} warnings in Logs.")
             self.save_settings()
             self.tabs.setCurrentWidget(self.skins_page)
             self.refresh_workflow()
@@ -575,6 +657,7 @@ class Window(W.QDialog):
 
     def save_settings(self):
         core.atomic_json(DATA / "settings.json", {"fields": {k: v.text() for k, v in self.fields.items()},
+                         "draft": self.capture_reload_state() if self.rows and not getattr(self, 'loaded_sheet', None) else None,
                          "column_profile": self.column_profile,
                          "maps": self.texture_sets.settings()})
 
@@ -608,11 +691,11 @@ class Window(W.QDialog):
 
     def ensure_rows(self):
         if not self.rows:
-            raise ValueError("Load the spreadsheet first.")
+            raise ValueError("Add a skin or import a spreadsheet first.")
         if self.invalid_names:
             raise ValueError(next(iter(self.invalid_names.values())) + " Fix or reset the edited player name.")
         sheet = self.fields["sheet"].text()
-        if (sheet, Path(sheet).stat().st_mtime_ns) != self.loaded_sheet:
+        if getattr(self, 'loaded_sheet', None) is not None and (sheet, Path(sheet).stat().st_mtime_ns) != self.loaded_sheet:
             raise ValueError("The spreadsheet changed. Click Load spreadsheet again.")
 
     def config_signature(self):
@@ -893,6 +976,7 @@ class Window(W.QDialog):
             if self.saved is not None:
                 event.ignore()
             else:
+                self.save_settings()
                 event.accept()
         else:
             self.save_settings()

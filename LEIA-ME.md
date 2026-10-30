@@ -1,170 +1,90 @@
-# CREAM 1.7.0
+# CREAM beta 1.9.3
 
-Color Replacement & Export Automation Manager for Adobe Substance 3D Painter on Windows.
-The filename is retained for installer compatibility; these instructions are in English.
+**Color Replacement & Export Automation Manager** personalizes Trackmania 2020 skin
+names/colors in Painter, exports DDS textures and packages one ZIP per skin.
 
-## Install
+## Requirements and beta compatibility
 
-1. Extract the entire ZIP to a folder.
-2. Save your work and close Painter.
-3. Run **Instalar.cmd**. Administrator access is not required.
-4. Open Painter and enable **Python > kr7_batch**.
-5. Reopen the window with **Window > CREAM — Batch Exporter**.
+**Windows and Adobe Substance 3D Painter 12.1.3 or later.** 12.1.3 is the supported
+minimum and the version used for SDK checks. Earlier versions are unverified; the old
+11.0 API estimate was not a tested compatibility guarantee. No separate Python,
+Excel, Pillow or DDS converter installation is required.
 
-The installer backs up an existing installation and preserves an existing TM2020 preset.
-The texconv converter is included; Python, Pillow and Excel are not required to use CREAM.
-CREAM always uses the bundled converter; no converter path needs to be selected.
-If it is missing, reinstall or update CREAM.
+This beta supports TM2020 texture sets Details, Glass, Skin and Wheels, without
+UDIM or material layering. It is not an exporter for arbitrary games. Test a small
+export in-game before processing large batches. Include Painter version, reproduction
+steps and relevant Logs when reporting issues.
 
-## Prepare the project
+## Installation
 
-Open a saved .spp project. CREAM never saves one project per backer.
-Use mask Fill effects named PLAYER_NAME with a Font in Grayscale. Every matching
-name outside Glass is updated. Use Fill Layers PLAYER_COLOR1, PLAYER_COLOR2 and/or
-PLAYER_COLOR3 with an independent uniform Base Color. Other layer properties,
-anchors, text colors, font sizes and projection settings are preserved.
+1. Download **CREAM-plugin.zip** from Releases, rather than GitHub's Source code ZIP.
+2. Extract the entire ZIP, save your project and close Painter.
+3. Run **Instalar.cmd** without administrator rights. The installer uses Windows'
+   Documents folder, backs up an existing installation and preserves an existing preset.
+4. Open Painter and enable **Python > kr7_batch**. This legacy internal folder name
+   remains for update compatibility; the application is CREAM.
+5. Reopen the window via **Window > CREAM — Batch Exporter** if needed.
 
-Texture sets: Details, Glass, Skin and Wheels, without UDIM or material layering.
-Glass can be exported but never receives personalized names or colors.
-The TM2020 export preset must have outputs $textureSet_B, _R, _I, _N, _CoatR,
-_DirtMask and _AO, as needed for the selected textures.
+Keep the extracted package together. Its texconv converter and fonts are bundled.
+The package ships no developer-specific source/output paths.
 
-## Spreadsheet
+## First export
 
-Use UTF-8 CSV (comma, semicolon or tab) or XLSX. The first row contains headers.
-For XLSX, CREAM reads the Backers sheet or the first sheet; formulas are rejected.
-Click Load spreadsheet, select a column for each field and confirm the sample.
-Header names/order are unrestricted. Repeated headers are identified by column letter.
-CREAM remembers the last mapping for identical headers and recognizes the original template.
+1. Open a saved project. Use mask Font fill effects named `PLAYER_NAME`, and uniform
+   Base Color fill layers `PLAYER_COLOR1`, `PLAYER_COLOR2`, optionally `PLAYER_COLOR3`.
+   CREAM changes text/Base Color only. Set font, size, alignment and projection in Painter.
+2. In **Settings**, select the base skin ZIP and output folder. Use CarSport directly
+   for in-game uploads; subfolders can fail. The base ZIP's files must be at its root.
+3. In **1 Skins**, click **Add skin…** and enter a name and up to three colors using
+   pickers or `#RRGGBB`. Blank colors keep the project original. Use **Edit skin…** to
+   change a highlighted entry and **Remove** to remove it.
+4. Optionally use **Import CSV / XLSX…** at the list's top right. Match your columns;
+   imports append to existing entries. Only player name is required. XLSX reads the
+   Backers sheet or first sheet; formulas are rejected.
+5. Choose maps/resolutions in **2 Textures**, then optional naming in **3 ZIP names**.
+6. Check configuration, preview a highlighted skin, then **Restore original**. Export
+   a test skin and inspect it in Trackmania. Help contains the full setup guide and FAQ.
 
-| Field | Content or default when not mapped |
-|---|---|
-| Player name | Required; case preserved, limited to 20 characters |
-| Color 1/2/3 | #RRGGBB; blank or unmapped uses the project original |
-| Row ID | Unique identifier; defaults to the spreadsheet row number |
-| ZIP name | Defaults to the player name |
-| Export / active | yes/no, true/false or 1/0; blank/unmapped exports all rows |
+Manual and mixed lists are saved locally. Spreadsheet-only lists must be reloaded
+when restarting Painter. CREAM-only reloads preserve the loaded list and editor state.
+Source spreadsheets are never modified. Inline name overrides are bold italic; refresh
+restores the original entry. Names preserve case, normalize to NFC and truncate to
+20 characters. TM styling codes cannot be used for the text printed on the car.
 
-Original template keys ativo, id, nome_player, nome_arquivo, cor_1, cor_2, cor_3 and
-Portuguese sim/não values remain compatible. A column can supply multiple fields.
-Names longer than 20 Unicode code points after NFC normalization are truncated with
-a warning. Empty names, control characters and common Trackmania formatting codes
-are rejected. Duplicate names are allowed; explicit IDs must be unique.
-ZIP collisions receive suffixes: Event - Joseph.zip, Event - Joseph 2.zip, etc.
-Existing ZIPs are never overwritten. Invalid filename characters are replaced with _.
+## Textures and ZIP names
 
-### Edit a player name manually
+Per-set controls select all maps and apply a common resolution; individual overrides
+remain possible. Wheels keeps 1:4 proportions. Unselected files remain from the base ZIP.
+Glass receives no name/color edits. DDS compression is automatic: B/AO BC1, R/N BC5U,
+I BC3, CoatR/DirtMask BC4U. Normals export as OpenGL without another green-channel flip.
 
-Edit the **Player name** field directly in the loaded table. A changed name appears
-bold italic. Click its refresh icon to restore the imported spreadsheet value.
-The same 20-character, Unicode and formatting-code validation applies to manual edits.
-Invalid edits must be fixed or reset before preview/export. Names are read-only while
-a batch or preview is active; restore the preview before editing.
+Filename tokens: `{name}`, `{player}`, `{id}`, `{row}`, `{primary}`, `{secondary}`.
+Duplicate/existing ZIP names receive numeric suffixes. Existing files are preserved.
+The optional TM helper supports bold, italic, uppercase, shadow, widths and three-digit
+text colors, including each player's primary/secondary color. It starts off each new
+session. Hiding the helper preserves codes already in the filename pattern. Montserrat
+previews approximate game rendering. The default ZIP pattern is `{name}`.
 
-Edits are used for the skin text, `{player}` and any ZIP name derived from the player
-name. An explicit ZIP-name column remains unchanged. Select the desired rows before
-exporting again; existing ZIPs are preserved. Edits survive CREAM reloads within the
-current session but do not modify the source spreadsheet. Reloading the spreadsheet
-starts again with its imported values.
+## Safe batches and updates
 
-## Export
+Use **Cancel safely** to finish the current operation and restore original values.
+Completed ZIPs remain valid. Resume using a JSON report in `_CREAM_reports`; successful
+matching rows whose ZIPs still exist are unchecked. Settings and project must match.
+After interruption, use **Logs > Restore original / recover project**. No per-skin SPP
+is saved. Temporary textures are cleaned up after processing.
 
-1. In **Setup**, choose the spreadsheet, base skin ZIP and output folder. Load the
-   spreadsheet and match its columns. Project preparation help is available below the files.
-2. In **Skins**, check the rows to export. Edit names directly if needed. **ZIP names**
-   contains the optional filename pattern and Trackmania styling helper.
-3. In Textures, expand a texture set to select individual textures. The header checkbox
-   selects or clears the full set. Its Resolution control applies to every texture in
-   the set; individual size overrides remain available. Mixed indicates differing sizes.
-4. Use **Check configuration**. The footer shows selected skins and texture counts,
-   and explains missing prerequisites. Export also validates automatically.
-5. Optionally use **Preview highlighted skin** in Skins, inspect the model, then click
-   **Restore original** in the preview banner. Activity also includes project recovery.
-6. Click **Export N skins**. Export one or two and check them in Trackmania before
-   running the full batch. **Updates** in the header opens update and access controls.
+Update controls are directly in **Settings**. Check, download and follow Apply/restart
+instructions. Python-only updates can reopen CREAM; loader/resource changes require
+Painter restart. Restore previews and finish batches before applying updates.
 
-Copy completed ZIPs directly into Trackmania/Skins/Models/CarSport for in-game upload.
-Uploads from subfolders inside CarSport can fail with C-AA-00-03 despite a working preview.
-The output folder preference is retained; CREAM does not automatically copy into CarSport.
+The repository is private. Each tester needs repository access. When required, CREAM
+asks for a fine-grained GitHub token limited to `tatauna-doesnt-code/cream`, with
+**Contents: Read-only**. Windows protects the saved credential. Startup checks never
+open credential prompts; public releases require no token.
 
-The base ZIP must contain files directly at its root. Selected outputs replace matching
-files; all others are preserved. Settings apply to every selected backer.
-Texture-set accordions start collapsed. A partial checkbox means only some textures
-are selected. Changing a set's resolution replaces sizes for all its textures, including
-unchecked ones. Existing selections/sizes are migrated from previous versions.
+## Development and components
 
-### ZIP name pattern
-
-Use a pattern such as `{name}`, `My Event - {name}` or `{player} - {id}`.
-`{name}` uses the ZIP-name column (or the player name if not mapped); `{player}` uses
-the printed name, `{id}` the row ID, and `{row}` the spreadsheet row number.
-The .zip extension is automatic. Duplicate filenames receive numeric suffixes.
-The pattern changes only ZIP filenames, never the text printed on the skin.
-Patterns cannot contain folders or invalid filename characters. Values are sanitized
-and the resulting name is limited to 100 characters, with reserved Windows names escaped.
-
-Saved filename patterns are retained. New installations start with `{name}` and the
-current user's Documents/Trackmania/Skins/Models/CarSport folder. Saved output folders
-are preserved. Naming preferences survive CREAM reloads. Changing the pattern prevents
-resuming a report created with a different naming configuration.
-
-### Trackmania name styling
-
-Turn on **TM styling helper** next to ZIP name pattern. It is off by default and shows
-an editable styled pattern plus the selected backer's in-game-name preview. Select text
-and use the toolbar, or choose a style and type. Bold, italic, uppercase, shadow,
-normal/narrow/wide width, default color, full reset and literal dollar are available.
-Ctrl+B and Ctrl+I also work. The preview uses local fonts, so exact metrics can differ
-from Trackmania. The raw pattern and actual ZIP filename remain visible.
-
-**Text color…** accepts exactly three hexadecimal digits such as F80, not FF8800.
-Channel sliders use values 0–F. Inside this picker, choose **Use skin primary color**
-or **Use skin secondary color** to use color 1 or 2 independently for each backer.
-The pattern tokens are `{primary}` and `{secondary}`; each becomes a `$RGB` color code.
-Example: `{primary}My Event$g - {secondary}{name}$z`.
-
-Skin colors are rounded from 6-digit sRGB to Trackmania's 3-digit text palette. For blank
-spreadsheet colors, the project original is used. If originals differ across texture
-sets at this palette precision, supply a spreadsheet color instead of relying on defaults.
-The helper changes ZIP-name styling only. Turning it off keeps the existing raw codes.
-
-| Texture | Compression / DDS identifier |
-|---|---|
-| B, AO | BC1 / DXT1; opaque alpha |
-| R, N | BC5 / BC5U |
-| I | BC3 / DXT5; RGB and alpha preserved |
-| CoatR, DirtMask | BC4 / BC4U |
-
-No extra mipmaps. Normals use Normal_OpenGL at Painter export, with no later green flip.
-ATI1/ATI2 aliases from texconv are changed to BC4U/BC5U without recompressing pixels.
-Details/Glass/Skin: square 1024, 2048 or 4096. Wheels: 256x1024, 512x2048 or 1024x4096.
-8-bit PNG intermediates are deleted after DDS conversion; per-backer temporary folders
-in %LOCALAPPDATA%/KR7BatchExporter are removed after processing.
-
-## Cancel and recover
-
-Cancel safely waits for a safe stopping point, restores original names/colors and preserves
-finished ZIPs. Painter exports/autosave can delay a cancellation request. Conversion can
-be terminated. A ZIP is written as .partial, checked for CRC and published only when complete.
-An abrupt process exit can leave temporary files. The recovery record is written before
-project edits. Restore original after a crash before starting another batch.
-
-Reports are stored in _CREAM_reports. Load the same spreadsheet/settings and use Resume from
-report to deselect confirmed completed rows. Reports across changed export pipelines cannot
-be resumed. CREAM cannot detect arbitrary manual material edits; check the project first.
-
-## Update
-
-Configure private access using a GitHub fine-grained token for tatauna-doesnt-code/cream,
-with Contents: Read-only. Do not share the token; Windows encrypts it for the current user.
-Check for updates, then Download update. CREAM verifies hashes and chooses the required restart:
-
-- Apply and reopen CREAM: eligible Python-only updates; loaded rows and settings are preserved.
-- Restart Painter required: loader/updater/native or other non-Python changes, an explicit
-  restart request, or unsupported/missing package metadata.
-
-Stop the batch, restore any preview/recovery, and wait for Painter/background tasks before
-applying. If importing an update fails, CREAM restores the previous version and asks for a
-Painter restart. Previous versions are retained in python/cream-backups. No internet is
-required for normal exports. Updating from 1.2.x requires one Painter restart to install
-this reload mechanism; compatible future updates can restart only CREAM.
+Run `python -m unittest discover -s tests -p 'test_*.py'`, then
+`python scripts/build_release.py`. Qt integration scripts require Painter's SDK runtime.
+Microsoft texconv retains its bundled MIT license; Montserrat retains its SIL Open Font
+License. This private beta does not yet have a selected open-source license.

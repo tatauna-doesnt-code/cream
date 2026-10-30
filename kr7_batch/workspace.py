@@ -1,5 +1,5 @@
 """Task-focused layout for CREAM; export behavior lives in ui.Window."""
-from PySide6 import QtCore, QtWidgets as W
+from PySide6 import QtCore, QtGui, QtWidgets as W
 
 from . import core
 from .name_cell import PlayerNameDelegate
@@ -70,15 +70,14 @@ def build(window, default_output):
     """)
     header = W.QHBoxLayout()
     title = note("CREAM")
-    title.setStyleSheet("font-size: 23px; font-weight: 600;")
+    title.setFont(QtGui.QFont("Georgia", 22, QtGui.QFont.Bold))
+    title.setStyleSheet("font-family: Georgia; font-size: 27px; font-weight: bold;")
     title.setToolTip("Color Replacement & Export Automation Manager")
     header.addWidget(title)
     subtitle = note("Trackmania skin exporter")
     subtitle.setWordWrap(False)
     header.addWidget(subtitle)
     header.addStretch()
-    w.updates_link = button("Check for updates…", lambda: w.updates_dialog.show())
-    header.addWidget(w.updates_link)
     layout.addLayout(header)
 
     # Preview recovery remains reachable from every page.
@@ -98,29 +97,17 @@ def build(window, default_output):
     w.tabs.tabBar().setDrawBase(False)
     layout.addWidget(w.tabs, 1)
     w.fields = {}
-    w.setup_page, setup = page(w, "1  Setup", "Choose your source files",
-        "Start with an open Painter project. Each spreadsheet row becomes one personalized skin ZIP.")
-    files = W.QFormLayout()
-    files.setVerticalSpacing(12)
-    files.setFormAlignment(QtCore.Qt.AlignTop)
-    files.setFieldGrowthPolicy(W.QFormLayout.AllNonFixedFieldsGrow)
-    setup.addLayout(files)
-    w.field(files, "sheet", "Spreadsheet", "", "Spreadsheets (*.csv *.xlsx)")
-    files.addRow("", note("CSV or XLSX with player names and optional hex colors. You’ll match the columns when loading."))
-    w.load_button = button("Load spreadsheet…", w.load_sheet, True)
-    w.load_button.setMaximumWidth(220)
-    files.addRow("", w.load_button)
-    w.field(files, "base", "Base skin ZIP", "", "Skin (*.zip)")
-    files.addRow("", note("A working skin to copy. Only the textures you select will be replaced."))
-    w.field(files, "output", "Save ZIPs to", default_output, None)
-    files.addRow("", note("For in-game uploads, use the CarSport folder directly; subfolders may fail."))
-    setup.addStretch()
-    w.setup_hint = note("Next: load your spreadsheet and match its columns.")
-    setup.addWidget(w.setup_hint)
-
-    w.skins_page, skins = page(w, "2  Skins", "Choose the skins to export",
+    # Import path is internal state; import itself is available in the skin list.
+    w.fields['sheet'] = W.QLineEdit()
+    w.skins_page, skins = page(w, "1  Skins", "Choose the skins to export",
         "Check rows to include in the batch. Click a row to preview that skin in Painter.")
     tools = W.QHBoxLayout()
+    w.add_button = button("Add skin…", w.add_skin, True)
+    tools.addWidget(w.add_button)
+    w.edit_button = button("Edit skin…", w.edit_skin)
+    tools.addWidget(w.edit_button)
+    w.remove_button = button("Remove", w.remove_skin)
+    tools.addWidget(w.remove_button)
     tools.addWidget(button("Select all", lambda: w.check_rows(True)))
     tools.addWidget(button("Clear selection", lambda: w.check_rows(False)))
     w.skin_count = note("No skins loaded")
@@ -135,14 +122,16 @@ def build(window, default_output):
     resume_info.setAccessibleName("How resuming a batch works")
     resume_info.setToolTip("Choose a JSON report from the output folder’s _CREAM_reports directory. CREAM checks that the project and export settings match, then unchecks successfully exported rows whose ZIPs still exist. Failed or unfinished rows stay checked. Review the selection and click Export to continue.")
     tools.addWidget(resume_info)
+    w.load_button = button("Import CSV / XLSX…", w.import_sheet)
+    tools.addWidget(w.load_button)
     skins.addLayout(tools)
     w.empty_state = W.QWidget()
     empty = W.QVBoxLayout(w.empty_state)
     empty.addStretch()
-    message = note("No skins yet\nLoad a spreadsheet in Setup to see your players and colors here.")
+    message = note("Create your first skin\nAdd a player name and colors, or import a spreadsheet for a larger batch.")
     message.setAlignment(QtCore.Qt.AlignCenter)
     empty.addWidget(message)
-    empty.addWidget(button("Go to Setup", lambda: w.tabs.setCurrentWidget(w.setup_page)))
+    empty.addWidget(button("Add your first skin…", w.add_skin, True))
     empty.addStretch()
     skins.addWidget(w.empty_state, 1)
     w.backers = W.QTableWidget(0, 8)
@@ -172,7 +161,7 @@ def build(window, default_output):
     preview.addWidget(button("Choose textures →", lambda: w.tabs.setCurrentWidget(w.textures_page)))
     skins.addLayout(preview)
 
-    w.textures_page, textures = page(w, "3  Textures", "Choose which textures to replace",
+    w.textures_page, textures = page(w, "2  Textures", "Choose which textures to replace",
         "Check a set to include all its textures, or expand it to choose individual maps. Everything else stays as it is in the base ZIP.")
     w.texture_sets = TextureSets()
     textures.addWidget(w.texture_sets, 1)
@@ -181,7 +170,7 @@ def build(window, default_output):
     technical.setToolTip("DDS without mipmaps. OpenGL normals exported directly. Glass receives no player-name or color changes. Missing, unselected files remain absent.")
     textures.addWidget(technical)
 
-    w.naming_page, naming = page(w, "4  ZIP names", "Name the exported files",
+    w.naming_page, naming = page(w, "3  ZIP names", "Name the exported files",
         "Optional. By default, each ZIP uses its player name. This changes filenames only, not the names printed on the car.")
     w.fields["name_pattern"] = W.QLineEdit(core.DEFAULT_NAME_PATTERN)
     w.fields["name_pattern"].setMaxLength(200)
@@ -226,7 +215,7 @@ def build(window, default_output):
     w.summary = note("")
     action_layout.addWidget(w.summary)
     actions = W.QHBoxLayout()
-    w.status = note("Start in Setup: choose a spreadsheet and base skin ZIP.")
+    w.status = note("Add a skin to get started. Choose your base ZIP and output folder in Settings.")
     w.status.setMaximumHeight(48)
     actions.addWidget(w.status, 1)
     w.validate_button = button("Check configuration", w.validate)
@@ -237,16 +226,25 @@ def build(window, default_output):
     action_layout.addLayout(actions)
     layout.addWidget(action_panel)
 
-    w.updates_dialog = W.QDialog(w)
-    w.updates_dialog.setWindowTitle("CREAM — Updates")
-    w.updates_dialog.setMinimumWidth(540)
-    w.updates_layout = W.QVBoxLayout(w.updates_dialog)
-    w.updates_layout.setContentsMargins(20, 20, 20, 20)
-    w.updates_layout.setSpacing(16)
-    update_heading = note("Keep CREAM up to date")
-    update_heading.setStyleSheet("font-size: 18px; font-weight: 600;")
-    w.updates_layout.addWidget(update_heading)
-    w.updates_layout.addWidget(note("Installed version: " + VERSION + "\nCheck for a release, download it, then apply it. CREAM will tell you if Painter needs restarting."))
+    w.settings_page, settings = page(w, "Settings", "Files and updates",
+        "Choose the base skin and where exported ZIPs should be saved.")
+    w.setup_page = w.settings_page
+    files = W.QFormLayout()
+    files.setVerticalSpacing(12)
+    settings.addLayout(files)
+    w.field(files, 'base', 'Base skin ZIP', '', 'Skin (*.zip)')
+    files.addRow('', note('A working skin ZIP. Only selected textures are replaced.'))
+    w.field(files, 'output', 'Save ZIPs to', default_output, None)
+    files.addRow('', note('Use CarSport directly for in-game uploads; subfolders can fail.'))
+    w.setup_hint = note('Add skins, choose textures and export. Settings apply to every selected skin.')
+    settings.addWidget(w.setup_hint)
+    w.updates_layout = W.QVBoxLayout()
+    settings.addLayout(w.updates_layout)
+    heading = note('Updates')
+    heading.setStyleSheet('font-size: 17px; font-weight: 600;')
+    w.updates_layout.addWidget(heading)
+    w.updates_layout.addWidget(note('Installed: CREAM beta ' + VERSION + '\nCheck, download, then apply the update. CREAM explains when Painter must restart.'))
+    settings.addStretch()
     from .help_page import add_help
     add_help(w)
     from .preview_help import PreviewHelp
