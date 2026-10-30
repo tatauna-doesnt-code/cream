@@ -8,7 +8,7 @@ import shutil
 import stat
 import uuid
 
-DATA = Path(os.environ.get("LOCALAPPDATA", str(Path.home()))) / "KR7BatchExporter"
+DATA = Path(os.environ.get("LOCALAPPDATA", str(Path.home()))) / "CREAM"
 MAX_UNPACKED = 150 * 1024 * 1024
 RELOAD_PROTOCOL = 1
 RESTART_FILES = {"__init__.py", "bootstrap.py", "updater.py"}
@@ -30,12 +30,12 @@ def pending_path(target, data_dir=DATA):
 def read_manifest(root):
     root = Path(root).resolve()
     manifest = json.loads((root / "manifest.json").read_text(encoding="utf-8"))
-    if manifest.get("product") != "CREAM" or manifest.get("schema") != 1 or manifest.get("module") != "kr7_batch":
+    if manifest.get("product") != "CREAM" or manifest.get("schema") != 1 or manifest.get("module") != "cream":
         raise ValueError("This is not a valid CREAM update package.")
     files = manifest.get("files", {})
-    required = {"kr7_batch/__init__.py", "kr7_batch/bootstrap.py", "kr7_batch/updater.py",
-                "kr7_batch/version.py", "kr7_batch/core.py", "kr7_batch/painter.py", "kr7_batch/ui.py",
-                "kr7_batch/bin/texconv.exe"}
+    required = {"cream/__init__.py", "cream/bootstrap.py", "cream/updater.py",
+                "cream/version.py", "cream/core.py", "cream/painter.py", "cream/ui.py",
+                "cream/bin/texconv.exe"}
     if not isinstance(files, dict) or not required.issubset(files):
         raise ValueError("The CREAM package is incomplete.")
     if len({name.casefold() for name in files}) != len(files):
@@ -45,8 +45,8 @@ def read_manifest(root):
         path = root / name
         if path.is_symlink() or not path.is_file() or sha256(path) != digest:
             raise ValueError("Package integrity check failed: " + name)
-    actual = {p.relative_to(root).as_posix() for p in (root / "kr7_batch").rglob("*") if p.is_file()}
-    expected = {name for name in files if name.startswith("kr7_batch/")}
+    actual = {p.relative_to(root).as_posix() for p in (root / "cream").rglob("*") if p.is_file()}
+    expected = {name for name in files if name.startswith("cream/")}
     if actual != expected:
         raise ValueError("Unexpected files in the update plugin.")
     return manifest
@@ -75,8 +75,8 @@ def restart_requirement(target, manifest):
     target = Path(target)
     old = {p.relative_to(target).as_posix(): sha256(p) for p in target.rglob("*")
            if p.is_file() and "__pycache__" not in p.parts and p.suffix != ".pyc"}
-    new = {name[len("kr7_batch/"):]: digest for name, digest in manifest["files"].items()
-           if name.startswith("kr7_batch/")}
+    new = {name[len("cream/"):]: digest for name, digest in manifest["files"].items()
+           if name.startswith("cream/")}
     for name in sorted(old.keys() | new.keys()):
         if old.get(name) == new.get(name):
             continue
@@ -92,7 +92,7 @@ def pending_info(target, data_dir=DATA):
     if not marker.exists():
         return None
     pending = json.loads(marker.read_text(encoding="utf-8"))
-    if pending.get("target") != str(target) or target.name != "kr7_batch":
+    if pending.get("target") != str(target) or target.name != "cream":
         raise ValueError("The update target does not match this plugin.")
     updates = (Path(data_dir) / "updates").resolve()
     stage = (updates / pending["stage"]).resolve()
@@ -121,12 +121,12 @@ def apply_pending(target, data_dir=DATA, cream_only=False):
     next_dir = target.parent / (".cream-next-" + uuid.uuid4().hex)
     backup_root = target.parent.parent / "cream-backups"
     backup_root.mkdir(parents=True, exist_ok=True)
-    backup = backup_root / ("kr7_batch-" + uuid.uuid4().hex)
+    backup = backup_root / ("cream-" + uuid.uuid4().hex)
     moved_old = False
     try:
-        shutil.copytree(stage / "kr7_batch", next_dir)
+        shutil.copytree(stage / "cream", next_dir)
         for name, digest in manifest["files"].items():
-            if name.startswith("kr7_batch/") and sha256(next_dir / name[len("kr7_batch/"):]) != digest:
+            if name.startswith("cream/") and sha256(next_dir / name[len("cream/"):]) != digest:
                 raise ValueError("Update copy verification failed.")
         os.rename(target, backup)
         moved_old = True

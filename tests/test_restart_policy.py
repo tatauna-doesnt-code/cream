@@ -4,14 +4,14 @@ import shutil
 import tempfile
 import unittest
 
-from kr7_batch import bootstrap, core
+from cream import bootstrap, core
 
 
 class RestartPolicyTests(unittest.TestCase):
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory()
         self.root = Path(self.temp.name)
-        self.target = self.root / 'plugins' / 'kr7_batch'
+        self.target = self.root / 'plugins' / 'cream'
         self.target.mkdir(parents=True)
         for name in ('__init__.py', 'bootstrap.py', 'updater.py', 'ui.py', 'core.py', 'version.py', 'painter.py', 'bin/texconv.exe'):
             path = self.target / name
@@ -19,13 +19,13 @@ class RestartPolicyTests(unittest.TestCase):
             path.write_bytes(b'original')
         self.data = self.root / 'data'
         self.stage = self.data / 'updates' / 'test'
-        shutil.copytree(self.target, self.stage / 'kr7_batch')
+        shutil.copytree(self.target, self.stage / 'cream')
 
     def tearDown(self):
         self.temp.cleanup()
 
     def manifest(self, **policy):
-        return {'schema': 1, 'product': 'CREAM', 'module': 'kr7_batch', 'version': '9.0.0',
+        return {'schema': 1, 'product': 'CREAM', 'module': 'cream', 'version': '9.0.0',
                 'update': dict(protocol=1, restart='cream', min_reload_protocol=1, **policy),
                 'files': {p.relative_to(self.stage).as_posix(): bootstrap.sha256(p)
                           for p in self.stage.rglob('*') if p.is_file() and p.name != 'manifest.json'}}
@@ -37,7 +37,7 @@ class RestartPolicyTests(unittest.TestCase):
             'process_id': bootstrap.os.getpid(), 'manifest_sha256': bootstrap.sha256(self.stage / 'manifest.json')})
 
     def test_python_changes_allow_reload(self):
-        (self.stage / 'kr7_batch/ui.py').write_bytes(b'new UI')
+        (self.stage / 'cream/ui.py').write_bytes(b'new UI')
         m = self.manifest()
         self.assertEqual(bootstrap.restart_requirement(self.target, m)[0], 'cream')
         self.stage_marker(m)
@@ -52,7 +52,7 @@ class RestartPolicyTests(unittest.TestCase):
     def test_loader_native_and_unknown_files_override_declaration(self):
         for name in ('__init__.py', 'bootstrap.py', 'updater.py', 'bin/texconv.exe', 'native.pyd', 'config.json'):
             with self.subTest(name=name):
-                path = self.stage / 'kr7_batch' / name
+                path = self.stage / 'cream' / name
                 previous = path.read_bytes() if path.exists() else None
                 path.write_bytes(b'changed')
                 self.assertEqual(bootstrap.restart_requirement(self.target, self.manifest())[0], 'painter')
@@ -62,7 +62,7 @@ class RestartPolicyTests(unittest.TestCase):
                     path.write_bytes(previous)
 
     def test_removed_files_are_classified(self):
-        (self.stage / 'kr7_batch/bootstrap.py').unlink()
+        (self.stage / 'cream/bootstrap.py').unlink()
         self.assertEqual(bootstrap.restart_requirement(self.target, self.manifest())[0], 'painter')
 
     def test_missing_unknown_or_explicit_restart_policy_is_conservative(self):
@@ -74,7 +74,7 @@ class RestartPolicyTests(unittest.TestCase):
                 self.assertEqual(bootstrap.restart_requirement(self.target, m)[0], 'painter')
 
     def test_restart_required_cannot_be_bypassed_by_disabling_plugin(self):
-        (self.stage / 'kr7_batch/updater.py').write_bytes(b'new updater')
+        (self.stage / 'cream/updater.py').write_bytes(b'new updater')
         self.stage_marker(self.manifest())
         with self.assertRaisesRegex(RuntimeError, 'Restart Substance'):
             bootstrap.apply_pending(self.target, self.data)
@@ -88,6 +88,6 @@ class RestartPolicyTests(unittest.TestCase):
 
     def test_tampering_after_staging_is_rejected(self):
         self.stage_marker(self.manifest())
-        (self.stage / 'kr7_batch/core.py').write_bytes(b'tampered')
+        (self.stage / 'cream/core.py').write_bytes(b'tampered')
         with self.assertRaises(ValueError):
             bootstrap.pending_info(self.target, self.data)

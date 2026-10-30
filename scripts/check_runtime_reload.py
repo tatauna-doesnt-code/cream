@@ -29,14 +29,14 @@ sp.project.is_open = lambda: False
 with tempfile.TemporaryDirectory() as folder:
     root = Path(folder)
     os.environ['LOCALAPPDATA'] = str(root / 'local')
-    target = root / 'plugins/kr7_batch'
-    shutil.copytree(ROOT / 'kr7_batch', target, ignore=shutil.ignore_patterns('__pycache__'))
+    target = root / 'plugins/cream'
+    shutil.copytree(ROOT / 'cream', target, ignore=shutil.ignore_patterns('__pycache__'))
     for name in list(sys.modules):
-        if name == 'kr7_batch' or name.startswith('kr7_batch.'):
+        if name == 'cream' or name.startswith('cream.'):
             del sys.modules[name]
     sys.path.insert(0, str(target.parent))
-    import kr7_batch as plugin
-    from kr7_batch import bootstrap
+    import cream as plugin
+    from cream import bootstrap
     plugin.start_plugin()
     assert plugin._window is None  # Enabling the plugin must not open CREAM.
     plugin.show_window()
@@ -54,15 +54,15 @@ with tempfile.TemporaryDirectory() as folder:
     old.name_cells[0].editor.setText('Bompi')
     def stage(broken=False):
         stage = bootstrap.DATA / 'updates' / uuid.uuid4().hex
-        shutil.copytree(target, stage / 'kr7_batch', ignore=shutil.ignore_patterns('__pycache__'))
-        ui = stage / 'kr7_batch/ui.py'
+        shutil.copytree(target, stage / 'cream', ignore=shutil.ignore_patterns('__pycache__'))
+        ui = stage / 'cream/ui.py'
         if broken:
             ui.write_text("raise RuntimeError('simulated UI import failure')\n", encoding='utf-8')
         else:
-            path = stage / 'kr7_batch/version.py'
-            from kr7_batch.version import VERSION
+            path = stage / 'cream/version.py'
+            from cream.version import VERSION
             path.write_text(path.read_text().replace('VERSION = "' + VERSION + '"', 'VERSION = "99.0.0"'), encoding='utf-8')
-        manifest = {'schema': 1, 'product': 'CREAM', 'module': 'kr7_batch', 'version': '99.0.0',
+        manifest = {'schema': 1, 'product': 'CREAM', 'module': 'cream', 'version': '99.0.0',
                     'update': {'protocol': 1, 'restart': 'cream', 'min_reload_protocol': 1},
                     'files': {p.relative_to(stage).as_posix(): hashlib.sha256(p.read_bytes()).hexdigest()
                               for p in stage.rglob('*') if p.is_file()}}
@@ -83,11 +83,11 @@ with tempfile.TemporaryDirectory() as folder:
     sp.project.is_busy = lambda: True
     assert 'busy' in old.reload_block_reason()
     sp.project.is_open = lambda: False
-    old_module = sys.modules['kr7_batch.ui']
+    old_module = sys.modules['cream.ui']
     plugin.request_reload()
     app.processEvents()
     current = plugin._window
-    assert current is not old and sys.modules['kr7_batch.ui'] is not old_module
+    assert current is not old and sys.modules['cream.ui'] is not old_module
     assert '99.0.0' in current.windowTitle()
     assert current.fields['name_pattern'].text() == 'Community - {name}'
     assert current.styling_enabled.isChecked() and not current.name_style.isHidden()
@@ -124,6 +124,6 @@ with tempfile.TemporaryDirectory() as folder:
     plugin.close_plugin()
     # Release module references before TemporaryDirectory removes the test copy.
     for name in list(sys.modules):
-        if name == 'kr7_batch' or name.startswith('kr7_batch.'):
+        if name == 'cream' or name.startswith('cream.'):
             del sys.modules[name]
 print('Passed: deferred Qt reload, fresh modules, state preservation, active-job/preview/autosave guards, import-failure rollback, legacy loader upgrade.')

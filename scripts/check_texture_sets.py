@@ -7,7 +7,14 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 _dll = os.add_dll_directory(str(Path(sys.executable).resolve().parents[2]))
 from PySide6 import QtCore, QtGui, QtWidgets as W
-from kr7_batch.texture_sets import TextureSets, TEXTURE_SETS
+import types
+sp = types.ModuleType('substance_painter')
+sp.__path__ = []
+sp.application = types.ModuleType('substance_painter.application')
+sp.application.version_info = lambda: (12, 1, 3)
+sys.modules['substance_painter'] = sp
+sys.modules['substance_painter.application'] = sp.application
+from cream.texture_sets import TextureSets, TEXTURE_SETS
 
 app = W.QApplication.instance() or W.QApplication([])
 QtGui.QFontDatabase.addApplicationFont(r'C:\Windows\Fonts\segoeui.ttf')

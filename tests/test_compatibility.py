@@ -6,7 +6,7 @@ import types
 import unittest
 from unittest.mock import patch
 
-from kr7_batch.compatibility import Capabilities, texture_set_name
+from cream.compatibility import Capabilities, texture_set_name
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -42,15 +42,15 @@ class CompatibilityTests(unittest.TestCase):
             fake = types.ModuleType(binding)
             for name in ('QtCore', 'QtGui', 'QtWidgets'):
                 setattr(fake, name, types.SimpleNamespace(QAction=object()))
-            spec = importlib.util.spec_from_file_location('kr7_batch._qt_test', ROOT / 'kr7_batch/qt.py')
+            spec = importlib.util.spec_from_file_location('cream._qt_test', ROOT / 'cream/qt.py')
             module = importlib.util.module_from_spec(spec)
-            with patch('kr7_batch.compatibility.current', return_value=Capabilities(version)), \
+            with patch('cream.compatibility.current', return_value=Capabilities(version)), \
                  patch.dict(sys.modules, {binding: fake}):
                 spec.loader.exec_module(module)
             self.assertIs(module.QAction, getattr(fake, action_module).QAction)
 
     def test_runtime_and_development_code_parse_as_python_39(self):
-        for folder in ('kr7_batch', 'scripts'):
+        for folder in ('cream', 'scripts'):
             for path in (ROOT / folder).glob('*.py'):
                 with self.subTest(path=path.name):
                     ast.parse(path.read_text(encoding='utf-8'), feature_version=(3, 9))

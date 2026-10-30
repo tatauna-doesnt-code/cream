@@ -21,7 +21,7 @@ with tempfile.TemporaryDirectory() as folder, patch.object(ui, "DATA", Path(fold
     window = ui.Window(auto_update=False)
     window.show()
     app.processEvents()
-    assert window.tabs.currentWidget() is window.skins_page
+    assert window.tabs.currentWidget() is window.textures_page
     assert not window.export_button.isEnabled()
     assert not window.preview_button.isEnabled()
     assert window.tabs.indexOf(window.settings_page) == 4
@@ -42,7 +42,17 @@ with tempfile.TemporaryDirectory() as folder, patch.object(ui, "DATA", Path(fold
     assert window.export_button.text() == "Export 7 skins"
     assert not window.empty_state.isVisible()
     window.name_cells[4].editor.setText("p0Sik!")
+    window.tabs.setCurrentWidget(window.skins_page)
     app.processEvents()
+    # The two toolbar rows must fit without shrinking labels at the compact width.
+    window.resize(900, 700)
+    app.processEvents()
+    for control in (window.add_button, window.edit_button, window.remove_button,
+                    window.clear_batch_button, window.load_button, window.resume_button):
+        assert control.height() == 32, (control.text(), control.height())
+        assert control.width() >= control.sizeHint().width(), (control.text(), control.width(), control.sizeHint().width())
+    for cell in window.name_cells.values():
+        assert cell.editor.height() == cell.reset.height() == 32
     window.grab().save(str(ROOT / "dist/workspace-03-skins.png"))
     window.saved = {"project": "test"}
     window.sync_name_editing()
@@ -67,7 +77,7 @@ with tempfile.TemporaryDirectory() as folder, patch.object(ui, "DATA", Path(fold
     assert not window.preview_banner.isVisible()
     assert not window.inline_restore.isEnabled()
     assert not window.preview_help.timer.isActive()
-    assert window.tabs.tabText(2) == '3  ZIP names'
+    assert window.tabs.tabText(1) == '2  Skin ZIPfile names'
     assert window.tabs.tabText(3) == 'Logs'
     window.tabs.setCurrentWidget(window.textures_page)
     skin.expand.click()

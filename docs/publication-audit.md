@@ -1,4 +1,4 @@
-# Pre-publication audit — 2026-10-30
+# Pre-publication audit â€” 2026-10-30
 
 Repository snapshot: 98b34387197e42c65af11b695cc2f037a066e79a. Visibility remains private.
 
@@ -19,7 +19,7 @@ GitHub-native secret scanning should still be enabled when available.
 
 ### Personal path in historical UI source
 
-Four kr7_batch/ui.py blob versions contain a developer-specific absolute output path.
+Four historical UI module blob versions contain a developer-specific absolute output path.
 The actual private path is intentionally not repeated here. The current code uses
 the current Windows user's locations.
 
@@ -36,7 +36,7 @@ Cleaning Git history does not clean uploaded release ZIPs.
 ### Bornie artwork in history and v1.9.4
 
 The former wordmark is blob c8479c1bb773400c1ea16b3e40f2b15f58c40dd3,
-kr7_batch/assets/cream-logo.png. The v1.9.4 ZIP also contains it. Its source font
+the historical logo asset. The v1.9.4 ZIP also contains it. Its source font
 archive has a personal-use license; rendering an image did not resolve usage rights.
 The new source removes the bitmap/renderer and uses OFL-licensed Righteous.
 No Bornie OTF was found in the repository or release archives.

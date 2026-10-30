@@ -8,7 +8,7 @@ CREAM exports your Substance 3D Painter project into a ready-to-use **Trackmania
 
 On Painter 10.0 and newer, you can also personalize names and colors on the car and export a whole batch from one project. Enter the data directly, or import a spreadsheet when the list gets longer.
 
-**Beta 1.10.0 · Windows · Painter 9.0.0+**
+**Beta 1.11.0 · Windows · Painter 9.0.0+**
 
 [Download](https://github.com/tatauna-doesnt-code/cream/releases) · [Report a bug](https://github.com/tatauna-doesnt-code/cream/issues) · [Changelog](CHANGELOG.md) · [Contributing](CONTRIBUTING.md)
 
@@ -56,28 +56,35 @@ In export-only mode, names and the first two colors are **filename data**. They 
 
 1. Download **CREAM-plugin.zip** from [Releases](https://github.com/tatauna-doesnt-code/cream/releases).
 2. Extract the whole ZIP. Save your work and close Painter.
-3. Run **Instalar.cmd**. Administrator access is not required. The installer backs up an existing installation and preserves an existing `TM2020` export preset.
-4. Open Painter and enable **Python → kr7_batch**. That is the plugin's internal package name.
-5. Open **Window → CREAM — Batch Exporter**.
+3. Run **Install.cmd**. Administrator access is not required. The installer backs up an existing installation and preserves an existing `TM2020` export preset.
+4. Open Painter and enable **Python → cream**. That is the plugin's package name.
+5. Open **Window → CREAM — Skin Exporter**.
 
 CREAM does **not** open its window automatically when Painter starts. Enabling the plugin adds its menu entry; open it when you need it.
 
-For manual installation, copy `kr7_batch` into Painter's `python/plugins` folder and `preset/TM2020.spexp` into `assets/export-presets`. Both are under your Windows Documents folder, inside `Adobe/Adobe Substance 3D Painter`. Keep the bundled converter and fonts in the plugin folder.
+For manual installation, copy `cream` into Painter's `python/plugins` folder and `preset/TM2020.spexp` into `assets/export-presets`. Both are under your Windows Documents folder, inside `Adobe/Adobe Substance 3D Painter`. Keep the bundled converter and fonts in the plugin folder.
+
+### Upgrading from an older package name
+
+For this migration, download the release ZIP, close Painter and run **Install.cmd** once. Older versions cannot apply the renamed package through their built-in updater. Enable **Python → cream** after installation.
+
+The installer identifies previous CREAM installations by their repository identity, moves them outside Painter's plugins folder into `cream-backups`, and installs one copy under `cream`. It copies settings, protected GitHub access and recovery records into `%LOCALAPPDATA%/CREAM` without overwriting newer values. Previous data stays intact; pending updates are not carried over. Future updates use the new package normally.
 
 ## First export
 
 1. Open a saved Painter project and choose a working Trackmania skin ZIP as the base.
 2. In **Settings**, select the base ZIP and output folder. For in-game uploads, use **CarSport directly**; uploads from subfolders can fail. The base ZIP's files must be at its root.
-3. In **1 Skins**, click **Add skin…**. Turn off **Customize names and colors on the car** to export the existing project. This option is already off and disabled on Painter 9.x.
-4. In **2 Textures**, choose maps and resolutions. Files you don't select remain from the base ZIP.
-5. In **3 ZIP names**, set the filename pattern and optionally enable **Use Trackmania text styling**.
-6. Click **Check configuration**, then export one skin and check it in Trackmania.
+3. In **1 Textures**, choose maps and resolutions. Files you don't select remain from the base ZIP.
+4. In **2 Skin ZIPfile name**, type your filename, or keep `{name}` to use the project filename. Optionally enable **Use Trackmania text styling**.
+5. Click **Export current skin**. CREAM checks the configuration, exports the textures, converts to DDS and packages the ZIP.
+
+**You don't need a batch entry.** Leave Batch empty to export the open project exactly as it is, without changing names or colors on the car. No specially named layers are required.
 
 Existing output ZIPs are preserved. Duplicate names receive numeric suffixes.
 
 ## Customizing the car
 
-**Requires Painter 10.0.0+.** Enable **Customize names and colors on the car** in the Skins tab.
+**Requires Painter 10.0.0+.** Enable **Customize names and colors on the car** in the Batch tab.
 
 - **Names:** use Font resources in mask Fill effects named `PLAYER_NAME`. CREAM changes only Text. Set the font, size, placement and alignment in Painter.
 - **Colors:** use Fill layers named `PLAYER_COLOR1`, `PLAYER_COLOR2` and optionally `PLAYER_COLOR3`. Base Color must be an independent uniform color. Only that channel changes. Existing anchor points can reuse those colors elsewhere.
@@ -88,7 +95,11 @@ Colors use `#RRGGBB`; blank fields keep the project original. Names preserve cas
 
 Use **Preview highlighted skin** to check a variation in Painter, then **Restore original**. Other actions explain why they are locked while a preview is active.
 
-## Entries and spreadsheets
+## Batch exports
+
+Batch is optional. Add entries when you need several versions of the same project. Once the list contains entries, CREAM exports **only checked entries**. Selecting none does not fall back to a current-project export.
+
+**Clear batch…** removes the entries after confirmation and returns to exporting the current project. **Clear selection** only unchecks them. The filename tab becomes **Skin ZIPfile names** when there is more than one entry.
 
 Use **Add skin…**, **Edit skin…** and **Remove** to manage entries. Names are editable directly in the list. Overrides become **_bold italic_**; the refresh icon resets the original entry.
 
@@ -152,7 +163,7 @@ Public releases need no token. While the repository is private, testers need acc
 
 No commits or online releases are needed to test changes:
 
-1. Clone the repository or download its source ZIP, then install once with **Instalar.cmd**.
+1. Clone the repository or download its source ZIP, then install once with **Install.cmd**.
 2. Open Painter and CREAM. Edit the source and run **Dev.cmd**.
 3. In **Settings → Check for updates**, apply the local build or restart Painter when requested.
 

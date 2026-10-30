@@ -18,7 +18,7 @@ sp.application = types.ModuleType('substance_painter.application')
 sp.application.version_info = lambda: (12, 1, 3)
 sys.modules['substance_painter'] = sp
 sys.modules['substance_painter.application'] = sp.application
-from kr7_batch.columns import ColumnDialog, column_letter
+from cream.columns import ColumnDialog, column_letter
 
 app = W.QApplication.instance() or W.QApplication([])
 QtGui.QFontDatabase.addApplicationFont(r'C:\Windows\Fonts\segoeui.ttf')
@@ -53,8 +53,8 @@ sys.modules["substance_painter.ui"] = sp.ui
 sp.application = types.ModuleType('substance_painter.application')
 sp.application.version_info = lambda: (12, 1, 3)
 sys.modules['substance_painter.application'] = sp.application
-sys.modules["kr7_batch.painter"] = types.ModuleType("kr7_batch.painter")
-from kr7_batch import ui
+sys.modules["cream.painter"] = types.ModuleType("cream.painter")
+from cream import ui
 ui.painter.ready = lambda: False
 
 with tempfile.TemporaryDirectory() as folder, patch.object(ui, "DATA", Path(folder)):
@@ -126,13 +126,13 @@ with tempfile.TemporaryDirectory() as folder, patch.object(ui, "DATA", Path(fold
     with patch.object(ui.painter, "project_path", return_value="project.spp", create=True), \
             patch.object(ui.painter, "preset_maps", return_value=[], create=True):
         custom_signature = window.config_signature()
-        window.fields["name_pattern"].setText("KR7 - {name}")
+        window.fields["name_pattern"].setText("CUP - {name}")
         legacy_signature = window.config_signature()
         assert custom_signature != legacy_signature
         expected_legacy = ui.core.fingerprint({"project": "project.spp", "base": str(base.resolve()),
             "base_size": base.stat().st_size, "base_mtime": base.stat().st_mtime_ns,
             "maps": window.selections(), "preset": [], "normal_invert": False,
-            "dds_headers": "BC4U_BC5U", "normal_export": "Normal_OpenGL"})
+            "dds_headers": "BC4U_BC5U", "normal_export": "Normal_OpenGL", "zip_name_pattern": "CUP - {name}"})
         assert legacy_signature == expected_legacy
     window.fields["name_pattern"].setText("Community - {name}")
     window.save_settings()

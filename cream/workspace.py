@@ -18,7 +18,7 @@ def note(text):
 def button(text, callback, primary=False):
     control = W.QPushButton(text)
     control.setAutoDefault(False)
-    control.setMinimumHeight(30)
+    control.setFixedHeight(32)
     if primary:
         control.setObjectName("primaryAction")
     control.clicked.connect(callback)
@@ -46,18 +46,24 @@ def build(window, default_output):
     layout.setContentsMargins(16, 14, 16, 14)
     layout.setSpacing(12)
     w.setStyleSheet("""
+        QPushButton, QLineEdit, QComboBox { min-height: 22px; max-height: 22px; padding: 4px 8px; border: 1px solid #55595d; border-radius: 3px; }
+        QPushButton { background: #34373a; }
+        QPushButton:hover { background: #41464b; }
+        QPushButton:pressed { background: #282b2e; }
+        QComboBox { background: #202225; }
+
         QPushButton#primaryAction { background: #326b96; color: white;
-            border: 1px solid #568ab1; border-radius: 3px; padding: 6px 18px; font-weight: 600; }
+            border: 1px solid #568ab1; border-radius: 3px; padding: 4px 18px; font-weight: 600; }
         QPushButton#primaryAction:hover { background: #3c7bab; }
         QPushButton#primaryAction:disabled { background: #41464b; color: #a0a4a8; border-color: #555; }
-        QPushButton#primaryAction:focus { border: 2px solid #b8ddfa; }
+        QPushButton#primaryAction:focus { border-color: #b8ddfa; }
         QTabBar::tab { padding: 10px 18px; background: #222426; border: 1px solid #494c50; border-bottom: none; border-radius: 0; }
         QTabBar::tab:selected { background: #292b2e; border-top: 2px solid #6ca8cf; }
-        QLineEdit { min-height: 0; background: #202225; color: #eee; border: 1px solid #55595d; border-radius: 3px; padding: 3px 6px; }
+        QLineEdit { background: #202225; color: #eee; border: 1px solid #55595d; border-radius: 3px; padding: 4px 8px; }
         QLineEdit:disabled, QComboBox:disabled { color: #85888c; background: #292b2e; }
         QPushButton:disabled, QCheckBox:disabled { color: #85888c; }
         QWidget#pathRow { background: transparent; border: none; }
-        QToolButton { min-height: 24px; }
+        QToolButton { min-height: 22px; padding: 4px; border: 1px solid #55595d; border-radius: 3px; }
         QWidget#workspaceCard { background: #292b2e; border: 1px solid #494c50; border-radius: 0; }
         QTabWidget::pane { border: none; margin-top: -1px; }
         QTableWidget { background: #222426; alternate-background-color: #2b2d30;
@@ -76,6 +82,8 @@ def build(window, default_output):
     w.compatibility_notice.setStyleSheet('background: #3a3427; color: #ead9ae; border: 1px solid #6c6046; padding: 10px;')
     w.compatibility_notice.setVisible(bool(w.capabilities.warning))
     layout.addWidget(w.compatibility_notice)
+    w.workflow_notice = note('Current project · Export the skin as it is in Painter. Batch is optional.')
+    layout.addWidget(w.workflow_notice)
     # Preview recovery remains reachable from every page.
     w.preview_banner = W.QWidget()
     w.preview_banner.setObjectName("previewBanner")
@@ -95,8 +103,8 @@ def build(window, default_output):
     w.fields = {}
     # Import path is internal state; import itself is available in the skin list.
     w.fields['sheet'] = W.QLineEdit()
-    w.skins_page, skins = page(w, "1  Skins", "Choose the skins to export",
-        "Check rows to include in the batch. Click a row to preview that skin in Painter.")
+    w.skins_page, skins = page(w, "Batch", "Batch export · optional",
+        "Add entries only when you need multiple versions. An empty list exports the current project as-is.")
     w.customize_project = W.QCheckBox('Customize names and colors on the car')
     w.customize_project.setChecked(w.capabilities.customization)
     w.customize_project.setEnabled(w.capabilities.customization)
@@ -111,8 +119,17 @@ def build(window, default_output):
     tools.addWidget(w.edit_button)
     w.remove_button = button("Remove", w.remove_skin)
     tools.addWidget(w.remove_button)
-    tools.addWidget(button("Select all", lambda: w.check_rows(True)))
-    tools.addWidget(button("Clear selection", lambda: w.check_rows(False)))
+    w.clear_batch_button = button("Clear batch…", w.clear_batch)
+    tools.addWidget(w.clear_batch_button)
+    tools.addStretch()
+    w.load_button = button("Import CSV / XLSX…", w.import_sheet)
+    tools.addWidget(w.load_button)
+    skins.addLayout(tools)
+    tools = W.QHBoxLayout()
+    w.select_all_button = button("Select all", lambda: w.check_rows(True))
+    w.clear_selection_button = button("Clear selection", lambda: w.check_rows(False))
+    tools.addWidget(w.select_all_button)
+    tools.addWidget(w.clear_selection_button)
     w.skin_count = note("No skins loaded")
     tools.addWidget(w.skin_count)
     tools.addStretch()
@@ -125,16 +142,14 @@ def build(window, default_output):
     resume_info.setAccessibleName("How resuming a batch works")
     resume_info.setToolTip("Choose a JSON report from the output folder’s _CREAM_reports directory. CREAM checks that the project and export settings match, then unchecks successfully exported rows whose ZIPs still exist. Failed or unfinished rows stay checked. Review the selection and click Export to continue.")
     tools.addWidget(resume_info)
-    w.load_button = button("Import CSV / XLSX…", w.import_sheet)
-    tools.addWidget(w.load_button)
     skins.addLayout(tools)
     w.empty_state = W.QWidget()
     empty = W.QVBoxLayout(w.empty_state)
     empty.addStretch()
-    message = note("Create your first skin\nAdd a player name and colors, or import a spreadsheet for a larger batch.")
+    message = note("No batch needed for a single export\nChoose textures and a ZIPfile name to export the current project.\nAdd entries here only to create variations or export several named copies.")
     message.setAlignment(QtCore.Qt.AlignCenter)
     empty.addWidget(message)
-    empty.addWidget(button("Add your first skin…", w.add_skin, True))
+    empty.addWidget(button("Add a batch entry…", w.add_skin, True))
     empty.addStretch()
     skins.addWidget(w.empty_state, 1)
     w.backers = W.QTableWidget(0, 8)
@@ -164,8 +179,9 @@ def build(window, default_output):
     preview.addWidget(button("Choose textures →", lambda: w.tabs.setCurrentWidget(w.textures_page)))
     skins.addLayout(preview)
 
-    w.textures_page, textures = page(w, "2  Textures", "Choose which textures to replace",
+    w.textures_page, textures = page(w, "1  Textures", "Export your current skin",
         "Check a set to include all its textures, or expand it to choose individual maps. Everything else stays as it is in the base ZIP.")
+    w.textures_heading = textures.itemAt(0).widget()
     w.texture_sets = TextureSets()
     textures.addWidget(w.texture_sets, 1)
     textures.addWidget(note("Set resolution applies to every map in that set. Expand a set to override individual resolutions."))
@@ -173,8 +189,8 @@ def build(window, default_output):
     technical.setToolTip("DDS without mipmaps. OpenGL normals exported directly. Glass receives no player-name or color changes. Missing, unselected files remain absent.")
     textures.addWidget(technical)
 
-    w.naming_page, naming = page(w, "3  ZIP names", "Name the exported files",
-        "Optional. By default, each ZIP uses its player name. This changes filenames only, not the names printed on the car.")
+    w.naming_page, naming = page(w, "2  Skin ZIPfile name", "Name your skin ZIPfile",
+        "Use any filename, or a pattern for batch entries. This changes the ZIP name only, not text printed on the car.")
     w.fields["name_pattern"] = W.QLineEdit(core.DEFAULT_NAME_PATTERN)
     w.fields["name_pattern"].setMaxLength(200)
     w.fields["name_pattern"].setPlaceholderText("Event - {name}")
@@ -189,8 +205,9 @@ def build(window, default_output):
         tokens.addWidget(control)
     tokens.addStretch()
     naming.addLayout(tokens)
-    naming.addWidget(note("{name} uses your ZIP-name column, or the player name if none is mapped. Add a prefix such as Event - {name}. Duplicate names receive 2, 3…"))
-    naming.addWidget(note("Filename preview · highlighted skin (or sample before loading)"))
+    naming.addWidget(note("{name} uses the project filename for a single export, or each batch entry’s ZIP name / player name. Duplicate names receive 2, 3…"))
+    w.naming_context = note("")
+    naming.addWidget(w.naming_context)
     w.name_preview = note("")
     w.name_preview.setTextInteractionFlags(QtCore.Qt.TextSelectableByMouse)
     naming.addWidget(w.name_preview)
@@ -204,6 +221,11 @@ def build(window, default_output):
     w.styling_enabled.toggled.connect(w.toggle_name_helper)
     naming.addWidget(w.name_style)
     naming.addStretch()
+
+    # The everyday export workflow comes first. Batch is a separate optional area.
+    w.tabs.tabBar().moveTab(w.tabs.indexOf(w.textures_page), 0)
+    w.tabs.tabBar().moveTab(w.tabs.indexOf(w.naming_page), 1)
+    w.tabs.setCurrentWidget(w.textures_page)
 
     w.log_page, logs = page(w, "Logs", "Logs and troubleshooting", "Validation details, warnings and export results appear here.")
     w.log = W.QPlainTextEdit()
@@ -219,13 +241,13 @@ def build(window, default_output):
     w.summary = note("")
     action_layout.addWidget(w.summary)
     actions = W.QHBoxLayout()
-    w.status = note("Add a skin to get started. Choose your base ZIP and output folder in Settings.")
+    w.status = note("Choose your base ZIP and output folder in Settings, then select textures to export.")
     w.status.setMaximumHeight(48)
     actions.addWidget(w.status, 1)
     w.validate_button = button("Check configuration", w.validate)
     actions.addWidget(w.validate_button)
     w.export_button = button("Export skins", w.start, True)
-    w.export_button.setToolTip("Checks configuration, exports the selected skins, then restores the original project.")
+    w.export_button.setToolTip("Exports the current project when Batch is empty, or the checked batch entries. Configuration is checked before exporting.")
     actions.addWidget(w.export_button)
     action_layout.addLayout(actions)
     layout.addWidget(action_panel)

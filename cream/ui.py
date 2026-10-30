@@ -19,7 +19,7 @@ from .name_cell import PlayerNameCell, PlayerNameDelegate
 from .texture_sets import TextureSets
 from .version import VERSION
 
-DATA = Path(os.environ.get("LOCALAPPDATA", str(Path.home()))) / "KR7BatchExporter"
+DATA = Path(os.environ.get("LOCALAPPDATA", str(Path.home()))) / "CREAM"
 DEFAULT_OUTPUT = str(Path(QtCore.QStandardPaths.writableLocation(QtCore.QStandardPaths.DocumentsLocation))
                      / "Trackmania" / "Skins" / "Models" / "CarSport")
 CONVERTER = Path(__file__).parent / "bin" / "texconv.exe"
@@ -29,7 +29,7 @@ class Progress(W.QDialog):
     def __init__(self, parent, cancel):
         super().__init__(parent)
         self.cancel = cancel
-        self.setWindowTitle("CREAM — Batch in progress")
+        self.setWindowTitle("CREAM · Export in progress")
         self.setWindowModality(QtCore.Qt.ApplicationModal)
         self.setMinimumWidth(530)
         layout = W.QVBoxLayout(self)
@@ -110,8 +110,8 @@ class Window(W.QDialog):
         for button in (self.check_button, self.update_button):
             update_bar.addWidget(button)
         self.updates_layout.addWidget(self.access_button)
-        self.check_button.setMinimumHeight(34)
-        self.update_button.setMinimumHeight(34)
+        self.check_button.setFixedHeight(32)
+        self.update_button.setFixedHeight(32)
         self.check_button.clicked.connect(lambda: self.check_updates(interactive=True))
         self.access_button.clicked.connect(self.configure_access)
         self.update_button.clicked.connect(self.update_clicked)
@@ -140,7 +140,18 @@ class Window(W.QDialog):
         return self.capabilities.customization and self.customize_project.isChecked()
 
     def project_snapshot(self):
-        return painter.snapshot(customize=self.customizing())
+        return painter.snapshot(customize=bool(self.rows) and self.customizing())
+
+    def current_project_row(self):
+        """Filename context only. Never add the current project to the batch list."""
+        try:
+            if not painter.ready():
+                raise ValueError('No available project')
+            name = Path(painter.project_path()).stem or 'Skin'
+        except (ValueError, RuntimeError):
+            name = 'Skin'
+        return {'name': name, 'stem': name, 'id': 'current', 'line': 1,
+                'colors': [None, None, None]}
 
     def customization_changed(self, *args):
         self.filename_defaults = None
@@ -192,20 +203,36 @@ class Window(W.QDialog):
         preview = self.saved is not None
         self.empty_state.setVisible(not loaded)
         self.backers.setVisible(loaded)
-        self.skin_count.setText(f"{count} of {len(self.rows)} selected" if loaded else "No skins loaded")
+        self.skin_count.setText(f"{count} of {len(self.rows)} selected" if loaded else "No batch entries")
+        count = count if loaded else 1
+        self.tabs.setTabText(self.tabs.indexOf(self.naming_page),
+                            '2  Skin ZIPfile names' if len(self.rows) > 1 else '2  Skin ZIPfile name')
+        self.tabs.setTabText(self.tabs.indexOf(self.skins_page), 'Batch' + (f' ({len(self.rows)})' if loaded else ''))
+        self.workflow_notice.setText(
+            f"Batch mode · {count} of {len(self.rows)} entries selected. Clear the batch to export the current project as-is."
+            if loaded else "Current project · Export the skin as it is in Painter. Batch is optional.")
+        self.textures_heading.setText('Choose textures for the batch' if loaded else 'Export your current skin')
+        self.clear_batch_button.setEnabled(loaded and not busy and not preview)
+        self.select_all_button.setEnabled(loaded and not busy and not preview)
+        self.clear_selection_button.setEnabled(loaded and not busy and not preview)
+        self.naming_context.setText(
+            'Filename preview · highlighted batch entry' if loaded else
+            'Filename preview · current project. {name} uses the project filename; type any other name above to replace it.')
         self.summary.setText(f"{count} skins selected  ·  {maps} textures per skin  ·  {count * maps} texture exports")
-        self.export_button.setText(f"Export {count} skin" + ("s" if count != 1 else ""))
+        if not loaded:
+            self.summary.setText(f"Current project  ·  {maps} textures  ·  1 ZIP")
+        self.export_button.setText((f"Export {count} skin" + ("s" if count != 1 else "")) if loaded else "Export current skin")
         configured = bool(self.fields["base"].text().strip() and self.fields["output"].text().strip())
-        next_step = ("Add a skin or import a spreadsheet." if not loaded else
-                     "Choose a base ZIP and output folder in Settings." if not configured else
+        next_step = ("Choose a base ZIP and output folder in Settings." if not configured else
                      "Select skins to export." if not count else
-                     "Choose textures in step 2." if not maps else
+                     "Choose textures in step 1." if not maps else
+                     "Check the skin ZIPfile name." if getattr(self, 'filename_error', None) else
                      "Fix or reset the invalid player name." if self.invalid_names else
                      "Restore the preview before exporting." if preview else "")
         if next_step:
             self.summary.setText(next_step + "  " + self.summary.text())
-        self.export_button.setEnabled(bool(self.capabilities.export and count and maps and configured and not busy and not preview and not self.invalid_names))
-        self.validate_button.setEnabled(self.capabilities.export and loaded and not busy and not preview)
+        self.export_button.setEnabled(bool(self.capabilities.export and count and maps and configured and not busy and not preview and not self.invalid_names and not getattr(self, 'filename_error', None)))
+        self.validate_button.setEnabled(self.capabilities.export and not busy and not preview)
         self.preview_button.setEnabled(self.customizing() and loaded and self.backers.currentRow() >= 0 and not busy and not preview and not self.invalid_names)
         reason = 'Painter 10.0.0 or later is required to change names and colors on the car.'
         self.customize_project.setEnabled(self.capabilities.customization and not busy and not preview)
@@ -226,14 +253,15 @@ class Window(W.QDialog):
         self.inline_restore.setEnabled(preview and not busy)
         locked = {self.export_button: "Export", self.validate_button: "Configuration checking",
                   self.customize_project: 'Changing export mode',
-                  self.add_button: "Adding a skin", self.edit_button: "Editing skin data", self.remove_button: "Removing a skin",
+                  self.clear_batch_button: "Clearing the batch", self.select_all_button: "Selecting batch entries",
+                  self.clear_selection_button: "Changing the batch selection", self.add_button: "Adding a skin", self.edit_button: "Editing skin data", self.remove_button: "Removing a skin",
                   self.preview_button: "Applying another preview", self.load_button: "Loading a spreadsheet",
                   self.resume_button: "Resuming a batch"}
         for cell in self.name_cells.values():
             locked[cell.editor] = "Editing this player name"
             locked[cell.reset] = "Resetting this player name"
         self.preview_help.update(locked, preview and not busy)
-        self.setup_hint.setText("Settings apply to every selected skin. Review Skins, Textures and ZIP names before exporting.")
+        self.setup_hint.setText("Settings apply to current-project exports and every entry in a batch.")
 
     def refresh_update_notice(self):
         pending = bootstrap.pending_path(Path(__file__).parent).exists()
@@ -366,6 +394,8 @@ class Window(W.QDialog):
     def restore_reload_state(self, state):
         if not state:
             return
+        self.filename_defaults = None
+        self.filename_defaults_project = None
         self.rows = state["rows"]
         self.loaded_sheet = state["loaded_sheet"]
         self.name_originals = state.get("name_originals") or self.infer_name_originals()
@@ -379,11 +409,11 @@ class Window(W.QDialog):
         self.install_name_cells()
         self.customize_project.setChecked(self.capabilities.customization and state.get('customize', self.customizing()))
         self.styling_enabled.setChecked(bool(state.get("tm_styling", self.styling_enabled.isChecked())))
-        self.refresh_destinations()
         if state["selected"] >= 0:
             self.backers.selectRow(state["selected"])
         self.log.setPlainText(state["log"])
         self.tabs.setCurrentIndex(state.get("page", 0))
+        self.naming_changed()
         self.refresh_workflow()
 
     def stop_updater(self):
@@ -399,13 +429,13 @@ class Window(W.QDialog):
         layout.setContentsMargins(0, 0, 0, 0)
         text = W.QLineEdit(value)
         text.setAccessibleName(label)
-        text.setFixedHeight(30)
+        text.setFixedHeight(32)
         self.fields[key] = text
         layout.addWidget(text)
         button = W.QPushButton("Browse…")
         button.setAutoDefault(False)
         button.setAccessibleName("Browse for " + label)
-        button.setFixedHeight(30)
+        button.setFixedHeight(32)
         button.setFixedWidth(110)
         button.clicked.connect(lambda: self.browse(key, pattern))
         layout.addWidget(button)
@@ -488,6 +518,21 @@ class Window(W.QDialog):
         self.restore_reload_state(state)
         self.save_settings()
 
+    def clear_batch(self):
+        if not self.rows or self.saved is not None or self.runner is not None:
+            return
+        answer = W.QMessageBox.question(self, 'Clear batch?',
+            'Remove all batch entries and return to exporting the current project? '
+            'Manual edits in this list will be removed. Your spreadsheet and exported ZIPs are not changed.',
+            W.QMessageBox.Yes | W.QMessageBox.No, W.QMessageBox.No)
+        if answer != W.QMessageBox.Yes:
+            return
+        state = self.capture_reload_state()
+        state.update(rows=[], name_originals=[], checked=[], selected=-1, loaded_sheet=None,
+                     page=self.tabs.indexOf(self.textures_page))
+        self.restore_reload_state(state)
+        self.save_settings()
+
     def import_sheet(self):
         if self.saved is not None or self.runner is not None:
             return
@@ -502,7 +547,7 @@ class Window(W.QDialog):
             if state:
                 state['tm_styling'] = False
                 self.restore_reload_state(state)
-                self.tabs.setCurrentWidget(self.skins_page)
+                self.tabs.setCurrentWidget(self.textures_page)
         except (OSError, ValueError, KeyError, TypeError):
             pass
 
@@ -537,6 +582,8 @@ class Window(W.QDialog):
                     ids.add(row['id'])
                 rows = [*self.rows, *rows]
                 originals = [*self.name_originals, *originals]
+            self.filename_defaults = None
+            self.filename_defaults_project = None
             self.rows = rows
             self.name_originals = originals
             self.loaded_sheet = (self.fields["sheet"].text(), stamp)
@@ -643,6 +690,9 @@ class Window(W.QDialog):
         occupied = set()
         folder = Path(self.fields["output"].text())
         existing = {path.name.casefold() for path in folder.glob("*")} if folder.exists() else set()
+        if not self.rows:
+            path = core.next_destination(folder, core.format_skin_name(pattern, self.current_project_row(), defaults), occupied, existing)
+            self.name_preview.setText(path.name)
         for i, row in enumerate(self.rows):
             if i in self.invalid_names:
                 self.backers.item(i, 6).setText("Invalid player name")
@@ -675,6 +725,7 @@ class Window(W.QDialog):
         self.naming_changed()
 
     def naming_changed(self):
+        self.filename_error = None
         pattern = self.fields["name_pattern"].text()
         self.name_style.set_source(pattern)
         selected = max(0, self.backers.currentRow())
@@ -683,8 +734,7 @@ class Window(W.QDialog):
             self.name_style.set_preview("", {})
             return
         try:
-            example = self.rows[max(0, self.backers.currentRow())] if self.rows else {
-                "stem": "Joseph", "name": "Joseph", "id": "001", "line": 2, "colors": ["#FF8800", "#0088FF", None]}
+            example = self.rows[max(0, self.backers.currentRow())] if self.rows else self.current_project_row()
             defaults = self.get_filename_defaults() if core.name_color_fields(pattern) else self.filename_defaults
             self.name_preview.setText(core.format_skin_name(pattern, example, defaults) + ".zip")
             self.refresh_destinations()
@@ -696,11 +746,13 @@ class Window(W.QDialog):
                     colors[key] = None
             self.name_style.set_preview(self.name_preview.text(), colors)
         except ValueError as exc:
+            self.filename_error = str(exc)
             self.name_preview.setText(str(exc))
             self.name_style.set_preview("", {})
             for i in range(self.backers.rowCount()):
                 if self.backers.item(i, 6) is not None:
                     self.backers.item(i, 6).setText("Invalid name pattern")
+        self.refresh_workflow()
 
     def selections(self):
         return self.texture_sets.selections()
@@ -760,11 +812,10 @@ class Window(W.QDialog):
                                  "dds_headers": "BC4U_BC5U",
                                  "normal_export": "Normal_OpenGL"}
         pattern = self.fields["name_pattern"].text()
-        if pattern != core.LEGACY_NAME_PATTERN:
-            signature["zip_name_pattern"] = pattern
+        signature["zip_name_pattern"] = pattern
         if core.name_color_fields(pattern):
             signature["filename_color_defaults"] = painter.filename_color_defaults(self.project_snapshot())
-        if not self.customizing():
+        if not self.rows or not self.customizing():
             signature['customization'] = False
         return core.fingerprint(signature)
 
@@ -773,7 +824,8 @@ class Window(W.QDialog):
             raise ValueError(self.capabilities.warning)
         if not painter.ready():
             raise ValueError("Wait for Painter to finish its current operation and open a saved project in painting mode.")
-        self.ensure_rows()
+        if self.rows:
+            self.ensure_rows()
         core.validate_name_pattern(self.fields["name_pattern"].text())
         if self.saved or self.recovery_path().exists():
             raise ValueError("Restore original before validating or starting a new batch.")
@@ -792,11 +844,11 @@ class Window(W.QDialog):
             pass
         saved = self.project_snapshot()
         self.filename_defaults = painter.filename_color_defaults(saved) if core.name_color_fields(self.fields["name_pattern"].text()) else None
-        for row in self.rows:
+        for row in self.rows or [self.current_project_row()]:
             core.format_skin_name(self.fields["name_pattern"].text(), row, self.filename_defaults)
         maps = painter.preset_maps()
         painter.preflight_exports(maps, selections, output)
-        for i in range(3) if self.customizing() else ():
+        for i in range(3) if self.rows and self.customizing() else ():
             if any(r["colors"][i] for r in self.rows) and not any(t.get("index") == i for t in saved["targets"]):
                 raise ValueError(f"There is color_{i + 1} in the spreadsheet, but no PLAYER_COLOR{i + 1} in the project.")
         self.refresh_destinations()
@@ -808,7 +860,7 @@ class Window(W.QDialog):
             saved, _ = self.check()
             for target in saved["targets"]:
                 self.say("Found: " + " / ".join(map(str, target["location"])))
-            self.say(f"Configuration valid: {len(saved['targets'])} targets; {len(self.selections())} textures per backer. Run a test export first.")
+            self.say(f"Configuration valid: {len(saved['targets'])} targets; {len(self.selections())} textures per skin. Run a test export first.")
         except Exception as exc:
             self.error(exc)
 
@@ -881,8 +933,10 @@ class Window(W.QDialog):
         try:
             _, maps = self.check()
             indices = [i for i in range(len(self.rows)) if self.backers.item(i, 0).checkState() == QtCore.Qt.Checked]
-            if not indices:
-                raise ValueError("Select at least one backer.")
+            if not self.rows:
+                indices = [None]  # One as-is export, with no list entry or layer changes.
+            elif not indices:
+                raise ValueError("Select at least one batch entry, or clear the batch to export the current project.")
             saved = self.capture()
             captured = True
             output = Path(self.fields["output"].text())
@@ -891,7 +945,8 @@ class Window(W.QDialog):
             stamp = datetime.now().strftime("%Y%m%d-%H%M%S-%f")
             self.report_path = report_dir / (stamp + ".json")
             self.report = {"version": 1, "signature": self.config_signature(), "started": stamp,
-                           "project": saved["project"], "status": "running", "rows": []}
+                           "project": saved["project"], "mode": "batch" if self.rows else "current_project",
+                           "status": "running", "rows": []}
             core.atomic_json(self.report_path, self.report)
             self.cancel.clear()
             self.progress = Progress(self, self.cancel)
@@ -911,11 +966,13 @@ class Window(W.QDialog):
                     pass
             self.error(exc)
 
-    def wait_ready(self):
+    def wait_ready(self, project=None):
         while not painter.ready():
             if not sp.project.is_open():
                 raise RuntimeError("The project was closed. The recovery record was preserved.")
             yield
+        if project is not None and painter.project_path() != project:
+            raise RuntimeError("The open project changed during export. Export stopped.")
 
     def await_file(self, function, *args):
         self.future = self.pool.submit(function, *args)
@@ -933,22 +990,24 @@ class Window(W.QDialog):
             name_colors = painter.filename_color_defaults(saved) if core.name_color_fields(name_pattern) else None
             for position, index in enumerate(indices):
                 core.check_cancel(self.cancel)
-                row = self.rows[index]
+                row = self.rows[index] if index is not None else self.current_project_row()
                 entry = {"key": core.fingerprint(row), "id": row["id"], "line": row["line"],
                          "name": row["name"], "status": "running", "output": ""}
                 self.report["rows"].append(entry)
                 core.atomic_json(self.report_path, self.report)
-                self.backers.item(index, 7).setText("Processing")
+                if index is not None:
+                    self.backers.item(index, 7).setText("Processing")
                 temp = Path(tempfile.mkdtemp(prefix="cream-", dir=DATA))
                 try:
-                    yield from self.wait_ready()
+                    yield from self.wait_ready(saved["project"])
                     core.check_cancel(self.cancel)
-                    self.say(f"{position + 1}/{len(indices)} — applying {row['name']}")
-                    painter.apply(saved, row)
+                    if saved['targets']:
+                        self.say(f"{position + 1}/{len(indices)} — applying {row['name']}")
+                        painter.apply(saved, row)
                     yield
                     replacements = {}
                     for selection in selections:
-                        yield from self.wait_ready()
+                        yield from self.wait_ready(saved["project"])
                         core.check_cancel(self.cancel)
                         filename = f"{selection['set']}_{selection['map']}"
                         self.say(f"{position + 1}/{len(indices)} — {row['name']}: exporting {filename}")
@@ -970,31 +1029,39 @@ class Window(W.QDialog):
                     entry.update(status="success", output=final)
                     # Persist success immediately after publish; then restore the project.
                     core.atomic_json(self.report_path, self.report)
-                    self.backers.item(index, 0).setCheckState(QtCore.Qt.Unchecked)
-                    self.backers.item(index, 6).setText(Path(final).name)
-                    self.backers.item(index, 7).setText("Completed")
+                    if index is not None:
+                        self.backers.item(index, 0).setCheckState(QtCore.Qt.Unchecked)
+                        self.backers.item(index, 6).setText(Path(final).name)
+                        self.backers.item(index, 7).setText("Completed")
                 except core.Cancelled:
                     entry["status"] = "cancelled"
-                    self.backers.item(index, 7).setText("Cancelled")
+                    if index is not None:
+                        self.backers.item(index, 7).setText("Cancelled")
                     raise
                 except Exception as exc:
                     entry.update(status="failed", error=str(exc))
-                    self.backers.item(index, 7).setText("Failed")
+                    if index is not None:
+                        self.backers.item(index, 7).setText("Failed")
                     self.say(f"Failed for {row['name']}: {exc}. See the report.")
                 finally:
-                    yield from self.wait_ready()
-                    painter.apply(saved)
-                    core.atomic_json(self.report_path, self.report)
-                    shutil.rmtree(temp, ignore_errors=True)
+                    try:
+                        yield from self.wait_ready(saved["project"])
+                        if saved['targets']:
+                            painter.apply(saved)
+                    finally:
+                        try:
+                            core.atomic_json(self.report_path, self.report)
+                        finally:
+                            shutil.rmtree(temp, ignore_errors=True)
                 self.progress.bar.setValue(position + 1)
                 yield
             self.report["status"] = "completed_with_errors" if any(r["status"] == "failed" for r in self.report["rows"]) else "completed"
         except core.Cancelled:
             self.report["status"] = "cancelled"
         finally:
-            yield from self.wait_ready()
-            painter.apply(saved)
+            yield from self.wait_ready(saved["project"])
             if saved['targets']:
+                painter.apply(saved)
                 self.recovery_path().unlink(missing_ok=True)
             self.saved = None
             self.sync_name_editing()
@@ -1030,7 +1097,10 @@ class Window(W.QDialog):
             successes = sum(r["status"] == "success" for r in self.report["rows"])
             failures = sum(r["status"] == "failed" for r in self.report["rows"])
             cancelled = " Cancelled by the user." if self.report["status"] == "cancelled" else ""
-            self.say(f"Batch finished: {successes} ZIPs completed; {failures} failures.{cancelled} Report: {self.report_path}")
+            self.say(f"Export finished: {successes} ZIPs completed; {failures} failures.{cancelled} Report: {self.report_path}")
+
+        self.naming_changed()
+        self.refresh_workflow()
 
     def closeEvent(self, event):
         if self.runner:

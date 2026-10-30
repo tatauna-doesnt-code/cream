@@ -2,7 +2,7 @@ from pathlib import Path
 import tempfile
 import unittest
 
-from kr7_batch import core
+from cream import core
 
 
 class NamingTests(unittest.TestCase):

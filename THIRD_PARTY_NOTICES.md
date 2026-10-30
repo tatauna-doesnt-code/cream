@@ -5,9 +5,9 @@ components retain their own licenses; CREAM's license does not replace them.
 
 | Component | License | Included notice |
 | --- | --- | --- |
-| Microsoft DirectXTex texconv | MIT | `kr7_batch/bin/LICENSE-DirectXTex.txt` |
-| Montserrat fonts | SIL Open Font License 1.1 | `kr7_batch/fonts/OFL.txt` |
-| Righteous font, unmodified | SIL Open Font License 1.1 | `kr7_batch/fonts/righteous/OFL.txt` |
+| Microsoft DirectXTex texconv | MIT | `cream/bin/LICENSE-DirectXTex.txt` |
+| Montserrat fonts | SIL Open Font License 1.1 | `cream/fonts/OFL.txt` |
+| Righteous font, unmodified | SIL Open Font License 1.1 | `cream/fonts/righteous/OFL.txt` |
 
 Righteous: Copyright (c) 2011 by Brian J. Bonislawsky DBA Astigmatic (AOETI).
 Source: https://github.com/google/fonts/tree/main/ofl/righteous

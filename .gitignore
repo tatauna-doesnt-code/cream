@@ -16,6 +16,5 @@ settings.json
 *.xlsx
 *.xls
 *.csv
-!modelo_backers.csv
 _CREAM_reports/
-_KR7_reports/
+_*_reports/

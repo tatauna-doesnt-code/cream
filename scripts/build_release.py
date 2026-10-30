@@ -7,17 +7,17 @@ import zipfile
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
-from kr7_batch.version import VERSION, UPDATE_RESTART
+from cream.version import VERSION, UPDATE_RESTART
 
 
 def build():
-    files = [p for folder in ('kr7_batch', 'preset', 'scripts', 'tests', 'docs', '.github') for p in (ROOT / folder).rglob('*')
+    files = [p for folder in ('cream', 'preset', 'scripts', 'tests', 'docs', '.github') for p in (ROOT / folder).rglob('*')
              if p.is_file() and '__pycache__' not in p.parts and p.suffix != '.pyc']
-    files += [ROOT / p for p in ('Instalar.cmd', 'Instalar.ps1', 'Dev.cmd', 'LEIA-ME.md', 'modelo_backers.csv',
+    files += [ROOT / p for p in ('Install.cmd', 'Install.ps1', 'Dev.cmd', 
                                 'LICENSE', 'THIRD_PARTY_NOTICES.md', 'CONTRIBUTING.md', 'SECURITY.md')]
     # Releases include their corresponding source, build instructions and license.
     files += [ROOT / p for p in ('README.md', 'CHANGELOG.md')]
-    manifest = {'schema': 1, 'product': 'CREAM', 'module': 'kr7_batch', 'version': VERSION,
+    manifest = {'schema': 1, 'product': 'CREAM', 'module': 'cream', 'version': VERSION,
                 'update': {'protocol': 1, 'restart': UPDATE_RESTART, 'min_reload_protocol': 1},
                 'files': {p.relative_to(ROOT).as_posix(): hashlib.sha256(p.read_bytes()).hexdigest() for p in files}}
     destination = ROOT / 'dist' / 'CREAM-plugin.zip'

@@ -1,7 +1,7 @@
 import copy
 import unittest
 
-from kr7_batch import core
+from cream import core
 
 
 class PlayerNameEditTests(unittest.TestCase):

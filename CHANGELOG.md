@@ -1,5 +1,20 @@
 # Changes
 
+## 1.11.0 beta
+
+- Rename the Python package to `cream`, installer to `Install.cmd` / `Install.ps1`, and local data directory to `CREAM`. Update development scripts, tests and manifests.
+- Remove the redundant translated README and obsolete sample CSV; the README explains spreadsheet columns.
+- Add installation migration with backups and rollback, keeping settings, protected access, recovery records and existing presets. This rename requires one manual installation; older updaters cannot apply the new package name.
+
+- Make current-project export the default: an empty Batch list exports one ZIP without changing any layers.
+- Open Textures first, followed by Skin ZIPfile Name. Batch is a separate optional area; the filename tab becomes plural for multiple entries.
+- Resolve `{name}` to the project filename for single exports, with the same TM styling, duplicate protection, DDS conversion and safe cancellation as batch exports.
+- Split the Batch toolbar into entry management and selection rows. Add Clear batch with confirmation; selecting no entries never triggers an unintended single export.
+- Standardize action buttons, single-line inputs and resolution controls at 32 px, including inline player-name reset controls.
+- Update the menu entry, Help and README to explain both workflows.
+- Add Qt5/Qt6 integration coverage for empty-list exports, untouched layers, cancellation cleanup and returning from batch to single export.
+
+
 ## 1.10.0 beta
 
 - Add Painter 9.x export-only mode with DDS conversion, ZIP packaging and TM filename styling.
@@ -145,7 +160,7 @@
 
 - Configure ZIP filenames with {name}, {player}, {id} and {row}, with a live example
   and per-row destination preview. Automatically append .zip and retain collision suffixes.
-- Preserve KR7 - {name} for existing settings; default new installations to {name}.
+- Preserve existing filename patterns; default new installations to {name}.
   Remove the hardcoded Windows username from the default output folder.
 - Validate patterns and Windows filenames before editing the Painter project. Naming
   affects only ZIP filenames, never the text applied to the skin.

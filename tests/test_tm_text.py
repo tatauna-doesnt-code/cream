@@ -1,7 +1,7 @@
 from dataclasses import replace
 import unittest
 
-from kr7_batch import core, tm_text
+from cream import core, tm_text
 
 
 class TMTextTests(unittest.TestCase):

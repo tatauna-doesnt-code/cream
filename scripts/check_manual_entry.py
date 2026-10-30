@@ -7,8 +7,8 @@ from unittest.mock import patch
 ROOT = Path(__file__).resolve().parents[1]
 context = runpy.run_path(str(ROOT / 'scripts/check_columns_ui.py'))
 W, ui, app = (context[key] for key in ('W', 'ui', 'app'))
-from kr7_batch.manual_entry import SkinDialog
-from kr7_batch.columns import ColumnDialog
+from cream.manual_entry import SkinDialog
+from cream.columns import ColumnDialog
 
 with tempfile.TemporaryDirectory() as folder, patch.object(ui, 'DATA', Path(folder)):
     window = ui.Window(auto_update=False)
