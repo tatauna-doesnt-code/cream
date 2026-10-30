@@ -122,6 +122,16 @@ with tempfile.TemporaryDirectory() as folder, patch.object(ui, 'DATA', Path(fold
                                           'colors': ['#AABBCC', None, None]}],
                                  'loaded_sheet': None, 'checked': [True], 'selected': 0, 'log': '',
                                  'customize': False})
+    original = window.capture_reload_state()
+    bulk = dict(original, rows=[dict(original['rows'][0], id=str(i), line=i + 1,
+                                    name='Player' + str(i), stem='Player' + str(i)) for i in range(200)],
+                name_originals=None, checked=[False] * 200)
+    window.restore_reload_state(bulk)
+    if version >= (10, 0, 0):
+        window.customize_project.setChecked(True)
+        window.customize_project.setChecked(False)
+    assert all(not window.backers.item(i, 5).flags() & ui.QtCore.Qt.ItemIsEnabled for i in range(200))
+    window.restore_reload_state(original)
     section = window.texture_sets.groups['Skin']
     section.table.item(0, 0).setCheckState(ui.QtCore.Qt.Checked)
     section.sizes[0].setCurrentIndex(section.sizes[0].findData(1024))

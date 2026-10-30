@@ -145,8 +145,25 @@ class Window(W.QDialog):
     def customization_changed(self, *args):
         self.filename_defaults = None
         self.filename_defaults_project = None
+        self.sync_color3_availability()
         self.refresh_workflow()
         self.naming_changed()
+
+    def sync_color3_availability(self):
+        # Run once per mode/list change, not on every table itemChanged signal.
+        signals_blocked = self.backers.blockSignals(True)
+        try:
+            for i in range(self.backers.rowCount()):
+                item = self.backers.item(i, 5)
+                if item is not None:
+                    flags = item.flags()
+                    enabled = bool(flags & QtCore.Qt.ItemIsEnabled)
+                    if enabled != self.customizing():
+                        item.setFlags(flags | QtCore.Qt.ItemIsEnabled if self.customizing()
+                                      else flags & ~QtCore.Qt.ItemIsEnabled)
+                    item.setToolTip('Skin color 3 is unused in export-only mode.' if not self.customizing() else '')
+        finally:
+            self.backers.blockSignals(signals_blocked)
 
     def adopt_reload_support(self):
         """Finish a one-time upgrade applied by the pre-1.3 startup loader."""
@@ -198,15 +215,6 @@ class Window(W.QDialog):
                               (4, 'Color 2' if self.customizing() else 'Text color 2')):
             self.backers.horizontalHeaderItem(column).setText(label)
         self.export_only_notice.setVisible(not self.customizing())
-        for i in range(self.backers.rowCount()):
-            item = self.backers.item(i, 5)
-            if item is not None:
-                flags = item.flags()
-                enabled = bool(flags & QtCore.Qt.ItemIsEnabled)
-                if enabled != self.customizing():
-                    item.setFlags(flags | QtCore.Qt.ItemIsEnabled if self.customizing()
-                                  else flags & ~QtCore.Qt.ItemIsEnabled)
-                item.setToolTip('Skin color 3 is unused in export-only mode.' if not self.customizing() else '')
         self.recover_button.setEnabled(self.capabilities.customization and not busy)
         self.recover_button.setToolTip(reason if not self.capabilities.customization else 'Restore the saved original layer values after an interrupted preview or batch.')
         self.preview_banner.setVisible(preview and not busy)
@@ -578,6 +586,7 @@ class Window(W.QDialog):
             cell.changed.connect(lambda value, i=index: self.edit_player_name(i, value))
             cell.reset_requested.connect(lambda i=index: self.reset_player_name(i))
             cell.focused.connect(lambda i=index: self.backers.selectRow(i))
+        self.sync_color3_availability()
         self.sync_name_editing()
         self.sync_name_selection()
 
