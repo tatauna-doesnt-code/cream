@@ -52,6 +52,7 @@ with tempfile.TemporaryDirectory() as folder, patch.object(ui, "DATA", Path(fold
     path = Path(folder) / "input.csv"
     path.write_text("Nickname;Color;Color\nJoseph;#AABBCC;#DDEEFF\n", encoding="utf-8")
     window = ui.Window(auto_update=False)
+    assert 'converter' not in window.fields
     assert window.fields["name_pattern"].text() == "{name}"
     assert not window.styling_enabled.isChecked()
     window.fields["sheet"].setText(str(path))
@@ -105,6 +106,10 @@ with tempfile.TemporaryDirectory() as folder, patch.object(ui, "DATA", Path(fold
     window.fields["name_pattern"].setText("{unknown}")
     assert window.backers.item(0, 6).text() == "Invalid name pattern"
     window.fields["name_pattern"].setText("Community - {name}")
+    wheels = window.texture_sets.groups['Wheels']
+    wheels.export.click()
+    wheels.resolution.setCurrentIndex(wheels.resolution.findData(4096))
+    wheels.sizes[1].setCurrentIndex(wheels.sizes[1].findData(2048))
     window.save_settings()
     base = Path(folder) / "base.zip"
     base.write_bytes(b"signature fixture")
@@ -126,6 +131,7 @@ with tempfile.TemporaryDirectory() as folder, patch.object(ui, "DATA", Path(fold
     second = ui.Window(auto_update=False)
     assert second.column_profile == profile
     assert second.fields["name_pattern"].text() == "Community - {name}"
+    assert second.texture_sets.settings() == window.texture_sets.settings()
     with patch.object(ColumnDialog, "exec", return_value=W.QDialog.Rejected):
         window.load_sheet()
     assert window.rows[0]["name"] == "Joseph"
@@ -137,9 +143,11 @@ with tempfile.TemporaryDirectory() as folder, patch.object(ui, "DATA", Path(fold
     window.name_cells[0].reset.click()
     settings = json.loads((Path(folder) / "settings.json").read_text())
     settings["fields"].pop("name_pattern")
+    settings['fields']['converter'] = 'C:/obsolete/custom/texconv.exe'
     (Path(folder) / "settings.json").write_text(json.dumps(settings))
     legacy = ui.Window(auto_update=False)
     assert legacy.fields["name_pattern"].text() == "KR7 - {name}"
+    assert 'converter' not in legacy.fields and ui.CONVERTER == Path(ui.__file__).parent / 'bin/texconv.exe'
     for item in (window, second, legacy):
         item.stop_updater()
         item.pool.shutdown(wait=True)
