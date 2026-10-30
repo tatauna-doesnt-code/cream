@@ -21,6 +21,17 @@ class UpdateTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             updater.version_tuple('v1.2.3-beta')
 
+    def test_release_contains_license_sources_and_no_bornie(self):
+        with zipfile.ZipFile(build()) as package:
+            names = set(package.namelist())
+            self.assertTrue({'LICENSE', 'THIRD_PARTY_NOTICES.md', 'README.md',
+                             'scripts/build_release.py', 'tests/test_updates.py',
+                             'kr7_batch/fonts/righteous/Righteous-Regular.ttf',
+                             'kr7_batch/fonts/righteous/OFL.txt'}.issubset(names))
+            self.assertIn(b'GNU GENERAL PUBLIC LICENSE', package.read('LICENSE'))
+            self.assertNotIn('kr7_batch/assets/cream-logo.png', names)
+            self.assertNotIn('scripts/render_logo.py', names)
+
     def test_traversal_rejected(self):
         for name in ('../evil', '/evil', 'kr7_batch/../../evil', 'C:/evil', 'a\\b', 'a/CON.py', 'a./b'):
             with self.subTest(name=name), self.assertRaises(ValueError):

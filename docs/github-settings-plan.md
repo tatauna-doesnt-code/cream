@@ -1,8 +1,8 @@
 # Repository administration plan
 
-These are **desired settings**, not a claim that they have been applied.
+The ruleset and available Actions/dependency settings below were configured in the browser on 2026-10-30. Public-only settings remain pending. See publication-audit.md for the verified status.
 The connected GitHub tools can edit source/PRs, but do not expose administration
-mutations. The current private repository also returns a plan restriction for rulesets.
+mutations; browser administration was explicitly authorized for this task. The current private repository also returns a plan restriction for rulesets.
 No visibility change is performed by this plan or its helper script.
 
 ## Main branch

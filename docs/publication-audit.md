@@ -63,3 +63,19 @@ Dependabot action updates, contribution/security policies and issue forms are in
 Ruleset enforcement, public-fork approval policy, secret scanning/push protection,
 private vulnerability reporting and public CodeQL need verification when the repository
 is public or on a plan that supports them. See github-settings-plan.md for desired values.
+
+## Verified live administration changes
+
+On 2026-10-30 the browser confirmed ruleset CREAM main protection, ID 26240731,
+was created with Active status, targeting main, no bypass actors, pull requests,
+zero mandatory approvals, resolved conversations, up-to-date branches, GitHub Actions
+Test and package, deletion restriction and force-push blocking. GitHub explicitly
+states this private repository's plan does not enforce it yet. Recheck enforcement
+before relying on it after publication or a plan change.
+
+The public-fork all-contributor approval setting, private vulnerability reporting,
+secret scanning and push protection are not currently exposed on this private
+personal repository's available settings page. They remain post-publication tasks.
+CodeQL is included but intentionally skips private repositories on this plan.
+Dependency graph and Dependabot alerts/security updates are verified On. Malware
+alerts did not become enabled and are not claimed as configured.
