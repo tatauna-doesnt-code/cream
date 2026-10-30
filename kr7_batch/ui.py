@@ -172,6 +172,14 @@ class Window(W.QDialog):
         self.preview_banner.setVisible(preview and not busy)
         self.load_button.setEnabled(not busy and not preview)
         self.resume_button.setEnabled(loaded and not busy and not preview)
+        self.inline_restore.setEnabled(preview and not busy)
+        locked = {self.export_button: "Export", self.validate_button: "Configuration checking",
+                  self.preview_button: "Applying another preview", self.load_button: "Loading a spreadsheet",
+                  self.resume_button: "Resuming a batch"}
+        for cell in self.name_cells.values():
+            locked[cell.editor] = "Editing this player name"
+            locked[cell.reset] = "Resetting this player name"
+        self.preview_help.update(locked, preview and not busy)
         self.setup_hint.setText("Spreadsheet loaded. Review Skins, choose Textures, then export." if loaded
                                 else "Next: load your spreadsheet and match its columns.")
 
@@ -281,6 +289,7 @@ class Window(W.QDialog):
         return ""
 
     def stop_background_tasks(self):
+        self.preview_help.update({}, False)
         self.timer.stop()
         self.stop_updater()
         self.update_pool.shutdown(wait=True, cancel_futures=True)

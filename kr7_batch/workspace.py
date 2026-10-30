@@ -27,6 +27,8 @@ def button(text, callback, primary=False):
 
 def page(window, tab, title, description):
     content = W.QWidget()
+    content.setObjectName("workspaceCard")
+    content.setAttribute(QtCore.Qt.WA_StyledBackground, True)
     layout = W.QVBoxLayout(content)
     layout.setContentsMargins(16, 16, 16, 16)
     layout.setSpacing(12)
@@ -52,6 +54,16 @@ def build(window, default_output):
         QTabBar::tab { padding: 10px 18px; }
         QLineEdit { min-height: 26px; }
         QToolButton { min-height: 24px; }
+        QWidget#workspaceCard { background: #292b2e; border: 1px solid #494c50; border-radius: 5px; }
+        QTabWidget::pane { border: none; }
+        QTableWidget { background: #222426; alternate-background-color: #2b2d30;
+            color: #eeeeee; border: 1px solid #494c50; selection-background-color: #365568; selection-color: white; }
+        QTableWidget::item { color: #eeeeee; }
+        QTableWidget::item:alternate { background: #2b2d30; }
+        QTableWidget::item:selected { background: #365568; color: white; }
+        QWidget#previewBanner { background: #263c49; border: 1px solid #537184; border-radius: 4px; }
+        QFrame#actionPanel { background: #242629; border: 1px solid #494c50; border-radius: 4px; }
+        QWidget#textureSetCard { background: #222426; border: 1px solid #494c50; border-radius: 4px; }
     """)
     header = W.QHBoxLayout()
     title = note("CREAM")
@@ -68,8 +80,10 @@ def build(window, default_output):
 
     # Preview recovery remains reachable from every page.
     w.preview_banner = W.QWidget()
+    w.preview_banner.setObjectName("previewBanner")
+    w.preview_banner.setAttribute(QtCore.Qt.WA_StyledBackground, True)
     banner = W.QHBoxLayout(w.preview_banner)
-    banner.setContentsMargins(0, 0, 0, 0)
+    banner.setContentsMargins(12, 8, 12, 8)
     banner.addWidget(note("Preview active in Painter. Restore the original before exporting or editing names."), 1)
     w.restore_button = button("Restore original", w.restore)
     banner.addWidget(w.restore_button)
@@ -123,6 +137,12 @@ def build(window, default_output):
     tools.addStretch()
     w.resume_button = button("Resume a previous batch…", w.resume)
     tools.addWidget(w.resume_button)
+    resume_info = W.QToolButton()
+    resume_info.setIcon(w.style().standardIcon(W.QStyle.SP_MessageBoxInformation))
+    resume_info.setAccessibleName("How resuming a batch works")
+    resume_info.setToolTip("Choose a JSON report from the output folder’s _KR7_reports directory. CREAM checks that the project and export settings match, then unchecks successfully exported rows whose ZIPs still exist. Failed or unfinished rows stay checked. Review the selection and click Export to continue.")
+    resume_info.clicked.connect(lambda: W.QToolTip.showText(resume_info.mapToGlobal(resume_info.rect().bottomLeft()), resume_info.toolTip(), resume_info))
+    tools.addWidget(resume_info)
     skins.addLayout(tools)
     w.empty_state = W.QWidget()
     empty = W.QVBoxLayout(w.empty_state)
@@ -154,6 +174,8 @@ def build(window, default_output):
     preview = W.QHBoxLayout()
     w.preview_button = button("Preview highlighted skin", w.preview)
     preview.addWidget(w.preview_button)
+    w.inline_restore = button("Restore original", w.restore)
+    preview.addWidget(w.inline_restore)
     preview.addStretch()
     preview.addWidget(button("Choose textures →", lambda: w.tabs.setCurrentWidget(w.textures_page)))
     skins.addLayout(preview)
@@ -167,7 +189,7 @@ def build(window, default_output):
     technical.setToolTip("DDS without mipmaps. OpenGL normals exported directly. Glass receives no player-name or color changes. Missing, unselected files remain absent.")
     textures.addWidget(technical)
 
-    w.naming_page, naming = page(w, "ZIP names", "Name the exported files",
+    w.naming_page, naming = page(w, "4  ZIP names", "Name the exported files",
         "Optional. By default, each ZIP uses its player name. This changes filenames only, not the names printed on the car.")
     w.fields["name_pattern"] = W.QLineEdit(core.DEFAULT_NAME_PATTERN)
     w.fields["name_pattern"].setMaxLength(200)
@@ -199,14 +221,18 @@ def build(window, default_output):
     naming.addWidget(w.name_style)
     naming.addStretch()
 
-    w.log_page, logs = page(w, "Activity", "Activity and troubleshooting", "Validation details, warnings and export results appear here.")
+    w.log_page, logs = page(w, "Logs", "Logs and troubleshooting", "Validation details, warnings and export results appear here.")
     w.log = W.QPlainTextEdit()
     w.log.setReadOnly(True)
     logs.addWidget(w.log, 1)
     logs.addWidget(button("Restore original / recover project", w.restore))
 
+    action_panel = W.QFrame()
+    action_panel.setObjectName("actionPanel")
+    action_layout = W.QVBoxLayout(action_panel)
+    action_layout.setContentsMargins(12, 10, 12, 10)
     w.summary = note("")
-    layout.addWidget(w.summary)
+    action_layout.addWidget(w.summary)
     actions = W.QHBoxLayout()
     w.status = note("Start in Setup: choose a spreadsheet and base skin ZIP.")
     w.status.setMaximumHeight(48)
@@ -216,11 +242,14 @@ def build(window, default_output):
     w.export_button = button("Export skins", w.start, True)
     w.export_button.setToolTip("Checks configuration, exports the selected skins, then restores the original project.")
     actions.addWidget(w.export_button)
-    layout.addLayout(actions)
+    action_layout.addLayout(actions)
+    layout.addWidget(action_panel)
 
     w.updates_dialog = W.QDialog(w)
     w.updates_dialog.setWindowTitle("CREAM — Updates")
     w.updates_dialog.setMinimumWidth(500)
     w.updates_layout = W.QVBoxLayout(w.updates_dialog)
     w.updates_layout.addWidget(note("CREAM " + VERSION + "\nUpdates are checked automatically when CREAM opens."))
+    from .preview_help import PreviewHelp
+    w.preview_help = PreviewHelp(w)
     return layout

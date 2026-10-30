@@ -1,5 +1,14 @@
 # Changes
 
+## 1.8.1
+
+- Use explicit neutral gray table rows and readable text instead of host-theme purple alternation.
+- Group pages, texture sets, preview recovery and export controls into bordered dark panels.
+- Number ZIP names as step 4 and rename Activity to the unnumbered Logs page.
+- Place Restore original beside Preview, retaining the global preview banner.
+- Explain preview-locked controls with a cursor-following tooltip, including disabled
+  buttons and read-only name editors. Add an information tooltip explaining report-based resume.
+
 ## 1.8.0
 
 - Reorganize the workspace into Setup, Skins and Textures, with separate optional ZIP

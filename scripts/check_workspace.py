@@ -47,10 +47,28 @@ with tempfile.TemporaryDirectory() as folder, patch.object(ui, "DATA", Path(fold
     window.saved = {"project": "test"}
     window.sync_name_editing()
     assert window.preview_banner.isVisible()
+    assert window.inline_restore.isEnabled()
+    assert window.preview_help.timer.isActive()
+    assert window.export_button in window.preview_help.targets
+    assert window.name_cells[0].editor in window.preview_help.targets
+    window.move(0, 0)
+    window.resize(900, 700)
+    app.processEvents()
+    QtGui.QCursor.setPos(window.export_button.mapToGlobal(window.export_button.rect().center()))
+    # Offscreen Qt does not provide native disabled-widget hit testing.
+    with patch.object(W.QApplication, 'widgetAt', return_value=window.export_button):
+        window.preview_help.follow()
+    assert window.preview_help.tip.isVisible()
+    assert 'Export is locked' in window.preview_help.tip.text()
+    assert 'Restore original' in window.preview_help.tip.text()
     assert not window.export_button.isEnabled() and not window.load_button.isEnabled()
     window.saved = None
     window.sync_name_editing()
     assert not window.preview_banner.isVisible()
+    assert not window.inline_restore.isEnabled()
+    assert not window.preview_help.timer.isActive()
+    assert window.tabs.tabText(3) == '4  ZIP names'
+    assert window.tabs.tabText(4) == 'Logs'
     window.tabs.setCurrentWidget(window.textures_page)
     skin.expand.click()
     app.processEvents()

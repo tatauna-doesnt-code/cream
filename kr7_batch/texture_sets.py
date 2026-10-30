@@ -26,6 +26,8 @@ class TextureSetSection(W.QWidget):
 
     def __init__(self, texture_set, parent=None):
         super().__init__(parent)
+        self.setObjectName("textureSetCard")
+        self.setAttribute(QtCore.Qt.WA_StyledBackground, True)
         self.texture_set = texture_set
         self.suffixes = list(core.MAPS)
         layout = W.QVBoxLayout(self)
