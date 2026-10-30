@@ -53,6 +53,10 @@ class UpdateTests(unittest.TestCase):
             release = {'id': 1, 'version': VERSION, 'size': len(payload), 'sha256': bootstrap.sha256(archive)}
             with patch.object(updater, '_request', return_value=io.BytesIO(payload)):
                 updater.stage_release(release, target, threading.Event(), data, token='test')
+            marker = bootstrap.pending_path(target, data)
+            pending = json.loads(marker.read_text())
+            pending['process_id'] = -1  # Simulate the next Painter process.
+            core.atomic_json(marker, pending)
             self.assertEqual((target/'__init__.py').read_text(), 'original')
             original_rename = bootstrap.os.rename
             def fail_swap(source, destination):

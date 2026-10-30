@@ -7,7 +7,7 @@ import zipfile
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
-from kr7_batch.version import VERSION
+from kr7_batch.version import VERSION, UPDATE_RESTART
 
 
 def build():
@@ -15,6 +15,7 @@ def build():
              if p.is_file() and '__pycache__' not in p.parts and p.suffix != '.pyc']
     files += [ROOT / p for p in ('Instalar.cmd', 'Instalar.ps1', 'LEIA-ME.md', 'modelo_backers.csv')]
     manifest = {'schema': 1, 'product': 'CREAM', 'module': 'kr7_batch', 'version': VERSION,
+                'update': {'protocol': 1, 'restart': UPDATE_RESTART, 'min_reload_protocol': 1},
                 'files': {p.relative_to(ROOT).as_posix(): hashlib.sha256(p.read_bytes()).hexdigest() for p in files}}
     destination = ROOT / 'dist' / 'CREAM-plugin.zip'
     destination.parent.mkdir(exist_ok=True)

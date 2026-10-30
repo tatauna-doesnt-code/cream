@@ -5,13 +5,13 @@ from . import core
 
 
 FIELDS = [
-    ("nome_player", "Nome na skin *", "Selecione uma coluna"),
-    ("cor_1", "Cor 1 — PLAYER_COLOR1", "Original do projeto"),
-    ("cor_2", "Cor 2 — PLAYER_COLOR2", "Original do projeto"),
-    ("cor_3", "Cor 3 — PLAYER_COLOR3", "Original do projeto"),
-    ("id", "ID da linha", "Número da linha"),
-    ("nome_arquivo", "Nome no ZIP", "Usar nome na skin"),
-    ("ativo", "Gerar / ativo", "Todas as linhas"),
+    ("nome_player", "Player name *", "Select a column"),
+    ("cor_1", "Color 1 — PLAYER_COLOR1", "Project original"),
+    ("cor_2", "Color 2 — PLAYER_COLOR2", "Project original"),
+    ("cor_3", "Color 3 — PLAYER_COLOR3", "Project original"),
+    ("id", "Row ID", "Row number"),
+    ("nome_arquivo", "ZIP name", "Use player name"),
+    ("ativo", "Export / active", "All rows"),
 ]
 
 
@@ -27,15 +27,15 @@ def column_letter(index):
 class ColumnDialog(W.QDialog):
     def __init__(self, table, saved=None, parent=None):
         super().__init__(parent)
-        self.setWindowTitle("CREAM — Colunas da planilha")
+        self.setWindowTitle("CREAM — Spreadsheet columns")
         self.resize(850, 650)
         self.table = table
         self.mapping = None
         headers = table[0]
         layout = W.QVBoxLayout(self)
         description = W.QLabel(
-            "Indique onde está cada informação. A primeira linha da planilha contém os cabeçalhos.\n"
-            "Somente o nome é obrigatório. Cores devem ser #RRGGBB; células vazias usam o original do projeto.")
+            "Choose a column for each field. The first spreadsheet row contains the headers.\n"
+            "Only the name is required. Colors must be #RRGGBB; blank cells use the project original.")
         description.setWordWrap(True)
         layout.addWidget(description)
         form = W.QFormLayout()
@@ -48,17 +48,17 @@ class ColumnDialog(W.QDialog):
             combo = W.QComboBox()
             combo.addItem("— " + empty + " —", None)
             for index, header in enumerate(headers):
-                combo.addItem(f"{column_letter(index)} — {header or '(sem cabeçalho)'}", index)
+                combo.addItem(f"{column_letter(index)} — {header or '(no header)'}", index)
             selected = initial.get(field)
             combo.setCurrentIndex(max(0, combo.findData(selected)))
             combo.currentIndexChanged.connect(self.validate_selection)
             form.addRow(label, combo)
             self.combos[field] = combo
-        layout.addWidget(W.QLabel("Amostra da planilha (até 5 linhas):"))
+        layout.addWidget(W.QLabel("Spreadsheet preview (up to 5 rows):"))
         samples = table[1:6]
         self.preview = W.QTableWidget(len(samples), len(headers))
         self.preview.setHorizontalHeaderLabels(
-            [f"{column_letter(i)} — {h or '(sem cabeçalho)'}" for i, h in enumerate(headers)])
+            [f"{column_letter(i)} — {h or '(no header)'}" for i, h in enumerate(headers)])
         self.preview.setEditTriggers(W.QAbstractItemView.NoEditTriggers)
         for row, cells in enumerate(samples):
             for column in range(len(headers)):
@@ -69,8 +69,8 @@ class ColumnDialog(W.QDialog):
         self.message.setWordWrap(True)
         layout.addWidget(self.message)
         self.buttons = W.QDialogButtonBox()
-        self.import_button = self.buttons.addButton("Carregar backers", W.QDialogButtonBox.AcceptRole)
-        self.buttons.addButton("Cancelar", W.QDialogButtonBox.RejectRole)
+        self.import_button = self.buttons.addButton("Load backers", W.QDialogButtonBox.AcceptRole)
+        self.buttons.addButton("Cancel", W.QDialogButtonBox.RejectRole)
         self.buttons.accepted.connect(self.accept_mapping)
         self.buttons.rejected.connect(self.reject)
         layout.addWidget(self.buttons)
@@ -85,7 +85,7 @@ class ColumnDialog(W.QDialog):
             return
         valid = self.combos["nome_player"].currentData() is not None
         self.import_button.setEnabled(valid)
-        self.message.setText("" if valid else "Selecione a coluna do nome para continuar.")
+        self.message.setText("" if valid else "Select the player name column to continue.")
 
     def accept_mapping(self):
         try:

@@ -15,7 +15,7 @@ from .core import dimensions
 
 def project_path():
     if not sp.project.is_open() or not sp.project.file_path():
-        raise ValueError("Abra um projeto .spp salvo antes de continuar.")
+        raise ValueError("Open a saved .spp project before continuing.")
     return str(Path(sp.project.file_path()).resolve())
 
 
@@ -54,43 +54,43 @@ def snapshot():
         entry = {"location": location, "name": name, "uid": node.uid()}
         if name == "PLAYER_NAME":
             if not isinstance(node, sp.layerstack.FillEffectNode) or not node.is_in_mask_stack():
-                raise ValueError(f"{location}: PLAYER_NAME deve ser um Fill na máscara com recurso Font.")
+                raise ValueError(f"{location}: PLAYER_NAME must be a mask Fill using a Font resource.")
             source = node.get_source()
             if not isinstance(source, sp.source.SourceFont):
-                raise ValueError(f"{location}: PLAYER_NAME não usa Font.")
+                raise ValueError(f"{location}: PLAYER_NAME does not use a Font.")
             entry.update(kind="font", text=source.get_parameters().text,
                          resource=source.resource_id.url())
         else:
             if not isinstance(node, sp.layerstack.FillLayerNode):
-                raise ValueError(f"{location}: a cor precisa estar em um Fill Layer.")
+                raise ValueError(f"{location}: the color must be in a Fill Layer.")
             source = node.get_source(sp.textureset.ChannelType.BaseColor)
             if not isinstance(source, sp.source.SourceUniformColor):
-                raise ValueError(f"{location}: Base Color precisa ser uma cor sólida independente (não um material).")
+                raise ValueError(f"{location}: Base Color must be an independent uniform color, not a material.")
             color = source.get_color()
             space = color.color_space
             entry.update(kind="color", index=int(name[-1]) - 1, value=list(color.value_raw),
                          space={"enum": space.name} if isinstance(space, sp.colormanagement.GenericColorSpace) else {"string": space})
         result["targets"].append(entry)
     if not any(t["kind"] == "font" for t in result["targets"]):
-        raise ValueError("Nenhum PLAYER_NAME com Font encontrado nas máscaras fora de Glass.")
+        raise ValueError("No PLAYER_NAME using a Font was found in masks outside Glass.")
     return result
 
 
 def resolve_targets(saved):
     if project_path().casefold() != saved["project"].casefold():
-        raise ValueError("O projeto aberto é diferente do projeto do registro de recuperação.")
+        raise ValueError("The open project differs from the recovery record project.")
     current = {tuple(location): node for node, location in nodes()}
     resolved = []
     for target in saved["targets"]:
         node = current.get(tuple(target["location"]))
         if node is None or node.get_name() != target["name"]:
-            raise ValueError("A estrutura de layers mudou. Não é seguro restaurar automaticamente: " + str(target["location"]))
+            raise ValueError("The layer structure changed. Automatic restoration is unsafe: " + str(target["location"]))
         source = node.get_source(None if target["kind"] == "font" else sp.textureset.ChannelType.BaseColor)
         if target["kind"] == "font":
             if not isinstance(source, sp.source.SourceFont) or source.resource_id.url() != target["resource"]:
-                raise ValueError("O recurso Font mudou desde o início do lote.")
+                raise ValueError("The Font resource changed after the batch started.")
         elif not isinstance(source, sp.source.SourceUniformColor):
-            raise ValueError("O Base Color deixou de ser uma cor sólida.")
+            raise ValueError("Base Color is no longer a uniform color.")
         resolved.append((target, source))
     return resolved
 
@@ -103,7 +103,7 @@ def original_color(target):
 
 def apply(saved, row=None):
     resolved = resolve_targets(saved)  # Validate the whole structure before the first edit.
-    with sp.layerstack.ScopedModification("KR7: restaurar" if row is None else "KR7: " + row["name"]):
+    with sp.layerstack.ScopedModification("CREAM: restore" if row is None else "KR7: " + row["name"]):
         for target, source in resolved:
             if target["kind"] == "font":
                 params = source.get_parameters()
@@ -122,7 +122,7 @@ def apply(saved, row=None):
 def preset_maps():
     matches = [p for p in sp.export.list_resource_export_presets() if p.resource_id.name == "TM2020"]
     if len(matches) != 1:
-        raise ValueError("É necessário exatamente um preset de exportação chamado TM2020 nas bibliotecas do Painter.")
+        raise ValueError("Exactly one export preset named TM2020 is required in the Painter libraries.")
     return matches[0].list_output_maps()
 
 
@@ -130,7 +130,7 @@ def export_config(maps, texture_set, suffix, size, directory):
     template = "$textureSet_" + suffix
     matched = [m for m in maps if m["fileName"] == template]
     if len(matched) != 1:
-        raise ValueError(f"O preset TM2020 não contém uma única saída {template}.")
+        raise ValueError(f"The TM2020 preset does not contain exactly one output {template}.")
     output = copy.deepcopy(matched[0])
     output["fileName"] = texture_set + "_" + suffix
     if suffix == "N":
@@ -143,7 +143,7 @@ def export_config(maps, texture_set, suffix, size, directory):
         rgb = [c for c in output.get("channels", []) if c.get("destChannel") in ("R", "G", "B")]
         if ({c.get("destChannel") for c in rgb} != {"R", "G", "B"}
                 or any(c.get("srcMapType") != "virtualMap" or c.get("srcMapName") != "Normal_OpenGL" for c in rgb)):
-            raise ValueError("Configure a saída _N do preset TM2020 com RGB de Converted maps → Normal OpenGL.")
+            raise ValueError("Configure the TM2020 preset _N output with RGB from Converted maps → Normal OpenGL.")
     width, height = dimensions(texture_set, size)
     # ResourceExportPreset.list_output_maps() supplies map definitions, but
     # does not guarantee the export dialog's padding setting. Inline presets
@@ -162,23 +162,23 @@ def preflight_exports(maps, selections, directory):
     for item in selections:
         name = item["set"]
         if name not in actual_sets:
-            raise ValueError(f"Texture set ausente: {name}")
+            raise ValueError(f"Missing texture set: {name}")
         stacks = actual_sets[name].all_stacks()
         if len(stacks) != 1 or stacks[0].name():
-            raise ValueError("Esta versão do KR7 não suporta material layering: " + name)
+            raise ValueError("This version of CREAM does not support material layering: " + name)
         config = export_config(maps, name, item["map"], item["size"], directory)
         files = [p for values in sp.export.list_project_textures(config).values() for p in values]
         if len(files) != 1 or Path(files[0]).name != f"{name}_{item['map']}.png":
-            raise ValueError(f"Saídas inesperadas em {name}_{item['map']} (UDIM não é suportado): {files}")
+            raise ValueError(f"Unexpected outputs in {name}_{item['map']} (UDIM is not supported): {files}")
 
 
 def export_one(maps, selection, directory):
     config = export_config(maps, selection["set"], selection["map"], selection["size"], directory)
     result = sp.export.export_project_textures(config)
     if result.status != sp.export.ExportStatus.Success:
-        raise RuntimeError(f"Export não concluído: {result.status.name}: {result.message}")
+        raise RuntimeError(f"Export did not complete: {result.status.name}: {result.message}")
     files = [Path(p) for values in result.textures.values() for p in values]
     expected = Path(directory) / f"{selection['set']}_{selection['map']}.png"
     if len(files) != 1 or files[0].resolve() != expected.resolve() or not expected.is_file():
-        raise RuntimeError("O Painter não gerou exatamente a textura esperada.")
+        raise RuntimeError("Painter did not generate exactly the expected texture.")
     return expected

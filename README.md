@@ -2,54 +2,58 @@
 
 **Color Replacement & Export Automation Manager**
 
-Plugin para Substance 3D Painter no Windows: nomes e cores de uma planilha,
-exportação de texturas para Trackmania 2020, conversão DDS e um ZIP por backer.
+Windows plugin for Adobe Substance 3D Painter: customize player names and colors
+from CSV/XLSX, export TM2020 textures, convert to DDS and build one ZIP per backer.
 
-Leia [LEIA-ME.md](LEIA-ME.md) para instalação e uso. Referência: Painter 12.1.3;
-API utilizada disponível a partir de 11.0, ainda sem validação real nessa versão mínima.
+See [LEIA-ME.md](LEIA-ME.md) for installation and usage (in English).
+Tested against the Painter 12.1.3 SDK; API minimum 11.0 is not validated on that version.
 
-Ao carregar uma planilha CSV ou XLSX, selecione qual coluna contém o nome, cada cor,
-ID, nome do ZIP e indicador de linha ativa. Há uma amostra dos dados; somente a coluna
-do nome é obrigatória. O último mapeamento é lembrado para cabeçalhos idênticos.
+## Updates
 
-## Atualizações privadas
+Install manually once with `Instalar.cmd`, with Painter closed. For private updates,
+configure a GitHub fine-grained token limited to `tatauna-doesnt-code/cream`, with
+Contents: Read-only. Windows protects the token for the current user.
 
-A versão 1.1.0 deve ser instalada uma vez com `Instalar.cmd`, com o Painter fechado.
-Depois, o plugin consulta o GitHub ao abrir, sem bloquear a interface.
-Em **Configurar acesso privado**, informe um fine-grained personal access token criado
-em https://github.com/settings/personal-access-tokens/new, limitado ao repositório
-`tatauna-doesnt-code/cream`, com **Contents: Read-only**. Não compartilhe o token.
-Ele fica criptografado pelo Windows para o usuário atual; nunca integra o pacote.
+Check for updates downloads and verifies the release asset SHA-256 and its manifest.
+The package declares an update protocol and restart mode. CREAM also compares file
+hashes against the installation; the declaration alone cannot authorize reloading.
 
-**Atualizar CREAM** baixa a versão estável, verifica o SHA-256 publicado pelo GitHub
-e os arquivos do manifesto, e prepara a instalação. Salve e reinicie o Painter.
-Na próxima inicialização, a instalação anterior é guardada em `python/cream-backups`.
-Se a substituição falhar, a versão anterior é restaurada. Sem internet, o exportador
-continua disponível. O botão manual permite repetir a consulta.
+- Pure Python module changes: **Apply and reopen CREAM**.
+- Changed loader, bootstrap, updater, non-Python files, unsupported metadata, or an
+  explicit full restart: **Restart Painter required**.
+- Active batch, preview, recovery, background task or busy Painter: wait or restore first.
 
-## Normals
+Eligible updates close the old UI, stop workers, swap directories and load fresh
+Python modules. Loaded rows, checked backers, settings and log are restored. Import
+failures restore the old files/modules and require a Painter restart to retry.
+Previous installations are retained under `python/cream-backups`.
+The initial upgrade from 1.2.x requires one Painter restart.
 
-O CREAM solicita `Normal_OpenGL` ao Painter antes de exportar a textura e a converte
-para DDS BC5, preservando o canal verde. Não há inversão posterior. A saída virtual
-usada pelo plugin é ajustada mesmo se o TM2020 salvo ainda usar `Normal_DirectX`.
+## Spreadsheet and textures
 
-Os DDS gerados usam os identificadores legados `BC5U` (R/N) e `BC4U` (CoatR/DirtMask),
-conforme a skin validada no jogo. Somente os aliases de cabeçalho ATI2/ATI1 são
-substituídos após a conversão; os dados comprimidos permanecem iguais.
-Para upload no jogo, copie os ZIPs diretamente para `CarSport`, fora de subpastas.
+Select columns for name, three colors, ID, ZIP name and active flag. Only name is
+required. Original template headers and existing CSV values remain supported.
+Names are limited to 20 Unicode code points after NFC normalization. Colors are sRGB
+`#RRGGBB`; omitted colors use the original project color.
 
-Para os exports manuais, abra **File → Export Textures → Output Templates → TM2020**.
-Na saída `$textureSet_N`, arraste **Converted maps → Normal OpenGL** para RGB.
-Preserve os demais mapas e configurações. Faça um teste no jogo para confirmar o relevo.
-A API pública não altera o template `.spexp` salvo: essa edição é feita pela interface.
-O preset incluído no pacote continua sendo a referência original do usuário.
+Normals are generated as Normal_OpenGL before conversion. Green is preserved.
+The output DDS identifiers are DXT1 (B/AO), DXT5 (I), BC5U (R/N) and BC4U
+(CoatR/DirtMask). ATI aliases are relabeled without changing compressed pixels.
+Copy ZIPs directly into CarSport for upload; subfolders can cause C-AA-00-03.
 
-## Desenvolvimento
+## Development
 
-`python -m unittest discover -s tests -p "test_*.py"` (Pillow nos testes de DDS).
-`python scripts/build_release.py` cria `dist/CREAM-plugin.zip`.
-Publique esse arquivo como asset de uma release estável `vX.Y.Z` após atualizar
-`kr7_batch/version.py`. O repositório permanece privado, sem licença open source.
-O texconv incluído mantém sua licença Microsoft/MIT em `kr7_batch/bin`.
+Run `python -m unittest discover -s tests -p "test_*.py"` (Pillow for real DDS tests).
+Run `scripts/check_columns_ui.py` and `scripts/check_runtime_reload.py` with Painter's
+SDK Python and Qt platform configured for offscreen testing.
+Run `python scripts/build_release.py` to create `dist/CREAM-plugin.zip`.
 
-Documentação da API de releases: https://docs.github.com/en/rest/releases/assets
+Set `VERSION` and `UPDATE_RESTART` in `kr7_batch/version.py` for each release.
+The manifest uses `update: {protocol: 1, restart: "cream"|"painter", min_reload_protocol: 1}`.
+Use `painter` for releases explicitly requiring it. The runtime additionally forces
+Painter restart for protected or non-Python changes, including removed files.
+Older packages without compatible metadata always require Painter restart.
+
+The GitHub Actions workflow tests, builds and publishes the stable asset on version changes.
+The repository is private, without an open-source license. The bundled texconv retains
+Microsoft's MIT license in `kr7_batch/bin`.

@@ -1,167 +1,109 @@
-# CREAM 1.2.1
+# CREAM 1.3.0
 
-Plugin Python para Adobe Substance 3D Painter 12.1.3, Windows x64.
-Converte uma planilha de backers em skins ZIP, usando o projeto aberto e um ZIP base.
+Color Replacement & Export Automation Manager for Adobe Substance 3D Painter on Windows.
+The filename is retained for installer compatibility; these instructions are in English.
 
-## Instalação
+## Install
 
-1. Extraia o pacote inteiro em uma pasta.
-2. Salve seu trabalho e feche o Painter.
-3. Execute **Instalar.cmd**. Não precisa executar como administrador.
-4. Abra o Painter e ative **Python → kr7_batch**.
-5. Para reabrir a janela, use **Window → CREAM — Batch Exporter**.
+1. Extract the entire ZIP to a folder.
+2. Save your work and close Painter.
+3. Run **Instalar.cmd**. Administrator access is not required.
+4. Open Painter and enable **Python > kr7_batch**.
+5. Reopen the window with **Window > CREAM — Batch Exporter**.
 
-O instalador copia `kr7_batch` para a pasta de plugins Python do Painter nos seus Documentos.
-Se houver uma instalação anterior, guarda uma cópia em `kr7_plugin_backups`.
-O preset TM2020 incluído é uma cópia do seu preset; só é instalado se ainda não existir.
-O texconv oficial da Microsoft está incluído: não é preciso instalar Python, Pillow ou Excel.
+The installer backs up an existing installation and preserves an existing TM2020 preset.
+The texconv converter is included; Python, Pillow and Excel are not required to use CREAM.
 
-Instalação manual: copie a pasta `kr7_batch` inteira para
-`%USERPROFILE%\Documents\Adobe\Adobe Substance 3D Painter\python\plugins`.
+## Prepare the project
 
-## Preparar o projeto
+Open a saved .spp project. CREAM never saves one project per backer.
+Use mask Fill effects named PLAYER_NAME with a Font in Grayscale. Every matching
+name outside Glass is updated. Use Fill Layers PLAYER_COLOR1, PLAYER_COLOR2 and/or
+PLAYER_COLOR3 with an independent uniform Base Color. Other layer properties,
+anchors, text colors, font sizes and projection settings are preserved.
 
-- Abra e salve seu `.spp` antes de começar. O plugin não salva nem cria projetos por backer.
-- Use efeitos Fill de máscara chamados exatamente `PLAYER_NAME`, com uma fonte no canal Grayscale.
-- Pode haver vários `PLAYER_NAME` dentro de grupos e máscaras. Todos são atualizados fora de Glass.
-- Use Fill Layers `PLAYER_COLOR1`, `PLAYER_COLOR2` e/ou `PLAYER_COLOR3` com uma cor sólida no Base Color.
-- O Base Color deve estar configurado individualmente; um material procedural que controla todos os canais precisa ser preparado como Fill de cor antes do lote.
-- As outras propriedades dos Fill Layers, anchors, cores dos textos, projeções, fontes e tamanhos não são alterados.
-- `Glass` não recebe personalização. Suas texturas ainda podem ser selecionadas para exportar.
-- Os sets suportados na interface são `Details`, `Glass`, `Skin` e `Wheels`, sem UDIM ou material layering.
-- O preset de saída deve se chamar exatamente `TM2020`, com mapas `$textureSet_B`, `_R`, `_I`, `_N`, `_CoatR`, `_DirtMask` e `_AO`.
+Texture sets: Details, Glass, Skin and Wheels, without UDIM or material layering.
+Glass can be exported but never receives personalized names or colors.
+The TM2020 export preset must have outputs $textureSet_B, _R, _I, _N, _CoatR,
+_DirtMask and _AO, as needed for the selected textures.
 
-## Planilha
+## Spreadsheet
 
-Use `modelo_backers.csv` como exemplo. CSV deve ser UTF-8; aceita vírgula, ponto e vírgula ou tabulação.
-Os cabeçalhos podem ter qualquer nome e ordem. Ao clicar **Carregar planilha**, escolha
-as colunas na janela **Colunas da planilha** e confira a amostra antes de carregar.
-A primeira linha deve conter os cabeçalhos; as letras A, B, C… distinguem colunas repetidas.
-O CREAM sugere os cabeçalhos do modelo e lembra o último mapeamento para cabeçalhos idênticos.
-Somente **Nome na skin** exige uma coluna. Os campos abaixo são informações de destino,
-não nomes obrigatórios para os cabeçalhos. Uma coluna pode alimentar mais de um campo.
-Sem coluna: cores usam o original do projeto, ID usa o número da linha, nome do ZIP usa
-o nome na skin e todas as linhas são ativas. Colunas não selecionadas são ignoradas.
-Também é possível abrir o CSV no Excel e salvar como XLSX. Para XLSX, use a aba **Backers** ou a primeira aba.
-Não use fórmulas nas células dessa aba: o plugin as rejeita para evitar valores de cache desatualizados.
+Use UTF-8 CSV (comma, semicolon or tab) or XLSX. The first row contains headers.
+For XLSX, CREAM reads the Backers sheet or the first sheet; formulas are rejected.
+Click Load spreadsheet, select a column for each field and confirm the sample.
+Header names/order are unrestricted. Repeated headers are identified by column letter.
+CREAM remembers the last mapping for identical headers and recognizes the original template.
 
-| Coluna | Conteúdo |
+| Field | Content or default when not mapped |
 |---|---|
-| ativo | `sim` ou `não`; vazio conta como ativo |
-| id | Identificador único da linha. Pode ficar vazio; será usado o número da linha |
-| nome_player | Texto da skin, preservando maiúsculas e minúsculas; máximo 20 caracteres |
-| nome_arquivo | Opcional. Nome para o ZIP quando o nick contém caracteres inválidos em arquivos |
-| cor_1 | `#RRGGBB`, ou vazio para a cor original de PLAYER_COLOR1 |
-| cor_2 | Mesmo formato para PLAYER_COLOR2 |
-| cor_3 | Mesmo formato para PLAYER_COLOR3 |
+| Player name | Required; case preserved, limited to 20 characters |
+| Color 1/2/3 | #RRGGBB; blank or unmapped uses the project original |
+| Row ID | Unique identifier; defaults to the spreadsheet row number |
+| ZIP name | Defaults to the player name |
+| Export / active | yes/no, true/false or 1/0; blank/unmapped exports all rows |
 
-Nomes acima de 20 caracteres são cortados e registrados como aviso. A contagem usa caracteres Unicode
-após normalização NFC; emojis compostos podem ocupar mais de um caractere. Códigos de formatação
-Trackmania comuns são rejeitados. Nomes vazios e caracteres de controle são rejeitados.
+Original template keys ativo, id, nome_player, nome_arquivo, cor_1, cor_2, cor_3 and
+Portuguese sim/não values remain compatible. A column can supply multiple fields.
+Names longer than 20 Unicode code points after NFC normalization are truncated with
+a warning. Empty names, control characters and common Trackmania formatting codes
+are rejected. Duplicate names are allowed; explicit IDs must be unique.
+ZIP collisions receive suffixes: KR7 - Joseph.zip, KR7 - Joseph 2.zip, etc.
+Existing ZIPs are never overwritten. Invalid filename characters are replaced with _.
 
-Nomes repetidos são permitidos; IDs explícitos repetidos não. A numeração do ZIP não muda o texto da skin:
-`KR7 - Joseph.zip`, `KR7 - Joseph 2.zip`, `KR7 - Joseph 3.zip`.
-Arquivos já existentes nunca são sobrescritos. Caracteres inválidos de arquivo viram `_`.
+## Export
 
-## Usar
+1. Load and map the spreadsheet.
+2. Select the base ZIP and output folder.
+3. Select textures and individual resolutions in Textures.
+4. Validate configuration.
+5. Preview a selected backer, inspect the model, then Restore names and colors.
+6. Export one or two backers and check them in Trackmania before running the full batch.
 
-1. Escolha a planilha, clique **Carregar planilha**, associe as colunas e clique **Carregar backers**.
-2. Selecione o ZIP base da skin KR7. O ZIP de referência BIBLIOTECHA serviu para analisar o formato; ele não foi definido como base automaticamente.
-3. Confira a pasta de saída. O padrão é `%USERPROFILE%\Documents\Trackmania\Skins\Models\CarSport\KR7BACKERS`.
-4. Na aba **Texturas**, marque as saídas que variam entre backers e escolha a resolução de cada uma.
-5. Clique **Validar configuração**. A aba Registro mostra os alvos encontrados.
-6. Selecione um backer e clique **Prévia do backer selecionado** para conferir no modelo. Depois clique **Restaurar nomes e cores**.
-7. Marque apenas um ou dois backers para o primeiro teste e clique **Exportar backers marcados**.
-8. Confira esses ZIPs no Trackmania antes de executar as ~200 linhas.
+Copy completed ZIPs directly into Trackmania/Skins/Models/CarSport for in-game upload.
+Uploads from subfolders such as KR7BACKERS can fail with C-AA-00-03 despite a working preview.
+The output folder preference is retained; CREAM does not automatically copy into CarSport.
 
-Para enviar ao jogo, copie os ZIPs diretamente para `Trackmania\Skins\Models\CarSport`.
-O upload pode falhar com `C-AA-00-03` em subpastas como `KR7BACKERS`, mesmo com preview funcionando.
+The base ZIP must contain files directly at its root. Selected outputs replace matching
+files; all others are preserved. Settings apply to every selected backer.
 
-Todas as texturas começam desmarcadas. A configuração é lembrada entre sessões.
-As seleções e resoluções se aplicam igualmente a todos os backers do lote.
-O ZIP base precisa ter seus arquivos diretamente na raiz e sem entradas duplicadas.
-Arquivos selecionados substituem as entradas correspondentes; os demais são preservados.
-Os novos ZIPs contêm apenas o conteúdo base e as texturas, sem relatórios ou arquivos temporários.
+| Texture | Compression / DDS identifier |
+|---|---|
+| B, AO | BC1 / DXT1; opaque alpha |
+| R, N | BC5 / BC5U |
+| I | BC3 / DXT5; RGB and alpha preserved |
+| CoatR, DirtMask | BC4 / BC4U |
 
-## Texturas
+No extra mipmaps. Normals use Normal_OpenGL at Painter export, with no later green flip.
+ATI1/ATI2 aliases from texconv are changed to BC4U/BC5U without recompressing pixels.
+Details/Glass/Skin: square 1024, 2048 or 4096. Wheels: 256x1024, 512x2048 or 1024x4096.
+8-bit PNG intermediates are deleted after DDS conversion; per-backer temporary folders
+in %LOCALAPPDATA%/KR7BatchExporter are removed after processing.
 
-| Saída | DDS | Tratamento |
-|---|---|---|
-| B | BC1 | RGB, alpha forçado a opaco |
-| R | BC5 | Canais do preset TM2020 preservados |
-| I | BC3 | RGB e alpha preservados, inclusive RGB onde alpha é zero |
-| N | BC5 | Normal OpenGL gerada pelo Painter; verde preservado na conversão |
-| CoatR | BC4 | Canal único |
-| DirtMask | BC4 | Canal único |
-| AO | BC1 | RGB, alpha forçado a opaco |
+## Cancel and recover
 
-Todos são DDS com cabeçalho legado e um único nível (sem mipmaps adicionais), como a referência.
-R e N usam FourCC `BC5U`; CoatR e DirtMask usam `BC4U`. O conversor produz aliases
-`ATI2`/`ATI1`, que o CREAM substitui no cabeçalho antes da validação, sem recomprimir
-ou alterar pixels/canais. Arquivos preservados do ZIP base não são modificados.
-Relatórios de lotes anteriores a 1.2.1 não podem ser retomados nesta versão; gere novamente
-as linhas necessárias para obter os novos cabeçalhos.
-PNG intermediário de 8 bits é exportado pelo Painter e removido depois da conversão.
-A inversão de normal se aplica somente aos `_N` gerados; normals preservadas do ZIP base não mudam.
-O CREAM usa Normal OpenGL no preset virtual de exportação, inclusive se o TM2020 salvo ainda usar DirectX.
-Para exports manuais: File → Export Textures → Output Templates → TM2020; na saída `$textureSet_N`,
-use RGB de Converted maps → Normal OpenGL. A alteração do template salvo é feita pela interface do Painter.
+Cancel safely waits for a safe stopping point, restores original names/colors and preserves
+finished ZIPs. Painter exports/autosave can delay a cancellation request. Conversion can
+be terminated. A ZIP is written as .partial, checked for CRC and published only when complete.
+An abrupt process exit can leave temporary files. The recovery record is written before
+project edits. Restore names and colors after a crash before starting another batch.
 
-Details, Glass e Skin: 1024×1024, 2048×2048 ou 4096×4096.
-Wheels: 256×1024, 512×2048 ou 1024×4096 para todas as texturas, incluindo DirtMask.
+Reports are stored in _KR7_reports. Load the same spreadsheet/settings and use Resume from
+report to deselect confirmed completed rows. Reports across changed export pipelines cannot
+be resumed. CREAM cannot detect arbitrary manual material edits; check the project first.
 
-## Cancelar, retomar e recuperar
+## Update
 
-**Cancelar com segurança** interrompe a sequência na próxima etapa segura. Uma exportação síncrona do
-Painter pode precisar terminar primeiro. Durante um freeze, o botão pode demorar a responder.
-A conversão externa pode ser encerrada; arquivos intermediários não são publicados como skins.
+Configure private access using a GitHub fine-grained token for tatauna-doesnt-code/cream,
+with Contents: Read-only. Do not share the token; Windows encrypts it for the current user.
+Check for updates, then Download update. CREAM verifies hashes and chooses the required restart:
 
-Cada ZIP é montado em um arquivo `.partial`, lido novamente para verificar CRC, fechado e somente
-então renomeado para o nome final. O ZIP base e ZIPs anteriores não são alterados.
-Um fechamento abrupto pode deixar um `.partial`; ele não é uma skin concluída.
+- Apply and reopen CREAM: eligible Python-only updates; loaded rows and settings are preserved.
+- Restart Painter required: loader/updater/native or other non-Python changes, an explicit
+  restart request, or unsupported/missing package metadata.
 
-As linhas concluídas são desmarcadas. Para retomar depois de reabrir o plugin, carregue a mesma planilha,
-restaure as mesmas opções e use **Retomar de relatório…** com o JSON de `_KR7_reports` na pasta de saída.
-Só serão desmarcadas linhas registradas como concluídas cujo ZIP ainda existe. Confira o jogo antes de
-retomar se você mudou manualmente o conteúdo do projeto: o relatório não compara toda a cena do `.spp`.
-Se encerrar o aplicativo exatamente entre a publicação do ZIP e a gravação do relatório, confira esse
-último ZIP manualmente para evitar uma cópia numerada ao retomar.
-
-Erros isolados de exportação/conversão são registrados e o lote continua com o próximo backer.
-Uma falha na restauração do projeto encerra o lote e mantém o registro de recuperação.
-
-Nomes e cores originais são restaurados ao final, inclusive após cancelamento. Uma cópia pequena dos
-valores é salva antes da primeira alteração em `%LOCALAPPDATA%\KR7BatchExporter\recover-*.json`.
-Se o Painter fechar inesperadamente, reabra o mesmo `.spp` e use **Restaurar nomes e cores**.
-Para essa recuperação, a hierarquia, os nomes dos layers e os recursos de fonte precisam continuar iguais.
-O plugin não salva o `.spp` após restaurar; você decide quando salvá-lo.
-
-O plugin espera o Painter ficar disponível e não usa temporizações fixas para supor que uma exportação
-terminou. Mantém o autosave ligado. Um autosave pode registrar o backer atual; o registro de recuperação
-guarda os originais. Não edite o projeto durante o lote. A janela de progresso bloqueia as interações
-usuais até finalizar ou cancelar.
-
-## Verificação desta entrega
-
-- Conversão real com texconv: sete tipos de saída, dimensões e cabeçalhos DDS conferidos.
-- Normal: canal verde preservado na conversão para BC5; OpenGL solicitado ao Painter antes da exportação.
-- Emissivo: RGB preservado com alpha zero.
-- Testes de CSV/XLSX, nomes repetidos, arquivo existente, cancelamento na montagem e ZIP base intacto.
-- Testes do adaptador com API simulada: quatro fontes de máscara, Glass ignorado, restauração de cores,
-  propriedades de texto preservadas e recusa de uma hierarquia alterada.
-- Interface instanciada e renderizada com o Python 3.13 / PySide6 da instalação local do Painter.
-- Fluxo do controlador testado com export do Painter simulado e conversor/ZIP reais: espera de ocupado,
-  dois Joseph com cores diferentes, cancelamento no segundo backer e restauração final.
-
-**Ainda requer teste dentro do seu projeto real e no Trackmania.** Os testes simulados não substituem
-a validação do export do Painter com sua fonte customizada, anchors, canais e preset.
-
-## Componentes
-
-Código do plugin: `kr7_batch/core.py`, `painter.py`, `ui.py`, `__init__.py`.
-Conversor: Microsoft DirectXTex texconv, release `may2026`, com licença MIT em `bin/LICENSE-DirectXTex.txt`.
-SHA-256 do executável: `dcfdec10244e02cf5037fba089c55fb7e1326b1c8181742d77d15fa5cb5eef06`.
-Origem: https://github.com/microsoft/DirectXTex/releases/tag/may2026
-
-Para desinstalar, desative o plugin, feche o Painter e remova somente a pasta `python\plugins\kr7_batch`.
-Isso não remove os ZIPs, o preset nem seus projetos. Preserve os registros de recuperação pendentes.
+Stop the batch, restore any preview/recovery, and wait for Painter/background tasks before
+applying. If importing an update fails, CREAM restores the previous version and asks for a
+Painter restart. Previous versions are retained in python/cream-backups. No internet is
+required for normal exports. Updating from 1.2.x requires one Painter restart to install
+this reload mechanism; compatible future updates can restart only CREAM.

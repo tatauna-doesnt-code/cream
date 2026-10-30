@@ -1,5 +1,19 @@
 # Changes
 
+## 1.3.0
+
+- Use English throughout the plugin UI, column selection, validation, progress,
+  recovery, updater messages and manual installer. Existing spreadsheets remain compatible.
+- Add release restart metadata with an independent check of installed file hashes.
+  Python-only changes can restart CREAM; loader, updater, native and unknown component
+  changes, unsupported metadata and explicit restart requests require Painter restart.
+- Apply eligible updates from the UI without restarting Painter, using a deferred
+  reload with worker shutdown, fresh Python modules, backup and rollback on import failure.
+- Preserve loaded rows, checked backers, selected row, settings and log across reloads.
+  Block applying during exports, background tasks, previews, recovery or Painter activity.
+- Upgrade the legacy startup loader after the initial install. Updating from 1.2.x
+  requires one Painter restart; subsequent compatible releases can reload CREAM alone.
+
 ## 1.2.1
 
 - Write BC4U and BC5U legacy DDS FourCC identifiers after texconv conversion,

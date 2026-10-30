@@ -2,10 +2,10 @@ $ErrorActionPreference = 'Stop'
 try {
     $kr7Source = Join-Path $PSScriptRoot 'kr7_batch'
     if (-not (Test-Path -LiteralPath (Join-Path $kr7Source '__init__.py'))) {
-        throw 'Extraia o ZIP inteiro antes de executar Instalar.cmd.'
+        throw 'Extract the entire ZIP before running Instalar.cmd.'
     }
     if (Get-Process -Name 'Adobe Substance 3D Painter' -ErrorAction SilentlyContinue) {
-        throw 'Salve seu trabalho e feche o Substance Painter antes de instalar. Depois execute Instalar.cmd novamente.'
+        throw 'Save your work and close Substance Painter before installing. Then run Instalar.cmd again.'
     }
     $kr7Adobe = Join-Path $env:USERPROFILE 'Documents\Adobe\Adobe Substance 3D Painter'
     if (-not (Test-Path -LiteralPath $kr7Adobe)) {
@@ -19,7 +19,7 @@ try {
         New-Item -ItemType Directory -Path $kr7BackupRoot -Force | Out-Null
         $kr7Backup = Join-Path $kr7BackupRoot ('kr7_batch_' + (Get-Date -Format 'yyyyMMdd_HHmmss_fff'))
         Copy-Item -LiteralPath $kr7Target -Destination $kr7Backup -Recurse
-        Write-Host ('Versao anterior copiada para: ' + $kr7Backup)
+        Write-Host ('Previous version backed up to: ' + $kr7Backup)
     }
     New-Item -ItemType Directory -Path $kr7Target -Force | Out-Null
     Get-ChildItem -LiteralPath $kr7Source -Force | ForEach-Object {
@@ -32,11 +32,11 @@ try {
         Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'preset\TM2020.spexp') -Destination $kr7PresetTarget
     }
     Write-Host ''
-    Write-Host ('Instalado em: ' + $kr7Target)
-    Write-Host 'Abra o Painter. No menu Python, ative kr7_batch.'
-    Write-Host 'Para reabrir a janela: Window > CREAM - Batch Exporter.'
-    Write-Host 'O preset TM2020 existente foi preservado.'
+    Write-Host ('Installed in: ' + $kr7Target)
+    Write-Host 'Open Painter and enable kr7_batch in the Python menu.'
+    Write-Host 'To reopen the window: Window > CREAM - Batch Exporter.'
+    Write-Host 'The existing TM2020 preset was preserved.'
 } catch {
-    Write-Host ('Nao foi possivel instalar: ' + $_.Exception.Message) -ForegroundColor Red
+    Write-Host ('Installation failed: ' + $_.Exception.Message) -ForegroundColor Red
     exit 1
 }

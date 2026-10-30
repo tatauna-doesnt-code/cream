@@ -31,7 +31,7 @@ class Cancelled(Exception):
 
 def check_cancel(cancel):
     if cancel.is_set():
-        raise Cancelled("Cancelado pelo usuário.")
+        raise Cancelled("Cancelled by the user.")
 
 
 def atomic_json(path, value):
@@ -68,12 +68,12 @@ def read_xlsx(path):
             values = {}
             for cell in row.findall("m:c", NS):
                 if cell.find("m:f", NS) is not None:
-                    raise ValueError(f"XLSX: substitua a fórmula da célula {cell.attrib['r']} por um valor.")
+                    raise ValueError(f"XLSX: replace the formula in cell {cell.attrib['r']} with a value.")
                 col = 0
                 for letter in re.match(r"[A-Z]+", cell.attrib["r"])[0]:
                     col = col * 26 + ord(letter) - 64
                 if col > 100:
-                    raise ValueError("Use uma planilha simples com as colunas do modelo.")
+                    raise ValueError("Use a simple spreadsheet with no more than 100 columns.")
                 kind = cell.attrib.get("t", "")
                 value = cell.findtext("m:v", "", NS)
                 if kind == "s":
@@ -81,7 +81,7 @@ def read_xlsx(path):
                 elif kind == "inlineStr":
                     value = "".join(t.text or "" for t in cell.iterfind(".//m:t", NS))
                 elif kind == "e":
-                    raise ValueError(f"Erro de Excel na célula {cell.attrib['r']}.")
+                    raise ValueError(f"Excel error in cell {cell.attrib['r']}.")
                 values[col - 1] = value
             rows.append([values.get(i, "") for i in range(max(values, default=-1) + 1)])
         return rows
@@ -100,9 +100,9 @@ def read_table(path):
             dialect = csv.excel
         table = list(csv.reader(io.StringIO(content), dialect))
     else:
-        raise ValueError("Selecione CSV UTF-8 ou XLSX.")
+        raise ValueError("Select a UTF-8 CSV or XLSX file.")
     if not table:
-        raise ValueError("Planilha vazia.")
+        raise ValueError("The spreadsheet is empty.")
     return table
 
 
@@ -116,13 +116,13 @@ def suggest_columns(headers):
 def validate_columns(headers, mapping):
     unknown = set(mapping) - set(HEADERS)
     if unknown:
-        raise ValueError("Campos de importação desconhecidos: " + ", ".join(sorted(unknown)))
+        raise ValueError("Unknown import fields: " + ", ".join(sorted(unknown)))
     result = {field: mapping.get(field) for field in HEADERS}
     for field, index in result.items():
         if index is not None and (type(index) is not int or not 0 <= index < len(headers)):
-            raise ValueError(f"Coluna inválida para {field}. Selecione novamente as colunas.")
+            raise ValueError(f"Invalid column for {field}. Select the columns again.")
     if result["nome_player"] is None:
-        raise ValueError("Selecione a coluna que contém o nome do player.")
+        raise ValueError("Select the column containing the player name.")
     return result
 
 
@@ -132,7 +132,7 @@ def read_rows(path, mapping=None):
 
 def rows_from_table(table, mapping=None):
     if not table:
-        raise ValueError("Planilha vazia.")
+        raise ValueError("The spreadsheet is empty.")
     mapping = validate_columns(table[0], suggest_columns(table[0]) if mapping is None else mapping)
     rows, warnings, ids = [], [], set()
     for number, cells in enumerate(table[1:], 2):
@@ -144,39 +144,39 @@ def rows_from_table(table, mapping=None):
         if active in ("não", "nao", "no", "false", "0", "n"):
             continue
         if active not in ("", "sim", "yes", "true", "1", "s"):
-            raise ValueError(f"Linha {number}: ativo deve ser sim ou não.")
+            raise ValueError(f"Row {number}: active must be yes or no.")
         name = unicodedata.normalize("NFC", record.get("nome_player", ""))
         if not name.strip() or any(unicodedata.category(c) == "Cc" for c in name):
-            raise ValueError(f"Linha {number}: nome vazio ou com caracteres de controle.")
+            raise ValueError(f"Row {number}: name is empty or contains control characters.")
         if re.search(r"\$(?:[0-9a-fA-F]{3}|[oswniztlgmhpuOSWNIZTLGMHPU])", name):
-            raise ValueError(f"Linha {number}: remova os códigos de formatação do Trackmania.")
+            raise ValueError(f"Row {number}: remove Trackmania formatting codes.")
         if len(name) > 20:
-            warnings.append(f"Linha {number}: nome cortado para {name[:20]!r}.")
+            warnings.append(f"Row {number}: name truncated to {name[:20]!r}.")
         name = name[:20]
         colors = []
         for index in range(1, 4):
             color = record.get(f"cor_{index}", "").strip()
             if color and not re.fullmatch(r"#[0-9a-fA-F]{6}", color):
-                raise ValueError(f"Linha {number}: cor_{index} deve ser #RRGGBB ou vazia.")
+                raise ValueError(f"Row {number}: color_{index} must be #RRGGBB or blank.")
             colors.append(color.upper() or None)
         identifier = record.get("id", "").strip() or str(number)
         if identifier in ids:
-            raise ValueError(f"Linha {number}: id repetido ({identifier}). Nomes podem repetir; IDs devem ser únicos.")
+            raise ValueError(f"Row {number}: duplicate ID ({identifier}). Names may repeat; IDs must be unique.")
         ids.add(identifier)
         filename = record.get("nome_arquivo", "").strip() or name
         clean = safe_stem(filename)
         if clean != filename:
-            warnings.append(f"Linha {number}: nome de arquivo adaptado para {clean!r}.")
+            warnings.append(f"Row {number}: filename adjusted to {clean!r}.")
         rows.append({"line": number, "id": identifier, "name": name, "stem": clean, "colors": colors})
     if not rows:
-        raise ValueError("Nenhuma linha ativa na planilha.")
+        raise ValueError("The spreadsheet has no active rows.")
     return rows, warnings
 
 
 def safe_stem(name):
     name = re.sub(r'[<>:"/\\|?*\x00-\x1f]', "_", name).strip().rstrip(". ")
     if not name:
-        raise ValueError("O nome do arquivo ficou vazio após remover caracteres inválidos.")
+        raise ValueError("The filename is empty after removing invalid characters.")
     return name[:100].rstrip(". ")
 
 
@@ -189,12 +189,12 @@ def next_destination(folder, stem, occupied=None):
         if name.casefold() not in existing | occupied:
             occupied.add(name.casefold())
             return Path(folder) / name
-    raise ValueError("Não foi possível reservar um nome de ZIP.")
+    raise ValueError("Could not reserve a ZIP filename.")
 
 
 def dimensions(texture_set, size):
     if size not in (1024, 2048, 4096):
-        raise ValueError("Resolução inválida.")
+        raise ValueError("Invalid resolution.")
     return (size // 4, size) if texture_set == "Wheels" else (size, size)
 
 
@@ -205,12 +205,12 @@ def inspect_base(path):
             if item.is_dir():
                 continue
             if item.filename != PurePosixPath(item.filename).name or "\\" in item.filename:
-                raise ValueError("O ZIP base deve conter arquivos diretamente na raiz, sem subpastas.")
+                raise ValueError("The base ZIP must contain files directly at its root, without subfolders.")
             names.append(item.filename.casefold())
         if len(names) != len(set(names)):
-            raise ValueError("O ZIP base contém entradas duplicadas.")
+            raise ValueError("The base ZIP contains duplicate entries.")
         if not names:
-            raise ValueError("O ZIP base está vazio.")
+            raise ValueError("The base ZIP is empty.")
         return names
 
 
@@ -218,17 +218,17 @@ def validate_dds(path, suffix, width, height):
     with Path(path).open("rb") as handle:
         header = handle.read(148)
     if len(header) < 128 or header[:4] != b"DDS ":
-        raise ValueError(f"DDS inválido: {path}")
+        raise ValueError(f"Invalid DDS: {path}")
     actual_h, actual_w = struct.unpack_from("<II", header, 12)
     mips = struct.unpack_from("<I", header, 28)[0]
     fourcc = header[84:88]
     expected = DDS_FOURCC[MAPS[suffix]]
     if (actual_w, actual_h) != (width, height) or mips not in (0, 1) or fourcc != expected:
-        raise ValueError(f"DDS fora da configuração: {Path(path).name}: {actual_w}×{actual_h}, {fourcc!r}, mips={mips}")
+        raise ValueError(f"DDS does not match the configuration: {Path(path).name}: {actual_w}×{actual_h}, {fourcc!r}, mips={mips}")
     block_bytes = 8 if suffix in ("B", "AO", "CoatR", "DirtMask") else 16
     expected_bytes = 128 + ((width + 3) // 4) * ((height + 3) // 4) * block_bytes
     if Path(path).stat().st_size != expected_bytes:
-        raise ValueError(f"Tamanho DDS incorreto ou arquivo incompleto: {path}")
+        raise ValueError(f"Incorrect DDS size or incomplete file: {path}")
 
 
 def normalize_dds_header(path, suffix):
@@ -243,11 +243,11 @@ def normalize_dds_header(path, suffix):
     with Path(path).open("r+b") as handle:
         header = handle.read(128)
         if len(header) != 128 or header[:4] != b"DDS ":
-            raise ValueError(f"DDS inválido: {path}")
+            raise ValueError(f"Invalid DDS: {path}")
         if header[84:88] == expected:
             return
         if alias is None or header[84:88] != alias:
-            raise ValueError(f"Formato DDS inesperado: {header[84:88]!r}; esperado {expected!r}.")
+            raise ValueError(f"Unexpected DDS format: {header[84:88]!r}; expected {expected!r}.")
         handle.seek(84)
         handle.write(expected)
 
@@ -282,13 +282,13 @@ def convert(texconv, source, output, suffix, width, height, cancel):
                     except subprocess.TimeoutExpired:
                         process.kill()
                         process.communicate()
-                    raise Cancelled("Conversão cancelada.")
+                    raise Cancelled("Conversion cancelled.")
         if process.returncode:
             raise RuntimeError(data.decode("utf-8", errors="replace")[-4000:])
         check_cancel(cancel)
         candidates = [p for p in output.iterdir() if p.stem.casefold() == Path(source).stem.casefold() and p.suffix.lower() == ".dds"]
         if len(candidates) != 1:
-            raise RuntimeError("O conversor não produziu o DDS esperado.")
+            raise RuntimeError("The converter did not produce the expected DDS.")
         normalize_dds_header(candidates[0], suffix)
         validate_dds(candidates[0], suffix, width, height)
         return candidates[0]
@@ -305,7 +305,7 @@ def build_zip(base, replacements, destination, cancel):
     temporary = destination.parent / (".kr7-" + uuid.uuid4().hex + ".partial")
     replacement_names = {name.casefold() for name in replacements}
     if len(replacement_names) != len(replacements):
-        raise ValueError("Texturas de saída duplicadas.")
+        raise ValueError("Duplicate output textures.")
     try:
         with zipfile.ZipFile(base) as original, zipfile.ZipFile(temporary, "w", zipfile.ZIP_DEFLATED, compresslevel=1) as target:
             for entry in original.infolist():

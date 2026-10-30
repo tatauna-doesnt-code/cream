@@ -27,7 +27,7 @@ class AccessRequired(RuntimeError):
 def version_tuple(value):
     match = re.fullmatch(r"v?(\d+)\.(\d+)\.(\d+)", value)
     if not match:
-        raise ValueError("Versão inválida: " + str(value))
+        raise ValueError("Invalid version: " + str(value))
     return tuple(map(int, match.groups()))
 
 
@@ -37,7 +37,7 @@ class _Blob(ctypes.Structure):
 
 def _protect(data, decrypt=False):
     if os.name != "nt":
-        raise RuntimeError("O armazenamento protegido de acesso requer Windows.")
+        raise RuntimeError("Protected credential storage requires Windows.")
     buffer = (ctypes.c_ubyte * len(data)).from_buffer_copy(data)
     source = _Blob(len(data), buffer)
     result = _Blob()
@@ -50,7 +50,7 @@ def _protect(data, decrypt=False):
                          ctypes.c_void_p, ctypes.c_void_p, wintypes.DWORD, ctypes.POINTER(_Blob)]
     function.restype = wintypes.BOOL
     if not function(ctypes.byref(source), None, None, None, None, 1, ctypes.byref(result)):
-        raise RuntimeError("Não foi possível acessar a credencial protegida pelo Windows.")
+        raise RuntimeError("Could not access the Windows-protected credential.")
     try:
         return ctypes.string_at(result.pbData, result.cbData)
     finally:
@@ -64,7 +64,7 @@ def token_path(data_dir=bootstrap.DATA):
 def save_token(token, data_dir=bootstrap.DATA):
     token = token.strip()
     if not token or any(c.isspace() for c in token):
-        raise ValueError("Informe um token GitHub válido, sem espaços.")
+        raise ValueError("Enter a valid GitHub token without whitespace.")
     encrypted = _protect(token.encode("utf-8"))
     path = token_path(data_dir)
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -86,7 +86,7 @@ class _GitHubRedirect(urllib.request.HTTPRedirectHandler):
         parsed = urllib.parse.urlparse(newurl)
         host = parsed.hostname or ""
         if parsed.scheme != "https" or not (host == "github.com" or host.endswith(".github.com") or host.endswith(".githubusercontent.com")):
-            raise RuntimeError("Redirecionamento de download fora do GitHub recusado.")
+            raise RuntimeError("Download redirect outside GitHub was refused.")
         redirected = super().redirect_request(req, fp, code, msg, headers, newurl)
         if redirected is not None and host != urllib.parse.urlparse(req.full_url).hostname:
             redirected.remove_header("Authorization")
@@ -95,7 +95,7 @@ class _GitHubRedirect(urllib.request.HTTPRedirectHandler):
 
 def _request(path, token, binary=False):
     if not path.startswith("/repos/" + REPOSITORY + "/"):
-        raise ValueError("Endpoint de atualização inválido.")
+        raise ValueError("Invalid update endpoint.")
     headers = {"User-Agent": "CREAM/" + VERSION, "X-GitHub-Api-Version": "2022-11-28",
                "Accept": "application/octet-stream" if binary else "application/vnd.github+json"}
     if token:
@@ -105,12 +105,12 @@ def _request(path, token, binary=False):
         return urllib.request.build_opener(_GitHubRedirect()).open(req, timeout=20)
     except urllib.error.HTTPError as exc:
         if exc.code in (401, 404):
-            raise AccessRequired("Configure um token com acesso de leitura ao repositório privado " + REPOSITORY + ".") from None
+            raise AccessRequired("Configure a token with read access to the private repository " + REPOSITORY + ".") from None
         if exc.code == 403:
-            raise RuntimeError("GitHub recusou a consulta: verifique permissões do token ou tente novamente mais tarde.") from None
-        raise RuntimeError("GitHub retornou HTTP " + str(exc.code) + ".") from None
+            raise RuntimeError("GitHub refused the request: check token permissions or try again later.") from None
+        raise RuntimeError("GitHub returned HTTP " + str(exc.code) + ".") from None
     except (urllib.error.URLError, TimeoutError, OSError):
-        raise RuntimeError("Sem conexão com o GitHub. O plugin continua disponível; tente verificar novamente depois.") from None
+        raise RuntimeError("Cannot connect to GitHub. The plugin remains available; try checking again later.") from None
 
 
 def check_latest(current=VERSION, token=None):
@@ -118,7 +118,7 @@ def check_latest(current=VERSION, token=None):
     with _request("/repos/" + REPOSITORY + "/releases/latest", token) as response:
         data = response.read(2 * 1024 * 1024 + 1)
     if len(data) > 2 * 1024 * 1024:
-        raise ValueError("Resposta GitHub excessiva.")
+        raise ValueError("The GitHub response is too large.")
     release = json.loads(data)
     if release.get("draft") or release.get("prerelease"):
         return None
@@ -127,11 +127,11 @@ def check_latest(current=VERSION, token=None):
         return None
     matches = [a for a in release.get("assets", []) if a["name"] == RELEASE_ASSET and a.get("state") == "uploaded"]
     if len(matches) != 1:
-        raise ValueError("A versão publicada ainda não tem um pacote CREAM completo.")
+        raise ValueError("The published release does not yet have a complete CREAM package.")
     asset = matches[0]
     digest = asset.get("digest", "")
     if not re.fullmatch(r"sha256:[0-9a-f]{64}", digest) or not 0 < asset["size"] <= MAX_DOWNLOAD:
-        raise ValueError("Pacote sem SHA-256 válido ou com tamanho inválido.")
+        raise ValueError("The package has no valid SHA-256 or has an invalid size.")
     return {"version": tag.removeprefix("v"), "id": int(asset["id"]), "sha256": digest[7:],
             "size": asset["size"], "notes": str(release.get("body", ""))[:12000]}
 
@@ -141,13 +141,13 @@ def extract_verified(archive, destination):
     with zipfile.ZipFile(archive) as package:
         infos = package.infolist()
         if len(infos) > 500 or sum(i.file_size for i in infos) > bootstrap.MAX_UNPACKED:
-            raise ValueError("Pacote de atualização excede o tamanho permitido.")
+            raise ValueError("The update package exceeds the allowed size.")
         names = set()
         for item in infos:
             name = item.filename.rstrip("/") if item.is_dir() else item.filename
             bootstrap.safe_relative(name)
             if name.casefold() in names or stat.S_ISLNK(item.external_attr >> 16):
-                raise ValueError("Entrada duplicada ou link simbólico no ZIP.")
+                raise ValueError("Duplicate entry or symbolic link in the ZIP.")
             names.add(name.casefold())
         for item in infos:
             path = destination / item.filename
@@ -163,7 +163,7 @@ def extract_verified(archive, destination):
 def stage_release(release, target, cancel, data_dir=bootstrap.DATA, token=None):
     target = Path(target).resolve()
     if target.name != "kr7_batch" or not (target / "__init__.py").is_file():
-        raise ValueError("Pasta do plugin inválida.")
+        raise ValueError("Invalid plugin folder.")
     token = load_token(data_dir) if token is None else token
     updates = Path(data_dir) / "updates"
     updates.mkdir(parents=True, exist_ok=True)
@@ -182,18 +182,19 @@ def stage_release(release, target, cancel, data_dir=bootstrap.DATA, token=None):
                     break
                 size += len(chunk)
                 if size > MAX_DOWNLOAD or size > release["size"]:
-                    raise ValueError("Download maior que o pacote anunciado.")
+                    raise ValueError("The download exceeds the announced package size.")
                 digest.update(chunk)
                 handle.write(chunk)
         core.check_cancel(cancel)
         if size != release["size"] or digest.hexdigest() != release["sha256"]:
-            raise ValueError("Download incompleto ou SHA-256 incorreto. Nenhuma atualização aplicada.")
+            raise ValueError("Incomplete download or incorrect SHA-256. No update was applied.")
         manifest = extract_verified(archive, stage)
         if manifest["version"] != release["version"]:
-            raise ValueError("A versão do pacote difere da versão anunciada.")
+            raise ValueError("The package version differs from the announced release.")
         core.check_cancel(cancel)
         core.atomic_json(bootstrap.pending_path(target, data_dir), {
             "target": str(target), "stage": stage.name, "version": release["version"],
+            "process_id": os.getpid(),
             "manifest_sha256": bootstrap.sha256(stage / "manifest.json")})
         committed = True
         return release["version"]

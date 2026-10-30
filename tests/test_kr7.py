@@ -112,7 +112,7 @@ class CoreTests(unittest.TestCase):
                 if name.endswith('sheet1.xml'):
                     data = data.replace(b'<is>', b'<f>1+1</f><is>')
                 dst.writestr(name, data)
-        with self.assertRaisesRegex(ValueError, 'fórmula'):
+        with self.assertRaisesRegex(ValueError, 'formula'):
             core.read_rows(bad)
 
     def test_real_dds_all_formats_and_wheels(self):
