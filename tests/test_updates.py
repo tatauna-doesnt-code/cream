@@ -21,6 +21,17 @@ class UpdateTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             updater.version_tuple('v1.2.3-beta')
 
+    def test_release_contains_license_sources_and_no_bornie(self):
+        with zipfile.ZipFile(build()) as package:
+            names = set(package.namelist())
+            self.assertTrue({'LICENSE', 'THIRD_PARTY_NOTICES.md', 'README.md',
+                             'scripts/build_release.py', 'tests/test_updates.py',
+                             'kr7_batch/fonts/righteous/Righteous-Regular.ttf',
+                             'kr7_batch/fonts/righteous/OFL.txt'}.issubset(names))
+            self.assertIn(b'GNU GENERAL PUBLIC LICENSE', package.read('LICENSE'))
+            self.assertNotIn('kr7_batch/assets/cream-logo.png', names)
+            self.assertNotIn('scripts/render_logo.py', names)
+
     def test_traversal_rejected(self):
         for name in ('../evil', '/evil', 'kr7_batch/../../evil', 'C:/evil', 'a\\b', 'a/CON.py', 'a./b'):
             with self.subTest(name=name), self.assertRaises(ValueError):
@@ -33,6 +44,27 @@ class UpdateTests(unittest.TestCase):
             self.assertEqual(updater.check_latest(current='1.1.2', token='test')['version'], '1.2.0')
         with patch.object(updater, '_request', return_value=io.BytesIO(json.dumps(release).encode())):
             self.assertIsNone(updater.check_latest(current='1.2.0', token='test'))
+
+    def test_public_update_ignores_saved_private_token(self):
+        response = io.BytesIO(b'public')
+        with patch.object(updater, '_request', return_value=response) as request, patch.object(updater, 'load_token') as load:
+            self.assertIs(updater._release_request('/repos/' + updater.REPOSITORY + '/releases/latest'), response)
+            request.assert_called_once_with('/repos/' + updater.REPOSITORY + '/releases/latest', '', binary=False)
+            load.assert_not_called()
+
+    def test_private_update_falls_back_to_saved_token(self):
+        response = io.BytesIO(b'private')
+        with patch.object(updater, '_request', side_effect=[updater.AccessRequired('private'), response]) as request, patch.object(updater, 'load_token', return_value='test-placeholder'):
+            self.assertIs(updater._release_request('/repos/' + updater.REPOSITORY + '/releases/latest'), response)
+            self.assertEqual([c.args[1] for c in request.call_args_list], ['', 'test-placeholder'])
+
+    def test_public_download_uses_anonymous_request(self):
+        response = io.BytesIO(b'archive')
+        with patch.object(updater, '_request', return_value=response) as request, patch.object(updater, 'load_token') as load:
+            updater._release_request('/repos/' + updater.REPOSITORY + '/releases/assets/1', binary=True)
+            self.assertTrue(request.call_args.kwargs['binary'])
+            self.assertEqual(request.call_args.args[1], '')
+            load.assert_not_called()
 
     @unittest.skipUnless(os.environ.get('CREAM_TEST_DPAPI') == '1', 'Enable in a normal Windows user session; sandbox has no DPAPI profile')
     def test_dpapi(self):

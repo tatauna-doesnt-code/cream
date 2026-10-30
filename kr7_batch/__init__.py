@@ -1,4 +1,9 @@
-"""CREAM Skin Batch Exporter — Substance 3D Painter 12.1 / Python plugin."""
+# SPDX-License-Identifier: GPL-3.0-only
+# Copyright (C) 2026 tatauna-doesnt-code and contributors
+"""CREAM Skin Batch Exporter — Substance 3D Painter 12.1 / Python plugin.
+
+Free software under GNU GPL version 3; see LICENSE. Distributed without warranty.
+"""
 _window = None
 _action = None
 _reload_scheduled = False

@@ -1,4 +1,4 @@
-# CREAM beta 1.9.4
+# CREAM beta 1.9.5
 
 **Color Replacement & Export Automation Manager** personalizes Trackmania 2020 skin
 names/colors in Painter, exports DDS textures and packages one ZIP per skin.
@@ -77,14 +77,25 @@ Update controls are directly in **Settings**. Check, download and follow Apply/r
 instructions. Python-only updates can reopen CREAM; loader/resource changes require
 Painter restart. Restore previews and finish batches before applying updates.
 
-The repository is private. Each tester needs repository access. When required, CREAM
-asks for a fine-grained GitHub token limited to `tatauna-doesnt-code/cream`, with
-**Contents: Read-only**. Windows protects the saved credential. Startup checks never
-open credential prompts; public releases require no token.
+For public releases, updates work without a GitHub account or token. CREAM checks
+anonymously first, even if an old private-access token is saved. If the repository
+is private, testers need repository access and a fine-grained token limited to
+`tatauna-doesnt-code/cream` with **Contents: Read-only**. Windows protects the saved
+credential. Startup checks never open credential prompts.
 
 ## Development and components
 
 Run `python -m unittest discover -s tests -p 'test_*.py'`, then
 `python scripts/build_release.py`. Qt integration scripts require Painter's SDK runtime.
-Microsoft texconv retains its bundled MIT license; Montserrat retains its SIL Open Font
-License. This private beta does not yet have a selected open-source license.
+CREAM original code is **GPL-3.0-only**; see [LICENSE](LICENSE). You may modify and
+redistribute it under GPLv3, including its source and required notices. It comes
+without warranty. Microsoft texconv retains its MIT license; Montserrat and the
+Righteous logo font retain their SIL Open Font Licenses. See
+[THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md). The logo is live lowercase `cream`
+in Righteous at 28 pt; the rest of the product uses CREAM. Bornie is not bundled.
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for pull requests and
+[SECURITY.md](SECURITY.md) for private vulnerability reporting. Do not post tokens,
+real backer spreadsheets or private paths in issues. The publication audit and
+remaining administration steps are in [docs/publication-audit.md](docs/publication-audit.md)
+and [docs/github-settings-plan.md](docs/github-settings-plan.md).

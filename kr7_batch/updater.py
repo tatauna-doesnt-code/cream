@@ -113,9 +113,20 @@ def _request(path, token, binary=False):
         raise RuntimeError("Cannot connect to GitHub. The plugin remains available; try checking again later.") from None
 
 
+def _release_request(path, token=None, binary=False, data_dir=bootstrap.DATA):
+    if token is not None:
+        return _request(path, token, binary=binary)
+    try:
+        return _request(path, "", binary=binary)
+    except AccessRequired:
+        credential = load_token(data_dir)
+        if not credential:
+            raise
+        return _request(path, credential, binary=binary)
+
+
 def check_latest(current=VERSION, token=None):
-    token = load_token() if token is None else token
-    with _request("/repos/" + REPOSITORY + "/releases/latest", token) as response:
+    with _release_request("/repos/" + REPOSITORY + "/releases/latest", token) as response:
         data = response.read(2 * 1024 * 1024 + 1)
     if len(data) > 2 * 1024 * 1024:
         raise ValueError("The GitHub response is too large.")
@@ -164,7 +175,6 @@ def stage_release(release, target, cancel, data_dir=bootstrap.DATA, token=None):
     target = Path(target).resolve()
     if target.name != "kr7_batch" or not (target / "__init__.py").is_file():
         raise ValueError("Invalid plugin folder.")
-    token = load_token(data_dir) if token is None else token
     updates = Path(data_dir) / "updates"
     updates.mkdir(parents=True, exist_ok=True)
     stage = updates / uuid.uuid4().hex
@@ -174,7 +184,7 @@ def stage_release(release, target, cancel, data_dir=bootstrap.DATA, token=None):
     try:
         digest = hashlib.sha256()
         size = 0
-        with _request(f"/repos/{REPOSITORY}/releases/assets/{release['id']}", token, binary=True) as response, archive.open("wb") as handle:
+        with _release_request(f"/repos/{REPOSITORY}/releases/assets/{release['id']}", token, binary=True, data_dir=data_dir) as response, archive.open("wb") as handle:
             while True:
                 core.check_cancel(cancel)
                 chunk = response.read(256 * 1024)
