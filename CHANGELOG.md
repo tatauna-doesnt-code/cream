@@ -1,5 +1,18 @@
 # Changes
 
+## 1.8.0
+
+- Reorganize the workspace into Setup, Skins and Textures, with separate optional ZIP
+  naming and Activity pages. Keep filename styling out of the selection workspace.
+- Add first-use guidance, project preparation help, an empty state, column-mapping
+  explanations, color swatches and live selection/export counts.
+- Give Export a clear primary action and explain missing prerequisites. Put preview
+  next to the skin list and show a persistent Restore original banner while active.
+- Move updates and private access into an Updates dialog, with an available/ready
+  indicator in the header. Automatic checks and safe reload behavior remain intact.
+- Preserve settings, manual name overrides, texture selections and the current page
+  across CREAM reloads. Improve spacing, keyboard labels and compact-window layout.
+
 ## 1.7.0
 
 - Remove the DDS converter input and always use the verified bundled texconv.exe.

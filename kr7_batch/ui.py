@@ -82,87 +82,8 @@ class Window(W.QDialog):
         self.timer.setInterval(100)
         self.timer.timeout.connect(self.tick)
         DATA.mkdir(parents=True, exist_ok=True)
-        layout = W.QVBoxLayout(self)
-        title = W.QLabel("CREAM • Color Replacement & Export Automation Manager")
-        title.setStyleSheet("font-size: 22px; font-weight: bold; margin: 4px 0 8px 0;")
-        layout.addWidget(title)
-        self.fields = {}
-        form = W.QFormLayout()
-        layout.addLayout(form)
-        self.field(form, "sheet", "CSV / XLSX spreadsheet", "", "Spreadsheets (*.csv *.xlsx)")
-        self.field(form, "base", "Base ZIP", "", "Skin (*.zip)")
-        self.field(form, "output", "ZIP output folder", DEFAULT_OUTPUT, None)
-        self.fields["name_pattern"] = W.QLineEdit(core.DEFAULT_NAME_PATTERN)
-        self.fields["name_pattern"].setPlaceholderText("Event - {name}")
-        self.fields["name_pattern"].setMaxLength(200)
-        self.fields["name_pattern"].setToolTip(
-            "{name}: ZIP-name column (or player name). {player}: printed name. {id}: row ID. {row}: spreadsheet row. "
-            "{primary}/{secondary}: per-backer text colors. ZIP extension is added automatically.")
-        name_row = W.QWidget()
-        name_layout = W.QHBoxLayout(name_row)
-        name_layout.setContentsMargins(0, 0, 0, 0)
-        name_layout.addWidget(self.fields["name_pattern"], 1)
-        self.styling_enabled = W.QCheckBox("TM styling helper")
-        self.styling_enabled.setToolTip("Show a visual Trackmania text-style editor. Off by default; hiding it keeps your filename codes.")
-        name_layout.addWidget(self.styling_enabled)
-        form.addRow("ZIP name pattern", name_row)
-        self.name_style = NameStyleHelper()
-        self.name_style.hide()
-        self.name_style.pattern_changed.connect(self.fields["name_pattern"].setText)
-        self.name_style.color_requested.connect(self.refresh_name_colors)
-        self.styling_enabled.toggled.connect(self.toggle_name_helper)
-        layout.addWidget(self.name_style)
-        self.name_preview = W.QLabel()
-        self.name_preview.setWordWrap(True)
-        form.addRow("Filename preview", self.name_preview)
-        self.tabs = W.QTabWidget()
-        layout.addWidget(self.tabs, 1)
-        page = W.QWidget()
-        box = W.QVBoxLayout(page)
-        toolbar = W.QHBoxLayout()
-        box.addLayout(toolbar)
-        for label, callback in [("Load spreadsheet", self.load_sheet), ("Select all", lambda: self.check_rows(True)),
-                                ("Deselect all", lambda: self.check_rows(False)), ("Resume from report…", self.resume)]:
-            button = W.QPushButton(label)
-            button.clicked.connect(callback)
-            toolbar.addWidget(button)
-        self.backers = W.QTableWidget(0, 8)
-        self.backers.setHorizontalHeaderLabels(["Export", "Row / ID", "Player name", "Color 1", "Color 2", "Color 3", "Expected ZIP", "Status"])
-        self.backers.setSelectionBehavior(W.QAbstractItemView.SelectRows)
-        self.backers.setSelectionMode(W.QAbstractItemView.SingleSelection)
-        self.backers.setEditTriggers(W.QAbstractItemView.NoEditTriggers)
-        self.name_delegate = PlayerNameDelegate(self.backers)
-        self.backers.setItemDelegateForColumn(2, self.name_delegate)
-        self.backers.horizontalHeaderItem(2).setToolTip("Edit names directly. Changed names are bold italic; the refresh icon restores the spreadsheet value.")
-        self.backers.selectionModel().selectionChanged.connect(self.sync_name_selection)
-        self.backers.horizontalHeader().setSectionResizeMode(W.QHeaderView.ResizeToContents)
-        self.backers.horizontalHeader().setStretchLastSection(True)
-        box.addWidget(self.backers)
-        box.addWidget(W.QLabel("Names: up to 20 characters. Blank colors: project original. Duplicate ZIP names receive 2, 3…"))
-        upload_note = W.QLabel("To upload in-game, place ZIPs directly in CarSport; uploads may fail from subfolders.")
-        upload_note.setWordWrap(True)
-        box.addWidget(upload_note)
-        self.tabs.addTab(page, "Backers")
-        page = W.QWidget()
-        box = W.QVBoxLayout(page)
-        box.addWidget(W.QLabel("TM2020 preset • DDS without mipmaps • OpenGL normals at export • Glass has no name/color changes"))
-        self.texture_sets = TextureSets()
-        box.addWidget(self.texture_sets)
-        box.addWidget(W.QLabel("Unselected files are preserved from the base ZIP. Missing files remain absent."))
-        self.tabs.addTab(page, "Textures")
-        self.log = W.QPlainTextEdit()
-        self.log.setReadOnly(True)
-        self.tabs.addTab(self.log, "Log")
-        actions = W.QHBoxLayout()
-        layout.addLayout(actions)
-        for label, callback in [("Validate configuration", self.validate), ("Preview selected backer", self.preview),
-                                ("Restore names and colors", self.restore), ("Export selected backers", self.start)]:
-            button = W.QPushButton(label)
-            button.clicked.connect(callback)
-            actions.addWidget(button)
-        self.status = W.QLabel("Select the spreadsheet, base ZIP and textures. Validate before exporting.")
-        self.status.setWordWrap(True)
-        layout.addWidget(self.status)
+        from .workspace import build
+        layout = build(self, DEFAULT_OUTPUT)
         self.load_settings()
         self.fields["name_pattern"].textChanged.connect(self.naming_changed)
         self.fields["output"].textChanged.connect(self.naming_changed)
@@ -176,9 +97,9 @@ class Window(W.QDialog):
         self.update_mode = "check"
         self.update_status = W.QLabel("CREAM " + VERSION)
         self.update_status.setWordWrap(True)
-        layout.addWidget(self.update_status)
+        self.updates_layout.addWidget(self.update_status)
         update_bar = W.QHBoxLayout()
-        layout.addLayout(update_bar)
+        self.updates_layout.addLayout(update_bar)
         self.check_button = W.QPushButton("Check for updates")
         self.access_button = W.QPushButton("Configure private access…")
         self.update_button = W.QPushButton("Download update")
@@ -188,6 +109,16 @@ class Window(W.QDialog):
         self.check_button.clicked.connect(self.check_updates)
         self.access_button.clicked.connect(self.configure_access)
         self.update_button.clicked.connect(self.update_clicked)
+        close = W.QDialogButtonBox(W.QDialogButtonBox.Close)
+        close.rejected.connect(self.updates_dialog.hide)
+        self.updates_layout.addWidget(close)
+        self.backers.itemChanged.connect(self.refresh_workflow)
+        self.backers.currentCellChanged.connect(self.refresh_workflow)
+        for section in self.texture_sets.groups.values():
+            section.changed.connect(self.refresh_workflow)
+        for field in self.fields.values():
+            field.textChanged.connect(self.refresh_workflow)
+        self.refresh_workflow()
         self.update_timer = QtCore.QTimer(self)
         self.update_timer.setInterval(200)
         self.update_timer.timeout.connect(self.poll_update)
@@ -211,6 +142,43 @@ class Window(W.QDialog):
             finally:
                 package._window, package._action = window, action
         self.reload_callback = package.request_reload
+
+    def refresh_workflow(self, *args):
+        if not hasattr(self, "export_button"):
+            return
+        count = sum(bool(self.backers.item(i, 0)) and self.backers.item(i, 0).checkState() == QtCore.Qt.Checked
+                    for i in range(self.backers.rowCount()))
+        maps = len(self.selections())
+        loaded = bool(self.rows)
+        busy = self.runner is not None
+        preview = self.saved is not None
+        self.empty_state.setVisible(not loaded)
+        self.backers.setVisible(loaded)
+        self.skin_count.setText(f"{count} of {len(self.rows)} selected" if loaded else "No skins loaded")
+        self.summary.setText(f"{count} skins selected  ·  {maps} textures per skin  ·  {count * maps} texture exports")
+        self.export_button.setText(f"Export {count} skin" + ("s" if count != 1 else ""))
+        configured = bool(self.fields["base"].text().strip() and self.fields["output"].text().strip())
+        next_step = ("Load a spreadsheet in Setup." if not loaded else
+                     "Choose a base ZIP and output folder in Setup." if not configured else
+                     "Select skins to export." if not count else
+                     "Choose textures in step 3." if not maps else
+                     "Fix or reset the invalid player name." if self.invalid_names else
+                     "Restore the preview before exporting." if preview else "")
+        if next_step:
+            self.summary.setText(next_step + "  " + self.summary.text())
+        self.export_button.setEnabled(bool(count and maps and configured and not busy and not preview and not self.invalid_names))
+        self.validate_button.setEnabled(loaded and not busy and not preview)
+        self.preview_button.setEnabled(loaded and self.backers.currentRow() >= 0 and not busy and not preview and not self.invalid_names)
+        self.preview_banner.setVisible(preview and not busy)
+        self.load_button.setEnabled(not busy and not preview)
+        self.resume_button.setEnabled(loaded and not busy and not preview)
+        self.setup_hint.setText("Spreadsheet loaded. Review Skins, choose Textures, then export." if loaded
+                                else "Next: load your spreadsheet and match its columns.")
+
+    def refresh_update_notice(self):
+        pending = bootstrap.pending_path(Path(__file__).parent).exists()
+        self.updates_link.setText("Update ready" if pending else "Update available" if self.available_release else "Updates · " + VERSION)
+        self.updates_link.setToolTip(self.update_status.text())
 
     def configure_access(self):
         if self.update_future is not None:
@@ -270,6 +238,7 @@ class Window(W.QDialog):
                 self.update_status.setText("New release: " + result["version"] if result else "CREAM " + VERSION + " is up to date.")
         except Exception as exc:
             self.update_status.setText(str(exc))
+        self.refresh_update_notice()
 
     def show_pending_update(self):
         try:
@@ -285,6 +254,7 @@ class Window(W.QDialog):
         except Exception as exc:
             self.update_button.setEnabled(False)
             self.update_status.setText(str(exc))
+        self.refresh_update_notice()
 
     def update_clicked(self):
         if bootstrap.pending_path(Path(__file__).parent).exists():
@@ -300,7 +270,7 @@ class Window(W.QDialog):
         if self.runner is not None or self._stepping or self.future is not None or self.update_future is not None:
             return "Wait for the current batch or background task to finish before applying the update."
         if self.saved is not None:
-            return "Restore names and colors before applying the update."
+            return "Restore original before applying the update."
         if self.invalid_names:
             return "Fix or reset the invalid player name before applying the update."
         if sp.project.is_open():
@@ -321,7 +291,8 @@ class Window(W.QDialog):
                 "name_originals": self.name_originals,
                 "checked": [self.backers.item(i, 0).checkState() == QtCore.Qt.Checked
                             for i in range(self.backers.rowCount())],
-                "selected": self.backers.currentRow(), "log": self.log.toPlainText()}
+                "selected": self.backers.currentRow(), "log": self.log.toPlainText(),
+                "page": self.tabs.currentIndex()}
 
     def restore_reload_state(self, state):
         if not state:
@@ -341,6 +312,8 @@ class Window(W.QDialog):
         if state["selected"] >= 0:
             self.backers.selectRow(state["selected"])
         self.log.setPlainText(state["log"])
+        self.tabs.setCurrentIndex(state.get("page", 1 if self.rows else 0))
+        self.refresh_workflow()
 
     def stop_updater(self):
         self._updates_stopped = True
@@ -353,9 +326,12 @@ class Window(W.QDialog):
         layout = W.QHBoxLayout(row)
         layout.setContentsMargins(0, 0, 0, 0)
         text = W.QLineEdit(value)
+        text.setAccessibleName(label)
         self.fields[key] = text
         layout.addWidget(text)
         button = W.QPushButton("Browse…")
+        button.setAutoDefault(False)
+        button.setAccessibleName("Browse for " + label)
         button.clicked.connect(lambda: self.browse(key, pattern))
         layout.addWidget(button)
         form.addRow(label, row)
@@ -371,6 +347,7 @@ class Window(W.QDialog):
     def say(self, message):
         self.log.appendPlainText(datetime.now().strftime("%H:%M:%S  ") + message)
         self.status.setText(message)
+        self.status.setToolTip(message)
         if self.progress and not self.cancel.is_set():
             self.progress.label.setText(message)
 
@@ -394,6 +371,10 @@ class Window(W.QDialog):
         try:
             if self.runner is not None or self.saved is not None:
                 raise ValueError("Finish the batch and restore the preview before loading another spreadsheet.")
+            if not self.fields["sheet"].text().strip():
+                self.browse("sheet", "Spreadsheets (*.csv *.xlsx)")
+                if not self.fields["sheet"].text().strip():
+                    return
             path = Path(self.fields["sheet"].text())
             stamp = path.stat().st_mtime_ns
             table = core.read_table(path)
@@ -418,8 +399,10 @@ class Window(W.QDialog):
             self.backers.selectRow(0)
             for warning in warnings:
                 self.say(warning)
-            self.say(f"{len(rows)} backers loaded. {len(warnings)} warnings in the Log.")
+            self.say(f"{len(rows)} backers loaded. {len(warnings)} warnings in Activity.")
             self.save_settings()
+            self.tabs.setCurrentWidget(self.skins_page)
+            self.refresh_workflow()
         except Exception as exc:
             self.error(exc)
 
@@ -438,6 +421,8 @@ class Window(W.QDialog):
         self.name_cells = {}
         self.invalid_names = {}
         for index, row in enumerate(self.rows):
+            for column, color in enumerate(row["colors"], 3):
+                self.backers.item(index, column).setData(QtCore.Qt.DecorationRole, QtGui.QColor(color) if color else None)
             cell = PlayerNameCell(row["name"], self.name_originals[index]["name"])
             self.name_cells[index] = cell
             self.backers.setCellWidget(index, 2, cell)
@@ -457,6 +442,7 @@ class Window(W.QDialog):
         allowed = self.runner is None and self.saved is None
         for cell in self.name_cells.values():
             cell.set_allowed(allowed)
+        self.refresh_workflow()
 
     def edit_player_name(self, index, value):
         cell = self.name_cells[index]
@@ -486,6 +472,7 @@ class Window(W.QDialog):
             self.naming_changed()
         cell.refresh_appearance()
         self.backers.item(index, 2).setFont(cell.editor.font())
+        self.refresh_workflow()
 
     def reset_player_name(self, index):
         if self.runner is None and self.saved is None:
@@ -587,7 +574,7 @@ class Window(W.QDialog):
     def capture(self):
         path = self.recovery_path()
         if self.saved is not None or path.exists():
-            raise ValueError("A preview or recovery is pending. Use Restore names and colors before continuing.")
+            raise ValueError("A preview or recovery is pending. Use Restore original before continuing.")
         saved = painter.snapshot()
         core.atomic_json(path, saved)  # Must reach disk before editing the project.
         self.saved = saved
@@ -623,7 +610,7 @@ class Window(W.QDialog):
         self.ensure_rows()
         core.validate_name_pattern(self.fields["name_pattern"].text())
         if self.saved or self.recovery_path().exists():
-            raise ValueError("Restore names and colors before validating or starting a new batch.")
+            raise ValueError("Restore original before validating or starting a new batch.")
         selections = self.selections()
         if not selections:
             raise ValueError("Select at least one texture in the Textures tab.")
@@ -676,7 +663,7 @@ class Window(W.QDialog):
                 self.saved = None
                 self.sync_name_editing()
                 raise
-            self.say("Preview applied. Check the model, then use Restore names and colors. Do not save the preview over your original.")
+            self.say("Preview applied. Check the model, then use Restore original. Do not save the preview over your original.")
         except Exception as exc:
             self.error(exc)
 
@@ -740,6 +727,7 @@ class Window(W.QDialog):
             self.progress.show()
             self.runner = self.run_batch(indices, saved, maps, self.selections(), self.fields["name_pattern"].text())
             self.timer.start()
+            self.refresh_workflow()
         except Exception as exc:
             # capture() may have succeeded before setup failed; no mutation yet.
             if captured and self.saved is not None and self.runner is None:

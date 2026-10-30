@@ -69,14 +69,19 @@ starts again with its imported values.
 
 ## Export
 
-1. Load and map the spreadsheet.
-2. Select the base ZIP, output folder and ZIP name pattern. Check the filename preview.
+1. In **Setup**, choose the spreadsheet, base skin ZIP and output folder. Load the
+   spreadsheet and match its columns. Project preparation help is available below the files.
+2. In **Skins**, check the rows to export. Edit names directly if needed. **ZIP names**
+   contains the optional filename pattern and Trackmania styling helper.
 3. In Textures, expand a texture set to select individual textures. The header checkbox
    selects or clears the full set. Its Resolution control applies to every texture in
    the set; individual size overrides remain available. Mixed indicates differing sizes.
-4. Validate configuration.
-5. Preview a selected backer, inspect the model, then Restore names and colors.
-6. Export one or two backers and check them in Trackmania before running the full batch.
+4. Use **Check configuration**. The footer shows selected skins and texture counts,
+   and explains missing prerequisites. Export also validates automatically.
+5. Optionally use **Preview highlighted skin** in Skins, inspect the model, then click
+   **Restore original** in the preview banner. Activity also includes project recovery.
+6. Click **Export N skins**. Export one or two and check them in Trackmania before
+   running the full batch. **Updates** in the header opens update and access controls.
 
 Copy completed ZIPs directly into Trackmania/Skins/Models/CarSport for in-game upload.
 Uploads from subfolders such as KR7BACKERS can fail with C-AA-00-03 despite a working preview.
@@ -142,7 +147,7 @@ Cancel safely waits for a safe stopping point, restores original names/colors an
 finished ZIPs. Painter exports/autosave can delay a cancellation request. Conversion can
 be terminated. A ZIP is written as .partial, checked for CRC and published only when complete.
 An abrupt process exit can leave temporary files. The recovery record is written before
-project edits. Restore names and colors after a crash before starting another batch.
+project edits. Restore original after a crash before starting another batch.
 
 Reports are stored in _KR7_reports. Load the same spreadsheet/settings and use Resume from
 report to deselect confirmed completed rows. Reports across changed export pipelines cannot

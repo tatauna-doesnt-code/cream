@@ -36,7 +36,7 @@ with tempfile.TemporaryDirectory() as temp:
     window.show()
     app.processEvents()
     window.grab().save(str(ROOT / 'dist/ui-backers.png'))
-    window.tabs.setCurrentIndex(1)
+    window.tabs.setCurrentWidget(window.textures_page)
     app.processEvents()
     window.grab().save(str(ROOT / 'dist/ui-textures.png'))
     assert len(window.texture_sets.settings()) == 28
@@ -130,10 +130,11 @@ with tempfile.TemporaryDirectory() as temp:
     window.styling_enabled.setChecked(True)
     window.backers.selectRow(0)
     window.fields['name_pattern'].setText('$o{primary}Community - {name}$z')
-    window.tabs.setCurrentIndex(0)
+    window.tabs.setCurrentWidget(window.naming_page)
     app.processEvents()
     app.processEvents()  # Allow the expanded helper's layout request to settle.
-    assert window.name_style.geometry().bottom() < window.tabs.geometry().top()
+    assert window.name_style.parentWidget() is window.naming_page
+    assert window.name_style.geometry().bottom() < window.naming_page.height()
     window.grab().save(str(ROOT / 'dist/ui-name-styling.png'))
     print('Controller integration: busy wait, two same-name different-color ZIPs, cancellation on second backer, original restore verified.', flush=True)
     window.pool.shutdown()

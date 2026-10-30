@@ -6,9 +6,9 @@ from . import core
 
 FIELDS = [
     ("nome_player", "Player name *", "Select a column"),
-    ("cor_1", "Color 1 — PLAYER_COLOR1", "Project original"),
-    ("cor_2", "Color 2 — PLAYER_COLOR2", "Project original"),
-    ("cor_3", "Color 3 — PLAYER_COLOR3", "Project original"),
+    ("cor_1", "Color 1 (optional)", "Project original"),
+    ("cor_2", "Color 2 (optional)", "Project original"),
+    ("cor_3", "Color 3 (optional)", "Project original"),
     ("id", "Row ID", "Row number"),
     ("nome_arquivo", "ZIP name", "Use player name"),
     ("ativo", "Export / active", "All rows"),
@@ -33,6 +33,11 @@ class ColumnDialog(W.QDialog):
         self.mapping = None
         headers = table[0]
         layout = W.QVBoxLayout(self)
+        layout.setContentsMargins(16, 16, 16, 16)
+        layout.setSpacing(12)
+        heading = W.QLabel("Match your spreadsheet columns")
+        heading.setStyleSheet("font-size: 17px; font-weight: 600;")
+        layout.addWidget(heading)
         description = W.QLabel(
             "Choose a column for each field. The first spreadsheet row contains the headers.\n"
             "Only the name is required. Colors must be #RRGGBB; blank cells use the project original.")
@@ -46,6 +51,9 @@ class ColumnDialog(W.QDialog):
             initial = saved.get("mapping", initial)
         for field, label, empty in FIELDS:
             combo = W.QComboBox()
+            combo.setAccessibleName(label)
+            if field.startswith("cor_"):
+                combo.setToolTip("Changes Base Color on PLAYER_COLOR" + field[-1] + ". Leave unmapped to keep the project original.")
             combo.addItem("— " + empty + " —", None)
             for index, header in enumerate(headers):
                 combo.addItem(f"{column_letter(index)} — {header or '(no header)'}", index)
@@ -69,7 +77,7 @@ class ColumnDialog(W.QDialog):
         self.message.setWordWrap(True)
         layout.addWidget(self.message)
         self.buttons = W.QDialogButtonBox()
-        self.import_button = self.buttons.addButton("Load backers", W.QDialogButtonBox.AcceptRole)
+        self.import_button = self.buttons.addButton("Load skins", W.QDialogButtonBox.AcceptRole)
         self.buttons.addButton("Cancel", W.QDialogButtonBox.RejectRole)
         self.buttons.accepted.connect(self.accept_mapping)
         self.buttons.rejected.connect(self.reject)

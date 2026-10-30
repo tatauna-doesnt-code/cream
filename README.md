@@ -10,6 +10,9 @@ Tested against the Painter 12.1.3 SDK; API minimum 11.0 is not validated on that
 
 ## Updates
 
+Open **Updates** in the top-right corner for version checks, downloads and private
+access. The header changes to **Update available** or **Update ready** when applicable.
+
 Install manually once with `Instalar.cmd`, with Painter closed. For private updates,
 configure a GitHub fine-grained token limited to `tatauna-doesnt-code/cream`, with
 Contents: Read-only. Windows protects the token for the current user.
@@ -30,6 +33,15 @@ Previous installations are retained under `python/cream-backups`.
 The initial upgrade from 1.2.x requires one Painter restart.
 
 ## Spreadsheet and textures
+
+The main workflow is **1 Setup → 2 Skins → 3 Textures**. Setup contains source files,
+the output folder and collapsible Painter-project instructions. Loading a spreadsheet
+opens column mapping and then the skin list. Select rows, optionally preview one,
+and choose maps. **Export N skins** validates before starting; a separate configuration
+check is available. Missing prerequisites are explained beside the export counts.
+An active preview shows **Restore original** above every page. Recovery after a crash
+is also available in **Activity**. ZIP naming/styling has its own optional **ZIP names**
+page; updates no longer occupy the export workspace.
 
 Select columns for name, three colors, ID, ZIP name and active flag. Only name is
 required. Original template headers and existing CSV values remain supported.
@@ -77,7 +89,7 @@ the current user's Documents/Trackmania/Skins/Models/CarSport. Saved folders are
 
 ### Trackmania styling helper
 
-Enable **TM styling helper** beside the name pattern to show a compact WYSIWYG editor
+Enable **Use Trackmania text styling** on the **ZIP names** page to show a compact WYSIWYG editor
 and styled preview for the selected backer. It is off by default. Select a portion of
 the pattern and use bold, italic, uppercase, shadow, width, color or reset controls;
 with no selection, the style applies to subsequent typing. Ctrl+B/Ctrl+I are supported.

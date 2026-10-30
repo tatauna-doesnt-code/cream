@@ -1,0 +1,75 @@
+"""Exercise first-use navigation and capture the actual Qt layouts without a project."""
+import runpy
+from pathlib import Path
+import tempfile
+from unittest.mock import patch
+
+ROOT = Path(__file__).resolve().parents[1]
+context = runpy.run_path(str(ROOT / "scripts/check_columns_ui.py"))
+W, ui, app = (context[key] for key in ("W", "ui", "app"))
+from PySide6 import QtCore, QtGui
+
+app.setStyle("Fusion")
+palette = QtGui.QPalette()
+for role, color in [("Window", "#303030"), ("WindowText", "#eeeeee"), ("Base", "#242424"),
+                    ("AlternateBase", "#2b2b2b"), ("Text", "#eeeeee"), ("Button", "#393939"),
+                    ("ButtonText", "#eeeeee"), ("Highlight", "#326b96"), ("HighlightedText", "#ffffff")]:
+    palette.setColor(getattr(QtGui.QPalette, role), QtGui.QColor(color))
+app.setPalette(palette)
+
+with tempfile.TemporaryDirectory() as folder, patch.object(ui, "DATA", Path(folder)):
+    window = ui.Window(auto_update=False)
+    window.show()
+    app.processEvents()
+    assert window.tabs.currentWidget() is window.setup_page
+    assert not window.export_button.isEnabled()
+    assert not window.preview_button.isEnabled()
+    assert window.updates_dialog.isHidden()
+    window.grab().save(str(ROOT / "dist/workspace-01-setup.png"))
+    window.tabs.setCurrentWidget(window.skins_page)
+    app.processEvents()
+    assert window.empty_state.isVisible() and not window.backers.isVisible()
+    window.grab().save(str(ROOT / "dist/workspace-02-empty.png"))
+    rows = [{"line": i + 2, "id": str(i + 1), "name": name, "stem": name,
+             "colors": ["#FFC878", "#8FDFFF", None]} for i, name in enumerate(
+                 ["Bompi", "DaBest", "Tevs", "Ice", "p0Sik", "Teak", "karl_jr23"])]
+    window.restore_reload_state({"rows": rows, "loaded_sheet": None,
+        "checked": [True] * len(rows), "selected": 0, "log": "Ready for validation."})
+    window.fields["base"].setText("C:/Skins/Base.zip")
+    skin = window.texture_sets.groups["Skin"]
+    skin.table.item(0, 0).setCheckState(QtCore.Qt.Checked)
+    assert window.export_button.isEnabled()
+    assert window.export_button.text() == "Export 7 skins"
+    assert not window.empty_state.isVisible()
+    window.name_cells[4].editor.setText("p0Sik!")
+    app.processEvents()
+    window.grab().save(str(ROOT / "dist/workspace-03-skins.png"))
+    window.saved = {"project": "test"}
+    window.sync_name_editing()
+    assert window.preview_banner.isVisible()
+    assert not window.export_button.isEnabled() and not window.load_button.isEnabled()
+    window.saved = None
+    window.sync_name_editing()
+    assert not window.preview_banner.isVisible()
+    window.tabs.setCurrentWidget(window.textures_page)
+    skin.expand.click()
+    app.processEvents()
+    window.grab().save(str(ROOT / "dist/workspace-04-textures.png"))
+    window.tabs.setCurrentWidget(window.naming_page)
+    window.styling_enabled.setChecked(True)
+    window.fields["name_pattern"].setText("$o{primary}KR7 - {name}$z")
+    app.processEvents()
+    window.grab().save(str(ROOT / "dist/workspace-05-names.png"))
+    window.resize(900, 700)
+    app.processEvents()
+    assert window.name_style.geometry().bottom() < window.naming_page.height()
+    assert window.export_button.geometry().right() < window.width()
+    window.grab().save(str(ROOT / "dist/workspace-06-small.png"))
+    window.updates_link.click()
+    app.processEvents()
+    assert window.updates_dialog.isVisible()
+    window.updates_dialog.grab().save(str(ROOT / "dist/workspace-07-updates.png"))
+    window.updates_dialog.hide()
+    window.stop_background_tasks()
+    window.hide()
+print("Passed: setup, empty state, selection counts, preview guard, navigation, naming, compact layout and updates dialog.")
