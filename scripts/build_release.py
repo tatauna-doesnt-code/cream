@@ -13,7 +13,7 @@ from kr7_batch.version import VERSION, UPDATE_RESTART
 def build():
     files = [p for folder in ('kr7_batch', 'preset', 'scripts', 'tests', 'docs', '.github') for p in (ROOT / folder).rglob('*')
              if p.is_file() and '__pycache__' not in p.parts and p.suffix != '.pyc']
-    files += [ROOT / p for p in ('Instalar.cmd', 'Instalar.ps1', 'LEIA-ME.md', 'modelo_backers.csv',
+    files += [ROOT / p for p in ('Instalar.cmd', 'Instalar.ps1', 'Dev.cmd', 'LEIA-ME.md', 'modelo_backers.csv',
                                 'LICENSE', 'THIRD_PARTY_NOTICES.md', 'CONTRIBUTING.md', 'SECURITY.md')]
     # Releases include their corresponding source, build instructions and license.
     files += [ROOT / p for p in ('README.md', 'CHANGELOG.md')]

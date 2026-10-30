@@ -1,5 +1,14 @@
 # Changes
 
+## Unreleased — local development tooling
+
+- Add Dev.cmd and a Python CLI to stage uncommitted source builds for the existing
+  transactional reload flow, without GitHub, commits or version bumps.
+- Locate Painter's bundled Python automatically and honor redirected Documents paths.
+- Validate source syntax, preserve downloaded pending updates by default, and use
+  the actual Painter process ID so protected changes really require a restart.
+- Document contributor setup and include the launcher in future release packages.
+
 ## 1.9.5
 
 - License CREAM's original code under GPL-3.0-only and include license/source/build

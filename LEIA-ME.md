@@ -83,6 +83,22 @@ is private, testers need repository access and a fine-grained token limited to
 `tatauna-doesnt-code/cream` with **Contents: Read-only**. Windows protects the saved
 credential. Startup checks never open credential prompts.
 
+## Local development without commits
+
+Get the current main source checkout (or GitHub Code → Download ZIP), install it
+once with Painter closed using Instalar.cmd, then reopen Painter. Edit the local
+checkout and run **Dev.cmd**. In CREAM, use **Settings → Check for updates**, then
+**Apply and reopen CREAM** to load that local build. The check sees the staged local
+package first; no commit, push, GitHub release or version bump is needed.
+
+Dev.cmd finds the running Painter's bundled Python. Alternatively use
+`python scripts/dev.py` with Python 3.10+, and `--target` for a custom installation.
+Python-only edits can reload CREAM; loader/updater/resource changes require a Painter
+restart. Existing preview/batch/autosave and rollback safeguards remain in effect.
+CREAM itself still runs inside Painter.
+
+See [docs/development.md](docs/development.md) for the full workflow and recovery notes.
+
 ## Development and components
 
 Run `python -m unittest discover -s tests -p 'test_*.py'`, then
