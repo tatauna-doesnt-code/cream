@@ -16,11 +16,13 @@ from . import core, painter, updater, bootstrap
 from .columns import ColumnDialog
 from .name_style import NameStyleHelper
 from .name_cell import PlayerNameCell, PlayerNameDelegate
+from .texture_sets import TextureSets
 from .version import VERSION
 
 DATA = Path(os.environ.get("LOCALAPPDATA", str(Path.home()))) / "KR7BatchExporter"
 DEFAULT_OUTPUT = str(Path(QtCore.QStandardPaths.writableLocation(QtCore.QStandardPaths.DocumentsLocation))
                      / "Trackmania" / "Skins" / "Models" / "CarSport")
+CONVERTER = Path(__file__).parent / "bin" / "texconv.exe"
 
 
 class Progress(W.QDialog):
@@ -90,7 +92,6 @@ class Window(W.QDialog):
         self.field(form, "sheet", "CSV / XLSX spreadsheet", "", "Spreadsheets (*.csv *.xlsx)")
         self.field(form, "base", "Base ZIP", "", "Skin (*.zip)")
         self.field(form, "output", "ZIP output folder", DEFAULT_OUTPUT, None)
-        self.field(form, "converter", "DDS converter", str(Path(__file__).parent / "bin" / "texconv.exe"), "Converter (texconv.exe)")
         self.fields["name_pattern"] = W.QLineEdit(core.DEFAULT_NAME_PATTERN)
         self.fields["name_pattern"].setPlaceholderText("Event - {name}")
         self.fields["name_pattern"].setMaxLength(200)
@@ -145,25 +146,8 @@ class Window(W.QDialog):
         page = W.QWidget()
         box = W.QVBoxLayout(page)
         box.addWidget(W.QLabel("TM2020 preset • DDS without mipmaps • OpenGL normals at export • Glass has no name/color changes"))
-        self.maps = W.QTableWidget(0, 5)
-        self.maps.setHorizontalHeaderLabels(["Exportar", "Texture set", "Texture", "Output resolution", "DDS"])
-        self.maps.setEditTriggers(W.QAbstractItemView.NoEditTriggers)
-        self.maps.horizontalHeader().setSectionResizeMode(W.QHeaderView.Stretch)
-        for texture_set in ("Details", "Glass", "Skin", "Wheels"):
-            for suffix, compression in core.MAPS.items():
-                index = self.maps.rowCount()
-                self.maps.insertRow(index)
-                self.maps.setItem(index, 0, self.check_item(False))
-                self.maps.setItem(index, 1, W.QTableWidgetItem(texture_set))
-                self.maps.setItem(index, 2, W.QTableWidgetItem(suffix))
-                sizes = W.QComboBox()
-                for size in (1024, 2048, 4096):
-                    width, height = core.dimensions(texture_set, size)
-                    sizes.addItem(f"{width} × {height}", size)
-                sizes.setCurrentIndex(1)
-                self.maps.setCellWidget(index, 3, sizes)
-                self.maps.setItem(index, 4, W.QTableWidgetItem(compression.replace("_UNORM", "")))
-        box.addWidget(self.maps)
+        self.texture_sets = TextureSets()
+        box.addWidget(self.texture_sets)
         box.addWidget(W.QLabel("Unselected files are preserved from the base ZIP. Missing files remain absent."))
         self.tabs.addTab(page, "Textures")
         self.log = W.QPlainTextEdit()
@@ -575,16 +559,13 @@ class Window(W.QDialog):
                     self.backers.item(i, 6).setText("Invalid name pattern")
 
     def selections(self):
-        return [{"set": self.maps.item(i, 1).text(), "map": self.maps.item(i, 2).text(),
-                 "size": self.maps.cellWidget(i, 3).currentData()}
-                for i in range(self.maps.rowCount()) if self.maps.item(i, 0).checkState() == QtCore.Qt.Checked]
+        return self.texture_sets.selections()
 
     def save_settings(self):
         core.atomic_json(DATA / "settings.json", {"fields": {k: v.text() for k, v in self.fields.items()},
                          "tm_styling": self.styling_enabled.isChecked(),
                          "column_profile": self.column_profile,
-                         "maps": [{"checked": self.maps.item(i, 0).checkState() == QtCore.Qt.Checked,
-                                   "size": self.maps.cellWidget(i, 3).currentData()} for i in range(self.maps.rowCount())]})
+                         "maps": self.texture_sets.settings()})
 
     def load_settings(self):
         try:
@@ -596,10 +577,7 @@ class Window(W.QDialog):
             for key, value in settings.get("fields", {}).items():
                 if key in self.fields:
                     self.fields[key].setText(value)
-            for i, item in enumerate(settings.get("maps", [])[:self.maps.rowCount()]):
-                self.maps.item(i, 0).setCheckState(QtCore.Qt.Checked if item["checked"] else QtCore.Qt.Unchecked)
-                combo = self.maps.cellWidget(i, 3)
-                combo.setCurrentIndex(max(0, combo.findData(item["size"])))
+            self.texture_sets.restore_settings(settings.get("maps", []))
         except (OSError, ValueError, KeyError):
             pass
 
@@ -651,9 +629,8 @@ class Window(W.QDialog):
             raise ValueError("Select at least one texture in the Textures tab.")
         base = Path(self.fields["base"].text())
         core.inspect_base(base)
-        converter = Path(self.fields["converter"].text())
-        if not converter.is_file() or converter.name.lower() != "texconv.exe":
-            raise ValueError("Select texconv.exe (included in the plugin bin folder).")
+        if not CONVERTER.is_file():
+            raise ValueError("The bundled DDS converter is missing. Reinstall or update CREAM.")
         output = Path(self.fields["output"].text())
         if not output.is_absolute():
             raise ValueError("Choose an output folder with an absolute path.")
@@ -791,7 +768,7 @@ class Window(W.QDialog):
         name_pattern = self.fields["name_pattern"].text() if name_pattern is None else name_pattern
         base = Path(self.fields["base"].text())
         output = Path(self.fields["output"].text())
-        converter = Path(self.fields["converter"].text())
+        converter = CONVERTER
         try:
             name_colors = painter.filename_color_defaults(saved) if core.name_color_fields(name_pattern) else None
             for position, index in enumerate(indices):
