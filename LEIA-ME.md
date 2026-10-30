@@ -101,3 +101,36 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for pull requests and
 real backer spreadsheets or private paths in issues. The publication audit and
 remaining administration steps are in [docs/publication-audit.md](docs/publication-audit.md)
 and [docs/github-settings-plan.md](docs/github-settings-plan.md).
+
+## Local development without commits
+
+Get the current main source checkout (or GitHub Code → Download ZIP), install it
+once with Painter closed using Instalar.cmd, then reopen Painter. Edit the local
+checkout and run **Dev.cmd**. In CREAM, use **Settings → Check for updates**, then
+**Apply and reopen CREAM** to load that local build. The check sees the staged local
+package first; no commit, push, GitHub release or version bump is needed.
+
+Dev.cmd finds the running Painter's bundled Python. Alternatively use
+`python scripts/dev.py` with Python 3.10+, and `--target` for a custom installation.
+Python-only edits can reload CREAM; loader/updater/resource changes require a Painter
+restart. Existing preview/batch/autosave and rollback safeguards remain in effect.
+CREAM itself still runs inside Painter.
+
+See [docs/development.md](docs/development.md) for the full workflow and recovery notes.
+
+## Development and components
+
+Run `python -m unittest discover -s tests -p 'test_*.py'`, then
+`python scripts/build_release.py`. Qt integration scripts require Painter's SDK runtime.
+CREAM original code is **GPL-3.0-only**; see [LICENSE](LICENSE). You may modify and
+redistribute it under GPLv3, including its source and required notices. It comes
+without warranty. Microsoft texconv retains its MIT license; Montserrat and the
+Righteous logo font retain their SIL Open Font Licenses. See
+[THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md). The logo is live lowercase `cream`
+in Righteous at 28 pt; the rest of the product uses CREAM. Bornie is not bundled.
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for pull requests and
+[SECURITY.md](SECURITY.md) for private vulnerability reporting. Do not post tokens,
+real backer spreadsheets or private paths in issues. The publication audit and
+remaining administration steps are in [docs/publication-audit.md](docs/publication-audit.md)
+and [docs/github-settings-plan.md](docs/github-settings-plan.md).
