@@ -1,5 +1,21 @@
 # Changes
 
+## 1.9.5
+
+- License CREAM's original code under GPL-3.0-only and include license/source/build
+  instructions and third-party notices in the release archive.
+- Replace the Bornie bitmap with the unmodified OFL-licensed Righteous font. Render
+  the lowercase “cream” wordmark as live 28-point text centered in Help.
+- Remove the former bitmap and its renderer from the current source/package.
+- Add read-only pull-request CI, pinned GitHub Actions, Dependabot action updates,
+  and a public-repository CodeQL workflow.
+- Add issue forms, contribution/security reporting policies, publication audit,
+  and a reviewable repository administration plan/helper. Live settings require
+  separate administration access; private-plan restrictions still apply.
+- Public releases check anonymously first, even when an old private-access token
+  is saved. Repository visibility is not changed by this release.
+- Requires a Painter restart for the new font and removed logo resource.
+
 ## 1.9.4
 
 - Center the Bornie “Cream” wordmark at 28 pt at the top of Help. Package rendered

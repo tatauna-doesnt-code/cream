@@ -41,11 +41,18 @@ def add_help(window):
     layout = W.QVBoxLayout(content)
     layout.setContentsMargins(18, 18, 18, 18)
     window.cream_logo = W.QLabel()
-    logo = QtGui.QPixmap(str(Path(__file__).parent / 'assets' / 'cream-logo.png'))
-    if not logo.isNull():
-        logo.setDevicePixelRatio(3)
-        window.cream_logo.setPixmap(logo)
-        window.cream_logo.setAccessibleName('Cream logo')
+    font_path = Path(__file__).parent / 'fonts/righteous/Righteous-Regular.ttf'
+    app = W.QApplication.instance()
+    identifier = app.property('creamRighteousFontId')
+    if identifier is None and font_path.is_file():
+        identifier = QtGui.QFontDatabase.addApplicationFontFromData(QtCore.QByteArray(font_path.read_bytes()))
+        app.setProperty('creamRighteousFontId', identifier)
+    if identifier is not None and identifier >= 0:
+        family = QtGui.QFontDatabase.applicationFontFamilies(identifier)[0]
+        window.cream_logo.setText('cream')
+        window.cream_logo.setFont(QtGui.QFont(family, 28))
+        window.cream_logo.setStyleSheet('font-family: "Righteous"; font-size: 28pt; font-weight: normal;')
+        window.cream_logo.setAccessibleName('CREAM logo')
     else:
         window.cream_logo.setText('CREAM')
         fallback = window.cream_logo.font()

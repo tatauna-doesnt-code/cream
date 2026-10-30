@@ -7,3 +7,15 @@ dist/
 *.partial
 .env
 .env.*
+
+# Local credentials, backer data and Painter projects
+*.dpapi
+settings.json
+*.spp
+*.spp.*
+*.xlsx
+*.xls
+*.csv
+!modelo_backers.csv
+_CREAM_reports/
+_KR7_reports/

@@ -13,7 +13,10 @@ from kr7_batch.version import VERSION, UPDATE_RESTART
 def build():
     files = [p for folder in ('kr7_batch', 'preset') for p in (ROOT / folder).rglob('*')
              if p.is_file() and '__pycache__' not in p.parts and p.suffix != '.pyc']
-    files += [ROOT / p for p in ('Instalar.cmd', 'Instalar.ps1', 'LEIA-ME.md', 'modelo_backers.csv')]
+    files += [ROOT / p for p in ('Instalar.cmd', 'Instalar.ps1', 'LEIA-ME.md', 'modelo_backers.csv',
+                                'LICENSE', 'THIRD_PARTY_NOTICES.md')]
+    # Releases include their corresponding source, build instructions and license.
+    files += [ROOT / p for p in ('README.md', 'CHANGELOG.md', 'scripts/build_release.py')]
     manifest = {'schema': 1, 'product': 'CREAM', 'module': 'kr7_batch', 'version': VERSION,
                 'update': {'protocol': 1, 'restart': UPDATE_RESTART, 'min_reload_protocol': 1},
                 'files': {p.relative_to(ROOT).as_posix(): hashlib.sha256(p.read_bytes()).hexdigest() for p in files}}

@@ -34,6 +34,27 @@ class UpdateTests(unittest.TestCase):
         with patch.object(updater, '_request', return_value=io.BytesIO(json.dumps(release).encode())):
             self.assertIsNone(updater.check_latest(current='1.2.0', token='test'))
 
+    def test_public_update_ignores_saved_private_token(self):
+        response = io.BytesIO(b'public')
+        with patch.object(updater, '_request', return_value=response) as request, patch.object(updater, 'load_token') as load:
+            self.assertIs(updater._release_request('/repos/' + updater.REPOSITORY + '/releases/latest'), response)
+            request.assert_called_once_with('/repos/' + updater.REPOSITORY + '/releases/latest', '', binary=False)
+            load.assert_not_called()
+
+    def test_private_update_falls_back_to_saved_token(self):
+        response = io.BytesIO(b'private')
+        with patch.object(updater, '_request', side_effect=[updater.AccessRequired('private'), response]) as request, patch.object(updater, 'load_token', return_value='test-placeholder'):
+            self.assertIs(updater._release_request('/repos/' + updater.REPOSITORY + '/releases/latest'), response)
+            self.assertEqual([c.args[1] for c in request.call_args_list], ['', 'test-placeholder'])
+
+    def test_public_download_uses_anonymous_request(self):
+        response = io.BytesIO(b'archive')
+        with patch.object(updater, '_request', return_value=response) as request, patch.object(updater, 'load_token') as load:
+            updater._release_request('/repos/' + updater.REPOSITORY + '/releases/assets/1', binary=True)
+            self.assertTrue(request.call_args.kwargs['binary'])
+            self.assertEqual(request.call_args.args[1], '')
+            load.assert_not_called()
+
     @unittest.skipUnless(os.environ.get('CREAM_TEST_DPAPI') == '1', 'Enable in a normal Windows user session; sandbox has no DPAPI profile')
     def test_dpapi(self):
         with tempfile.TemporaryDirectory() as directory:
