@@ -1,5 +1,16 @@
 # Changes
 
+## 1.9.0
+
+- Join tab navigation to its content panel; align path controls with consistent backgrounds.
+- Show player names as vertically centered inputs with matching reset buttons on the left.
+  Add subtle column separators and turn the resume information control into a plain icon.
+- Add a top-right Help page with expandable project setup and a feature FAQ.
+- Bundle Montserrat regular/bold/italic/bold-italic under the SIL Open Font License for
+  filename styling previews. This resource update requires one Painter restart.
+- Clarify update navigation and the update dialog. Request private-repository credentials
+  contextually after an access failure; automatic startup checks never open a credential prompt.
+
 ## 1.8.1
 
 - Use explicit neutral gray table rows and readable text instead of host-theme purple alternation.

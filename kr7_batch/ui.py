@@ -101,12 +101,16 @@ class Window(W.QDialog):
         update_bar = W.QHBoxLayout()
         self.updates_layout.addLayout(update_bar)
         self.check_button = W.QPushButton("Check for updates")
-        self.access_button = W.QPushButton("Configure private access…")
+        self.access_button = W.QPushButton("Connect to GitHub…")
+        self.access_button.hide()
         self.update_button = W.QPushButton("Download update")
         self.update_button.setEnabled(False)
-        for button in (self.check_button, self.access_button, self.update_button):
+        for button in (self.check_button, self.update_button):
             update_bar.addWidget(button)
-        self.check_button.clicked.connect(self.check_updates)
+        self.updates_layout.addWidget(self.access_button)
+        self.check_button.setMinimumHeight(34)
+        self.update_button.setMinimumHeight(34)
+        self.check_button.clicked.connect(lambda: self.check_updates(interactive=True))
         self.access_button.clicked.connect(self.configure_access)
         self.update_button.clicked.connect(self.update_clicked)
         close = W.QDialogButtonBox(W.QDialogButtonBox.Close)
@@ -125,7 +129,7 @@ class Window(W.QDialog):
         if self.reload_callback is None:
             QtCore.QTimer.singleShot(0, self.adopt_reload_support)
         if auto_update:
-            QtCore.QTimer.singleShot(1000, self.check_updates)
+            QtCore.QTimer.singleShot(1000, lambda: self.check_updates(interactive=False))
 
     def adopt_reload_support(self):
         """Finish a one-time upgrade applied by the pre-1.3 startup loader."""
@@ -185,7 +189,7 @@ class Window(W.QDialog):
 
     def refresh_update_notice(self):
         pending = bootstrap.pending_path(Path(__file__).parent).exists()
-        self.updates_link.setText("Update ready" if pending else "Update available" if self.available_release else "Updates · " + VERSION)
+        self.updates_link.setText("Update ready…" if pending else "Update available…" if self.available_release else "Check for updates…")
         self.updates_link.setToolTip(self.update_status.text())
 
     def configure_access(self):
@@ -198,16 +202,18 @@ class Window(W.QDialog):
         if ok and token.strip():
             try:
                 updater.save_token(token)
-                self.check_updates()
+                self.check_updates(interactive=False)
             except Exception as exc:
                 self.update_status.setText(str(exc))
 
-    def check_updates(self):
+    def check_updates(self, interactive=True):
         if self._updates_stopped or self.update_future is not None:
             return
         if bootstrap.pending_path(Path(__file__).parent).exists():
             self.show_pending_update()
             return
+        self.update_interactive = interactive
+        self.access_button.hide()
         self.update_mode = "check"
         self.update_status.setText("Checking for new releases…")
         self.check_button.setEnabled(False)
@@ -244,6 +250,11 @@ class Window(W.QDialog):
                 self.update_button.setText("Download update")
                 self.update_button.setEnabled(result is not None)
                 self.update_status.setText("New release: " + result["version"] if result else "CREAM " + VERSION + " is up to date.")
+        except updater.AccessRequired:
+            self.update_status.setText("GitHub access is required because CREAM's repository is currently private. Connect with a read-only token to check and download updates.")
+            self.access_button.show()
+            if getattr(self, "update_interactive", False):
+                self.configure_access()
         except Exception as exc:
             self.update_status.setText(str(exc))
         self.refresh_update_notice()
@@ -332,15 +343,19 @@ class Window(W.QDialog):
 
     def field(self, form, key, label, value, pattern):
         row = W.QWidget()
+        row.setObjectName("pathRow")
         layout = W.QHBoxLayout(row)
         layout.setContentsMargins(0, 0, 0, 0)
         text = W.QLineEdit(value)
         text.setAccessibleName(label)
+        text.setFixedHeight(30)
         self.fields[key] = text
         layout.addWidget(text)
         button = W.QPushButton("Browse…")
         button.setAutoDefault(False)
         button.setAccessibleName("Browse for " + label)
+        button.setFixedHeight(30)
+        button.setFixedWidth(110)
         button.clicked.connect(lambda: self.browse(key, pattern))
         layout.addWidget(button)
         form.addRow(label, row)

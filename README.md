@@ -13,6 +13,13 @@ Tested against the Painter 12.1.3 SDK; API minimum 11.0 is not validated on that
 Open **Updates** in the top-right corner for version checks, downloads and private
 access. The header changes to **Update available** or **Update ready** when applicable.
 
+The header now reads **Check for updates…**. The update dialog requests a read-only
+GitHub token only if a private-repository access check fails. Startup checks never
+open credential prompts. **Help** at the top-right of the page navigation contains
+the project setup guide and feature FAQ. Filename previews use bundled Montserrat
+fonts (regular, bold, italic and bold italic), distributed under their included SIL
+Open Font License. Upgrading to 1.9.0 requires a Painter restart for these new resources.
+
 Install manually once with `Instalar.cmd`, with Painter closed. For private updates,
 configure a GitHub fine-grained token limited to `tatauna-doesnt-code/cream`, with
 Contents: Read-only. Windows protects the token for the current user.

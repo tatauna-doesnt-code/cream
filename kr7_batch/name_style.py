@@ -1,11 +1,23 @@
 """Compact WYSIWYG editor for filename-compatible Trackmania text styles."""
 from dataclasses import replace
+from pathlib import Path
 
 from PySide6 import QtCore, QtGui, QtWidgets as W
 
 from . import tm_text
 
 STYLE_PROPERTY = int(QtGui.QTextFormat.UserProperty) + 71
+_font_ids = []
+
+
+def game_font():
+    if not _font_ids:
+        for path in (Path(__file__).parent / "fonts").glob("Montserrat-*.ttf"):
+            # Loading bytes avoids Windows holding font files open during future updates.
+            identifier = QtGui.QFontDatabase.addApplicationFontFromData(QtCore.QByteArray(path.read_bytes()))
+            if identifier >= 0:
+                _font_ids.append(identifier)
+    return QtGui.QFont("Montserrat", 12)
 
 
 def style_from_format(fmt):
@@ -15,6 +27,7 @@ def style_from_format(fmt):
 
 def text_format(style, colors):
     fmt = QtGui.QTextCharFormat()
+    fmt.setFontFamilies(["Montserrat"])
     fmt.setProperty(STYLE_PROPERTY, dict(style.__dict__))
     fmt.setFontWeight(QtGui.QFont.Bold if style.bold else QtGui.QFont.Normal)
     fmt.setFontItalic(style.italic)
@@ -32,6 +45,8 @@ class StyledLine(W.QTextEdit):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setAcceptRichText(False)
+        self.setFont(game_font())
+        self.document().setDefaultFont(game_font())
         self.setLineWrapMode(W.QTextEdit.NoWrap)
         self.setFixedHeight(56)
         self.setStyleSheet("QTextEdit { background: #242424; color: #eeeeee; border: 1px solid #666; padding: 4px; }")

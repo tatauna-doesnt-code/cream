@@ -88,6 +88,26 @@ with tempfile.TemporaryDirectory() as folder, patch.object(ui, "DATA", Path(fold
     assert window.updates_dialog.isVisible()
     window.updates_dialog.grab().save(str(ROOT / "dist/workspace-07-updates.png"))
     window.updates_dialog.hide()
+    window.help_link.click()
+    app.processEvents()
+    assert window.tabs.currentWidget() is window.help_page
+    assert window.help_link.isChecked()
+    questions = window.help_page.findChildren(W.QToolButton)
+    questions[0].click()
+    app.processEvents()
+    window.grab().save(str(ROOT / 'dist/workspace-08-help.png'))
+    assert window.name_style.preview.document().defaultFont().family() == 'Montserrat'
+    from concurrent.futures import Future
+    for interactive in (False, True):
+        window.update_future = Future()
+        window.update_future.set_exception(ui.updater.AccessRequired('private'))
+        window.update_mode = 'check'
+        window.update_interactive = interactive
+        with patch.object(window, 'configure_access') as prompt:
+            window.poll_update()
+            assert prompt.call_count == int(interactive)
+        assert not window.access_button.isHidden()
+        assert 'private' in window.update_status.text()
     window.stop_background_tasks()
     window.hide()
 print("Passed: setup, empty state, selection counts, preview guard, navigation, naming, compact layout and updates dialog.")

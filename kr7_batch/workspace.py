@@ -51,14 +51,17 @@ def build(window, default_output):
         QPushButton#primaryAction:hover { background: #3c7bab; }
         QPushButton#primaryAction:disabled { background: #41464b; color: #a0a4a8; border-color: #555; }
         QPushButton#primaryAction:focus { border: 2px solid #b8ddfa; }
-        QTabBar::tab { padding: 10px 18px; }
-        QLineEdit { min-height: 26px; }
+        QTabBar::tab { padding: 10px 18px; background: #222426; border: 1px solid #494c50; border-bottom: none; }
+        QTabBar::tab:selected { background: #292b2e; border-top: 2px solid #6ca8cf; }
+        QLineEdit { min-height: 0; background: #202225; color: #eee; border: 1px solid #55595d; border-radius: 3px; padding: 3px 6px; }
+        QWidget#pathRow { background: transparent; border: none; }
         QToolButton { min-height: 24px; }
         QWidget#workspaceCard { background: #292b2e; border: 1px solid #494c50; border-radius: 5px; }
-        QTabWidget::pane { border: none; }
+        QTabWidget::pane { border: none; margin-top: -1px; }
         QTableWidget { background: #222426; alternate-background-color: #2b2d30;
             color: #eeeeee; border: 1px solid #494c50; selection-background-color: #365568; selection-color: white; }
         QTableWidget::item { color: #eeeeee; }
+        QTableWidget::item { border-right: 1px solid #44474a; }
         QTableWidget::item:alternate { background: #2b2d30; }
         QTableWidget::item:selected { background: #365568; color: white; }
         QWidget#previewBanner { background: #263c49; border: 1px solid #537184; border-radius: 4px; }
@@ -74,7 +77,7 @@ def build(window, default_output):
     subtitle.setWordWrap(False)
     header.addWidget(subtitle)
     header.addStretch()
-    w.updates_link = button("Updates · " + VERSION, lambda: w.updates_dialog.show())
+    w.updates_link = button("Check for updates…", lambda: w.updates_dialog.show())
     header.addWidget(w.updates_link)
     layout.addLayout(header)
 
@@ -91,6 +94,8 @@ def build(window, default_output):
     w.preview_banner.hide()
 
     w.tabs = W.QTabWidget()
+    w.tabs.setDocumentMode(True)
+    w.tabs.tabBar().setDrawBase(False)
     layout.addWidget(w.tabs, 1)
     w.fields = {}
     w.setup_page, setup = page(w, "1  Setup", "Choose your source files",
@@ -109,20 +114,6 @@ def build(window, default_output):
     files.addRow("", note("A working skin to copy. Only the textures you select will be replaced."))
     w.field(files, "output", "Save ZIPs to", default_output, None)
     files.addRow("", note("For in-game uploads, use the CarSport folder directly; subfolders may fail."))
-    project_help = W.QToolButton()
-    project_help.setText("How to prepare the Painter project")
-    project_help.setCheckable(True)
-    project_help.setToolButtonStyle(QtCore.Qt.ToolButtonTextBesideIcon)
-    project_help.setArrowType(QtCore.Qt.RightArrow)
-    setup.addWidget(project_help, 0, QtCore.Qt.AlignLeft)
-    requirements = note("Use PLAYER_NAME for the font fill effects in your masks. Name your color fill layers "
-        "PLAYER_COLOR1, PLAYER_COLOR2 and PLAYER_COLOR3 as needed. CREAM changes only their Base Color; "
-        "blank spreadsheet colors keep the original. Glass is excluded from name and color changes. "
-        "Use Check configuration to verify the project before exporting.")
-    setup.addWidget(requirements)
-    requirements.hide()
-    project_help.toggled.connect(requirements.setVisible)
-    project_help.toggled.connect(lambda expanded: project_help.setArrowType(QtCore.Qt.DownArrow if expanded else QtCore.Qt.RightArrow))
     setup.addStretch()
     w.setup_hint = note("Next: load your spreadsheet and match its columns.")
     setup.addWidget(w.setup_hint)
@@ -137,11 +128,12 @@ def build(window, default_output):
     tools.addStretch()
     w.resume_button = button("Resume a previous batch…", w.resume)
     tools.addWidget(w.resume_button)
-    resume_info = W.QToolButton()
-    resume_info.setIcon(w.style().standardIcon(W.QStyle.SP_MessageBoxInformation))
+    resume_info = W.QLabel()
+    resume_info.setPixmap(w.style().standardIcon(W.QStyle.SP_MessageBoxInformation).pixmap(16, 16))
+    resume_info.setFixedSize(20, 24)
+    resume_info.setAlignment(QtCore.Qt.AlignCenter)
     resume_info.setAccessibleName("How resuming a batch works")
     resume_info.setToolTip("Choose a JSON report from the output folder’s _KR7_reports directory. CREAM checks that the project and export settings match, then unchecks successfully exported rows whose ZIPs still exist. Failed or unfinished rows stay checked. Review the selection and click Export to continue.")
-    resume_info.clicked.connect(lambda: W.QToolTip.showText(resume_info.mapToGlobal(resume_info.rect().bottomLeft()), resume_info.toolTip(), resume_info))
     tools.addWidget(resume_info)
     skins.addLayout(tools)
     w.empty_state = W.QWidget()
@@ -168,7 +160,7 @@ def build(window, default_output):
     w.backers.horizontalHeader().setSectionResizeMode(W.QHeaderView.ResizeToContents)
     w.backers.horizontalHeader().setSectionResizeMode(6, W.QHeaderView.Stretch)
     w.backers.horizontalHeader().setStretchLastSection(False)
-    w.backers.verticalHeader().setDefaultSectionSize(34)
+    w.backers.verticalHeader().setDefaultSectionSize(40)
     skins.addWidget(w.backers, 1)
     skins.addWidget(note("Edit names directly (20 characters max). Bold italic = edited; refresh = reset. Blank colors keep the project original."))
     preview = W.QHBoxLayout()
@@ -247,9 +239,16 @@ def build(window, default_output):
 
     w.updates_dialog = W.QDialog(w)
     w.updates_dialog.setWindowTitle("CREAM — Updates")
-    w.updates_dialog.setMinimumWidth(500)
+    w.updates_dialog.setMinimumWidth(540)
     w.updates_layout = W.QVBoxLayout(w.updates_dialog)
-    w.updates_layout.addWidget(note("CREAM " + VERSION + "\nUpdates are checked automatically when CREAM opens."))
+    w.updates_layout.setContentsMargins(20, 20, 20, 20)
+    w.updates_layout.setSpacing(16)
+    update_heading = note("Keep CREAM up to date")
+    update_heading.setStyleSheet("font-size: 18px; font-weight: 600;")
+    w.updates_layout.addWidget(update_heading)
+    w.updates_layout.addWidget(note("Installed version: " + VERSION + "\nCheck for a release, download it, then apply it. CREAM will tell you if Painter needs restarting."))
+    from .help_page import add_help
+    add_help(w)
     from .preview_help import PreviewHelp
     w.preview_help = PreviewHelp(w)
     return layout

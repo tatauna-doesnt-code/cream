@@ -23,22 +23,24 @@ class PlayerNameCell(W.QWidget):
         self.selected = False
         self.invalid = ""
         layout = W.QHBoxLayout(self)
-        layout.setContentsMargins(2, 0, 2, 0)
-        layout.setSpacing(2)
+        layout.setContentsMargins(5, 4, 5, 4)
+        layout.setSpacing(4)
         self.editor = W.QLineEdit(name)
         self.editor.setAccessibleName("Player name")
         self.editor.setMinimumWidth(120)
         self.editor.installEventFilter(self)
-        layout.addWidget(self.editor, 1)
+        self.editor.setFixedHeight(26)
+        self.editor.setAlignment(QtCore.Qt.AlignVCenter | QtCore.Qt.AlignLeft)
         self.reset = W.QToolButton()
         self.reset.setIcon(self.style().standardIcon(W.QStyle.SP_BrowserReload))
         self.reset.setToolButtonStyle(QtCore.Qt.ToolButtonIconOnly)
         self.reset.setAccessibleName("Reset player name")
         self.reset.setToolTip("Reset to spreadsheet value: " + original)
         self.reset.setAutoRaise(True)
-        self.reset.setFixedSize(24, 24)
+        self.reset.setFixedSize(26, 26)
         self.reset.clicked.connect(self.reset_requested)
-        layout.addWidget(self.reset)
+        layout.addWidget(self.reset, 0, QtCore.Qt.AlignVCenter)
+        layout.addWidget(self.editor, 1, QtCore.Qt.AlignVCenter)
         self.editor.textChanged.connect(self.changed)
         self.refresh_appearance()
 
@@ -75,5 +77,6 @@ class PlayerNameCell(W.QWidget):
         self.editor.setToolTip(self.invalid or (
             "Edit the player name for this session. Up to 20 characters."
             if self.allowed else "Finish the batch and restore the preview before editing names."))
-        self.editor.setStyleSheet("QLineEdit { background: transparent; border: " +
-                                 ("1px solid #d66" if self.invalid else "1px solid transparent") + "; padding: 2px; }")
+        self.editor.setStyleSheet("QLineEdit { min-height: 0; background: #202225; color: #eee; border: " +
+                                 ("1px solid #d66" if self.invalid else "1px solid #62666a") +
+                                 "; border-radius: 3px; padding: 0 5px; } QLineEdit:focus { border-color: #7db5d8; }")
