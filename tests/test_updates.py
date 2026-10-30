@@ -10,9 +10,9 @@ from unittest.mock import patch
 import zipfile
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from kr7_batch import bootstrap, core, updater
+from cream import bootstrap, core, updater
 from scripts.build_release import build
-from kr7_batch.version import VERSION
+from cream.version import VERSION
 
 
 class UpdateTests(unittest.TestCase):
@@ -26,14 +26,14 @@ class UpdateTests(unittest.TestCase):
             names = set(package.namelist())
             self.assertTrue({'LICENSE', 'THIRD_PARTY_NOTICES.md', 'README.md',
                              'scripts/build_release.py', 'tests/test_updates.py',
-                             'kr7_batch/fonts/righteous/Righteous-Regular.ttf',
-                             'kr7_batch/fonts/righteous/OFL.txt'}.issubset(names))
+                             'cream/fonts/righteous/Righteous-Regular.ttf',
+                             'cream/fonts/righteous/OFL.txt'}.issubset(names))
             self.assertIn(b'GNU GENERAL PUBLIC LICENSE', package.read('LICENSE'))
-            self.assertNotIn('kr7_batch/assets/cream-logo.png', names)
+            self.assertNotIn('cream/assets/cream-logo.png', names)
             self.assertNotIn('scripts/render_logo.py', names)
 
     def test_traversal_rejected(self):
-        for name in ('../evil', '/evil', 'kr7_batch/../../evil', 'C:/evil', 'a\\b', 'a/CON.py', 'a./b'):
+        for name in ('../evil', '/evil', 'cream/../../evil', 'C:/evil', 'a\\b', 'a/CON.py', 'a./b'):
             with self.subTest(name=name), self.assertRaises(ValueError):
                 bootstrap.safe_relative(name)
 
@@ -78,7 +78,7 @@ class UpdateTests(unittest.TestCase):
         payload = archive.read_bytes()
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
-            target = root/'plugins'/'kr7_batch'
+            target = root/'plugins'/'cream'
             target.mkdir(parents=True)
             (target/'__init__.py').write_text('original')
             data = root/'data'
@@ -106,7 +106,7 @@ class UpdateTests(unittest.TestCase):
     def test_modified_package_rejected(self):
         with tempfile.TemporaryDirectory() as directory:
             updater.extract_verified(build(), directory)
-            (Path(directory)/'kr7_batch/core.py').write_text('tampered')
+            (Path(directory)/'cream/core.py').write_text('tampered')
             with self.assertRaises(ValueError):
                 bootstrap.read_manifest(directory)
 

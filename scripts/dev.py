@@ -14,7 +14,7 @@ import uuid
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
-from kr7_batch import bootstrap, core, updater
+from cream import bootstrap, core, updater
 
 
 def default_target():
@@ -23,11 +23,11 @@ def default_target():
         buffer = ctypes.create_unicode_buffer(32768)
         if ctypes.windll.shell32.SHGetFolderPathW(None, 5, None, 0, buffer) == 0:
             documents = Path(buffer.value)
-    return documents / 'Adobe/Adobe Substance 3D Painter/python/plugins/kr7_batch'
+    return documents / 'Adobe/Adobe Substance 3D Painter/python/plugins/cream'
 
 
 def validate_sources(root=ROOT):
-    for path in (Path(root) / 'kr7_batch').rglob('*.py'):
+    for path in (Path(root) / 'cream').rglob('*.py'):
         ast.parse(path.read_text(encoding='utf-8-sig'), filename=str(path))
 
 
@@ -46,10 +46,10 @@ def painter_pid():
 
 def stage_local(target, data_dir=bootstrap.DATA, archive=None, replace_pending=False, painter_process_id=None):
     target, data_dir = Path(target).resolve(), Path(data_dir).resolve()
-    if target == (ROOT / 'kr7_batch').resolve():
+    if target == (ROOT / 'cream').resolve():
         raise ValueError('Target must be the installed copy, not your source checkout.')
-    if target.name != 'kr7_batch' or not (target / '__init__.py').is_file():
-        raise ValueError('Install CREAM with Instalar.cmd first, or pass --target for your installed plugin folder.')
+    if target.name != 'cream' or not (target / '__init__.py').is_file():
+        raise ValueError('Install CREAM with Install.cmd first, or pass --target for your installed plugin folder.')
     marker = bootstrap.pending_path(target, data_dir)
     if marker.exists() and not replace_pending:
         previous = json.loads(marker.read_text(encoding='utf-8'))

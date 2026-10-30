@@ -6,7 +6,7 @@ import tempfile
 import unittest
 from unittest.mock import patch
 
-from kr7_batch import bootstrap, core
+from cream import bootstrap, core
 from scripts.build_release import build
 from scripts import dev
 
@@ -19,8 +19,8 @@ class DevelopmentTests(unittest.TestCase):
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory()
         self.root = Path(self.temp.name)
-        self.target = self.root / 'plugins/kr7_batch'
-        shutil.copytree(dev.ROOT / 'kr7_batch', self.target, ignore=shutil.ignore_patterns('__pycache__'))
+        self.target = self.root / 'plugins/cream'
+        shutil.copytree(dev.ROOT / 'cream', self.target, ignore=shutil.ignore_patterns('__pycache__'))
         self.data = self.root / 'data'
 
     def tearDown(self):
@@ -70,12 +70,11 @@ class DevelopmentTests(unittest.TestCase):
         self.assertTrue(Path(stage).is_dir())
         self.assertTrue(Path(first['marker']).samefile(bootstrap.pending_path(self.target, self.data)))
         with self.assertRaisesRegex(ValueError, 'source checkout'):
-            dev.stage_local(dev.ROOT / 'kr7_batch', self.data, archive=self.archive)
+            dev.stage_local(dev.ROOT / 'cream', self.data, archive=self.archive)
 
     def test_source_syntax_is_checked(self):
-        source = self.root / 'source/kr7_batch'
+        source = self.root / 'source/cream'
         source.mkdir(parents=True)
         (source / 'broken.py').write_text('if :\n')
         with self.assertRaises(SyntaxError):
             dev.validate_sources(source.parent)
-

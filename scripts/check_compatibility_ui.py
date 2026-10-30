@@ -80,7 +80,7 @@ sp.export.ExportStatus = types.SimpleNamespace(Success='success')
 sp.export.list_project_textures = paths
 sp.export.export_project_textures = export
 app = W.QApplication.instance() or W.QApplication([])
-from kr7_batch.qt import QtGui
+from cream.qt import QtGui
 app.setStyle('Fusion')
 palette = QtGui.QPalette()
 for role, value in [('Window', '#303030'), ('WindowText', '#eeeeee'), ('Base', '#222426'),
@@ -88,9 +88,9 @@ for role, value in [('Window', '#303030'), ('WindowText', '#eeeeee'), ('Base', '
                     ('ButtonText', '#eeeeee'), ('Highlight', '#365568'), ('HighlightedText', '#ffffff')]:
     palette.setColor(getattr(QtGui.QPalette, role), QtGui.QColor(value))
 app.setPalette(palette)
-from kr7_batch import ui, painter, bootstrap, compatibility
-from kr7_batch.manual_entry import SkinDialog
-import kr7_batch as plugin
+from cream import ui, painter, bootstrap, compatibility
+from cream.manual_entry import SkinDialog
+import cream as plugin
 
 with tempfile.TemporaryDirectory() as folder, patch.object(ui, 'DATA', Path(folder)), \
      patch.object(bootstrap, 'DATA', Path(folder)), \
@@ -118,6 +118,48 @@ with tempfile.TemporaryDirectory() as folder, patch.object(ui, 'DATA', Path(fold
         archive.writestr('Details_R.dds', b'unchanged base file')
     window.fields['base'].setText(str(base))
     window.fields['output'].setText(folder)
+    # Empty Batch is the primary workflow, even with customization checked on modern hosts.
+    assert not window.rows and window.tabs.currentWidget() is window.textures_page
+    window.customize_project.setChecked(version >= (10, 0, 0))
+    section = window.texture_sets.groups['Skin']
+    section.table.item(0, 0).setCheckState(ui.QtCore.Qt.Checked)
+    section.sizes[0].setCurrentIndex(section.sizes[0].findData(1024))
+    window.fields['name_pattern'].setText('$o$F80{name}$z')
+    assert window.name_preview.text() == '$o$F80test$z.zip'
+    assert window.export_button.isEnabled() and window.export_button.text() == 'Export current skin'
+    assert window.validate_button.isEnabled()
+    with patch.object(painter, 'nodes', side_effect=AssertionError('As-is exports must not scan layers')), \
+         patch.object(painter, 'apply', side_effect=AssertionError('As-is exports must not apply or restore layers')):
+        window.check()
+        window.start()
+        deadline = time.monotonic() + 30
+        while window.runner is not None and time.monotonic() < deadline:
+            app.processEvents()
+            time.sleep(.01)
+        assert window.runner is None and window.report['status'] == 'completed', window.report
+        assert window.report['mode'] == 'current_project'
+        assert not window.rows and window.backers.rowCount() == 0
+        with zipfile.ZipFile(window.report['rows'][0]['output']) as archive:
+            assert archive.read('Details_R.dds') == b'unchanged base file'
+            assert archive.read('Skin_B.dds')[84:88] == b'DXT1'
+        assert window.name_preview.text() == '$o$F80test$z 2.zip'
+        assert not list(Path(folder).glob('recover-*.json'))
+        assert not list(Path(folder).glob('cream-*'))
+        # Cancel the single export after its PNG exists: clean all intermediates, publish nothing.
+        window.start()
+        window.timer.stop()
+        window.tick()
+        window.tick()
+        window.cancel.set()
+        while window.runner is not None and time.monotonic() < deadline:
+            window.tick()
+            app.processEvents()
+            time.sleep(.01)
+        assert window.runner is None and window.report['status'] == 'cancelled'
+        assert len(list(Path(folder).glob('$o$F80*.zip'))) == 1
+        assert not list(Path(folder).glob('cream-*'))
+    window.grab().save(str(ROOT / 'dist' / ('single-export-' + '.'.join(map(str, version)) + '.png')))
+    window.customize_project.setChecked(False)
     window.restore_reload_state({'rows': [{'id': '1', 'line': 1, 'name': 'Tester', 'stem': 'Tester',
                                           'colors': ['#AABBCC', None, None]}],
                                  'loaded_sheet': None, 'checked': [True], 'selected': 0, 'log': '',
@@ -164,7 +206,16 @@ with tempfile.TemporaryDirectory() as folder, patch.object(ui, 'DATA', Path(fold
             app.processEvents()
             time.sleep(.01)
         assert window.runner is None and window.report['status'] == 'cancelled'
-        assert len(list(Path(folder).glob('$o*.zip'))) == 1
+        assert len(list(Path(folder).glob('$o$ABC*.zip'))) == 1
+    window.check_rows(False)
+    assert not window.export_button.isEnabled()  # A nonempty, unchecked batch never exports as-is.
+    with patch.object(W.QMessageBox, 'question', return_value=W.QMessageBox.No):
+        window.clear_batch()
+        assert window.rows
+    with patch.object(W.QMessageBox, 'question', return_value=W.QMessageBox.Yes):
+        window.clear_batch()
+        assert not window.rows and window.export_button.text() == 'Export current skin'
+    assert window.tabs.tabText(1) == '2  Skin ZIPfile name'
     window.grab().save(str(ROOT / 'dist' / ('compatibility-' + '.'.join(map(str, version)) + '.png')))
     plugin.close_plugin()
 print('Passed: Painter', version, 'startup, warnings, disabled controls, styling, export, real DDS/ZIP and cancellation.')

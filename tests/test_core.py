@@ -11,10 +11,10 @@ import unittest
 import zipfile
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from kr7_batch import core
+from cream import core
 from PIL import Image
 
-TEXCONV = Path(__file__).resolve().parents[1] / 'kr7_batch/bin/texconv.exe'
+TEXCONV = Path(__file__).resolve().parents[1] / 'cream/bin/texconv.exe'
 
 
 class CoreTests(unittest.TestCase):
@@ -40,8 +40,8 @@ class CoreTests(unittest.TestCase):
         self.assertEqual(len(rows[0]['name']), 20)
         self.assertEqual(rows[0]['colors'], ['#00FFAA', None, None])
         occupied = set()
-        self.assertEqual(core.next_destination(self.root, core.format_skin_name(core.LEGACY_NAME_PATTERN, rows[1]), occupied).name, 'KR7 - Joseph.zip')
-        self.assertEqual(core.next_destination(self.root, core.format_skin_name(core.LEGACY_NAME_PATTERN, rows[2]), occupied).name, 'KR7 - Joseph 2.zip')
+        self.assertEqual(core.next_destination(self.root, core.format_skin_name('CUP - {name}', rows[1]), occupied).name, 'CUP - Joseph.zip')
+        self.assertEqual(core.next_destination(self.root, core.format_skin_name('CUP - {name}', rows[2]), occupied).name, 'CUP - Joseph 2.zip')
         self.assertEqual(len(warnings), 1)
 
     def test_invalid_color_or_formatting_fails(self):
@@ -56,8 +56,8 @@ class CoreTests(unittest.TestCase):
             core.read_rows(self.sheet([['sim','1','A','','','',''], ['sim','1','B','','','','']]))
 
     def test_filename_collision_windows_rules(self):
-        (self.root / 'KR7 - JOSEPH.zip').write_bytes(b'existing')
-        self.assertEqual(core.next_destination(self.root, 'KR7 - Joseph').name, 'KR7 - Joseph 2.zip')
+        (self.root / 'CUP - JOSEPH.zip').write_bytes(b'existing')
+        self.assertEqual(core.next_destination(self.root, 'CUP - Joseph').name, 'CUP - Joseph 2.zip')
         self.assertEqual(core.safe_stem('A/B:*? '), 'A_B___')
 
     def test_zip_replace_preserve_and_no_clobber(self):

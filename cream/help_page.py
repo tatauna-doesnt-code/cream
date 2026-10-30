@@ -4,22 +4,9 @@ from pathlib import Path
 
 
 FAQ = [
-    ("How do I prepare the Painter project?", """
-    <h3>1. Start with your finished base skin</h3><p>Open the project in Painter and keep a working skin ZIP as your base.
-    Supported texture sets are <b>Details, Glass, Skin and Wheels</b>. Glass is exported if selected,
-    but excluded from player name and color edits.</p>
-    <h3>2. Prepare the player-name fills</h3><p>In the appropriate layer masks, add fill effects using a <b>Font</b> resource.
-    Name each effect <code>PLAYER_NAME</code>. CREAM replaces the font's Text parameter in every matching effect.
-    Choose your font, size, alignment and placement in Painter; CREAM keeps those settings.</p>
-    <h3>3. Prepare the color layers</h3><p>Use fill layers named <code>PLAYER_COLOR1</code>,
-    <code>PLAYER_COLOR2</code> and optionally <code>PLAYER_COLOR3</code>. Their Base Color must be a uniform color.
-    Only Base Color changes. Use anchor points to reuse these colors elsewhere in the skin.</p>
-    <h3>4. Verify a small export</h3><p>Load the spreadsheet in <b>1 Setup</b>, match the columns, select a player in
-    <b>2 Skins</b> and choose maps in <b>3 Textures</b>. Use <b>Check configuration</b>, preview the player,
-    then <b>Restore original</b>. Export a test skin and check it in Trackmania before running the full batch.</p>"""),
     ("What spreadsheet do I need?", "<p>Use CSV or XLSX with column headers in the first row. Match any column names when loading. Only the player name is required; colors 1–3, row ID, ZIP name and active flag are optional. Colors use <code>#RRGGBB</code>. Blank or unmapped colors keep the project originals. XLSX uses the Backers sheet, or the first sheet; formulas are rejected.</p>"),
     ("Can I edit a player's name without changing the spreadsheet?", "<p>Yes. Edit the input in the Player name column. Overrides are <b><i>bold italic</i></b>; the refresh icon resets the imported name. Names preserve case and are truncated to 20 characters. Trackmania styling codes are not accepted for the text printed on the car. Edits last for this session and survive CREAM reloads. Reloading the spreadsheet resets them.</p>"),
-    ("Does the final ZIP filename support TM styling?", "<p>Yes. In <b>3 ZIP names</b>, enable <b>Use Trackmania text styling</b>. Select text and apply bold, italic, uppercase, shadow, width or color. Text colors require exactly <b>three hex digits</b>, such as <code>$F80</code>. You can also edit raw codes. The Montserrat preview approximates in-game rendering; italic is shown normally in the editor. Styling affects ZIP names only.</p>"),
+    ("Does the final ZIP filename support TM styling?", "<p>Yes. In <b>2 Skin ZIPfile name</b>, enable <b>Use Trackmania text styling</b>. Select text and apply bold, italic, uppercase, shadow, width or color. Text colors require exactly <b>three hex digits</b>, such as <code>$F80</code>. You can also edit raw codes. The Montserrat preview approximates in-game rendering; italic is shown normally in the editor. Styling affects ZIP names only.</p>"),
     ("How can I use each player's chosen color in the ZIP filename?", "<p>Open <b>Text color…</b> in the styling helper and choose <b>Use skin primary color</b> or <b>Use skin secondary color</b>. These insert <code>{primary}</code> or <code>{secondary}</code>, resolved independently from spreadsheet colors 1 and 2 for each skin. Example: <code>{primary}Event - {name}$z</code>. Skin colors are rounded to Trackmania's three-digit palette. Blank colors use the original project color; differing originals across sets must be resolved before export.</p>"),
     ("How do filename patterns and duplicate names work?", "<p>Use <code>{name}</code> for the ZIP-name column or player fallback, <code>{player}</code> for the printed player name, <code>{id}</code> for row ID and <code>{row}</code> for spreadsheet row. Add a prefix such as <code>Event - {name}</code>. The .zip extension is automatic. Duplicate or existing names receive 2, 3…; existing ZIPs are preserved. An explicit ZIP-name column is independent of manual player-name edits.</p>"),
     ("Which textures and resolutions can I export?", "<p>Check a set to select every map, or expand it to select maps individually. Set resolution applies to all maps in the set; individual overrides are supported and show as Mixed. Sizes are 1024, 2048 or 4096; Wheels keeps a 1:4 ratio. Compression is automatic for Trackmania 2020. OpenGL normals are exported directly, without a later green-channel inversion.</p>"),
@@ -64,9 +51,33 @@ def add_help(window):
     title = W.QLabel("Getting started with CREAM")
     title.setStyleSheet("font-size: 18px; font-weight: 600;")
     layout.addWidget(title)
-    intro = FAQ[0][1]
-    intro = intro.replace('Load the spreadsheet in <b>1 Setup</b>, match the columns, select a player in\n    <b>2 Skins</b> and choose maps in <b>3 Textures</b>.', 'In <b>Settings</b>, choose your base ZIP and output folder. In <b>1 Skins</b>, use <b>Add skin</b> to enter a name and colors, or <b>Import CSV / XLSX</b> to append a spreadsheet. Choose maps in <b>2 Textures</b> and set filenames in <b>3 ZIP names</b>.')
-    intro = '<p>CREAM exports Trackmania 2020 skin ZIPs from your open Painter project. Start with one skin, then build a batch when you are ready.</p><p><b>Export only:</b> in Skins, turn off <b>Customize names and colors on the car</b>. Set up your base ZIP, textures and ZIP filename; no special layers are needed. Painter 9.x always uses this mode. Names and colors style filenames only.</p><p><b>Optional customization (Painter 10.0+):</b> enable that checkbox and prepare any name/color targets below. Color-only projects do not require name fills. Builds older than 10.1.2 show a compatibility warning.</p>' + intro
+    intro = """
+    <p><b>Color Replacement &amp; Export Automation Manager.</b> CREAM is a Trackmania 2020
+    skin export utility with optional batch customization.</p>
+    <h3>Export your current skin</h3>
+    <ol><li>Open a saved Painter project. In <b>Settings</b>, choose a working base skin ZIP
+    and your output folder. The base ZIP's files must be at its root.</li>
+    <li>In <b>1 Textures</b>, select the maps to replace and their resolutions.
+    Everything else is copied from the base ZIP.</li>
+    <li>In <b>2 Skin ZIPfile name</b>, type the name you want, or keep <code>{name}</code>
+    to use the project filename. Enable the optional Trackmania styling helper to style it.</li>
+    <li>Click <b>Export current skin</b>. CREAM checks the configuration, converts the textures
+    to DDS and builds the ZIP. No batch entry or special layer names are needed.</li></ol>
+    <h3>Optional: export a batch</h3>
+    <p>In <b>Batch</b>, add entries manually or import CSV / XLSX. Once the list contains entries,
+    only checked entries are exported. <b>Clear selection</b> exports nothing; <b>Clear batch</b>
+    removes the list and returns to exporting the current project. Existing ZIPs are never overwritten.</p>
+    <p>On Painter 10.0+, enable <b>Customize names and colors on the car</b> to personalize each entry.
+    Turn it off to create named copies without changing the car. Painter 9.x always uses this export-only mode.</p>
+    <ul><li><b>Names:</b> use Font resources in mask Fill effects named <code>PLAYER_NAME</code>.
+    CREAM changes Text only. Set font, size, alignment and placement in Painter.</li>
+    <li><b>Colors:</b> use uniform Base Color fill layers named <code>PLAYER_COLOR1</code>,
+    <code>PLAYER_COLOR2</code> and optionally <code>PLAYER_COLOR3</code>. Other channels stay unchanged.
+    Anchor points can reuse those colors elsewhere.</li>
+    <li>Only prepare the targets you need. Glass can be exported but is excluded from customization.</li></ul>
+    <p>Preview a highlighted entry, then <b>Restore original</b> before exporting.
+    Check a test ZIP in Trackmania before running a large batch.</p>
+    """
     intro = intro.replace('<code>', '<b><span style="color: #a9d7f5; font-family: Consolas;">').replace('</code>', '</span></b>')
     guide = W.QLabel(intro)
     guide.setWordWrap(True)
@@ -76,16 +87,18 @@ def add_help(window):
     faq_heading = W.QLabel('Frequently asked questions')
     faq_heading.setStyleSheet('font-size: 17px; font-weight: 600; padding-top: 16px;')
     layout.addWidget(faq_heading)
-    entries = [('What does CREAM mean?', '<p><b>Color Replacement &amp; Export Automation Manager.</b> CREAM automates player names, skin colors, texture exports, DDS conversion and final ZIP packaging.</p>'),
-        ('Can I enter data without a spreadsheet?', '<p>Yes. In <b>1 Skins</b>, click <b>Add skin</b>, enter a name and up to three colors, then Save. Use <b>Edit skin</b> to change a highlighted entry or <b>Remove</b> to delete it. Blank colors keep the project original. Manual lists are saved locally. Import CSV / XLSX appends spreadsheet rows without replacing the current list.</p>')]
-    for question, answer in entries + FAQ[1:]:
+    entries = [('Do I need to add a batch entry to export?', '<p>No. Leave Batch empty to export the current project as-is. The default filename is the project filename, and the styling helper works without entries. Clear batch returns to this workflow; clearing the selection only deselects existing entries.</p>'),
+        ('What does CREAM mean?', '<p><b>Color Replacement &amp; Export Automation Manager.</b> CREAM automates player names, skin colors, texture exports, DDS conversion and final ZIP packaging.</p>'),
+        ('Can I enter data without a spreadsheet?', '<p>Yes. In <b>Batch</b>, click <b>Add skin</b>, enter a name and up to three colors, then Save. Use <b>Edit skin</b> to change a highlighted entry or <b>Remove</b> to delete it. Blank colors keep the project original. Manual lists are saved locally. Import CSV / XLSX appends spreadsheet rows without replacing the current list.</p>')]
+    for question, answer in entries + FAQ:
         toggle = W.QToolButton()
         toggle.setText(question)
+        toggle.setFixedHeight(32)
         toggle.setCheckable(True)
         toggle.setToolButtonStyle(QtCore.Qt.ToolButtonTextBesideIcon)
         toggle.setArrowType(QtCore.Qt.RightArrow)
         toggle.setSizePolicy(W.QSizePolicy.Expanding, W.QSizePolicy.Preferred)
-        toggle.setStyleSheet("text-align: left; padding: 8px; background: #222426; border: 1px solid #494c50;")
+        toggle.setStyleSheet("text-align: left; padding: 4px 8px; background: #222426; border: 1px solid #494c50;")
         import re
         answer = re.sub(r"<code>(.*?)</code>", r'<b><span style="color: #a9d7f5; font-family: Consolas;">\1</span></b>', answer)
         body = W.QLabel(answer)

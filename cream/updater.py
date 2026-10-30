@@ -173,7 +173,7 @@ def extract_verified(archive, destination):
 
 def stage_release(release, target, cancel, data_dir=bootstrap.DATA, token=None):
     target = Path(target).resolve()
-    if target.name != "kr7_batch" or not (target / "__init__.py").is_file():
+    if target.name != "cream" or not (target / "__init__.py").is_file():
         raise ValueError("Invalid plugin folder.")
     updates = Path(data_dir) / "updates"
     updates.mkdir(parents=True, exist_ok=True)

@@ -26,7 +26,6 @@ DDS_FOURCC = {"BC1_UNORM": b"DXT1", "BC3_UNORM": b"DXT5",
               "BC4_UNORM": b"BC4U", "BC5_UNORM": b"BC5U"}
 HEADERS = ["ativo", "id", "nome_player", "nome_arquivo", "cor_1", "cor_2", "cor_3"]
 DEFAULT_NAME_PATTERN = "{name}"
-LEGACY_NAME_PATTERN = "KR7 - {name}"
 NAME_FIELDS = {"name", "player", "id", "row", "primary", "secondary"}
 NS = {"m": "http://schemas.openxmlformats.org/spreadsheetml/2006/main"}
 

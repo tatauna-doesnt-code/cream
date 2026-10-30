@@ -27,8 +27,9 @@ for name in ['application', 'ui', 'project', 'layerstack', 'textureset', 'colorm
     sys.modules[module.__name__] = module
 sp.application.version_info = lambda: (12, 1, 3)
 sp.ui.get_main_window = lambda: main
+sp.project.is_open = lambda: False
 sys.path.insert(0, str(ROOT))
-from kr7_batch import ui
+from cream import ui
 print('Module ready', flush=True)
 with tempfile.TemporaryDirectory() as temp:
     ui.DATA = Path(temp)
@@ -49,7 +50,7 @@ with tempfile.TemporaryDirectory() as temp:
     window.grab().save(str(ROOT / 'dist/ui-textures-expanded.png'))
     # Exercise the real Qt controller + external converter + ZIP publisher, with only
     # Painter's native calls simulated. No user's project is opened or modified.
-    from kr7_batch import core, painter
+    from cream import core, painter
     base = Path(temp) / 'base.zip'
     with zipfile.ZipFile(base, 'w') as z:
         z.writestr('Details_R.dds', b'preserved base data')

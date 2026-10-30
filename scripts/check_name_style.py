@@ -7,8 +7,15 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 _dll = os.add_dll_directory(str(Path(sys.executable).resolve().parents[2]))
 from PySide6 import QtGui, QtWidgets as W
-from kr7_batch import tm_text
-from kr7_batch.name_style import NameStyleHelper, TextColorDialog, document_runs, style_from_format
+import types
+sp = types.ModuleType('substance_painter')
+sp.__path__ = []
+sp.application = types.ModuleType('substance_painter.application')
+sp.application.version_info = lambda: (12, 1, 3)
+sys.modules['substance_painter'] = sp
+sys.modules['substance_painter.application'] = sp.application
+from cream import tm_text
+from cream.name_style import NameStyleHelper, TextColorDialog, document_runs, style_from_format
 
 app = W.QApplication.instance() or W.QApplication([])
 QtGui.QFontDatabase.addApplicationFont(r'C:\Windows\Fonts\segoeui.ttf')
@@ -17,9 +24,9 @@ helper = NameStyleHelper()
 helper.resize(1000, 320)
 emitted = []
 helper.pattern_changed.connect(emitted.append)
-raw = '$oKR7 - {name}$z'
+raw = '$oCUP - {name}$z'
 helper.set_source(raw)
-assert helper.editor.toPlainText() == 'KR7 - {name}'
+assert helper.editor.toPlainText() == 'CUP - {name}'
 assert not emitted and helper.source == raw
 cursor = helper.editor.textCursor()
 cursor.setPosition(0)
@@ -28,12 +35,12 @@ helper.editor.setTextCursor(cursor)
 helper.change_style(italic=True)
 assert emitted and '$i' in emitted[-1]
 runs = tm_text.parse(emitted[-1], template=True)
-assert runs[0][0] == 'KR7' and runs[0][1].bold and runs[0][1].italic
+assert runs[0][0] == 'CUP' and runs[0][1].bold and runs[0][1].italic
 assert runs[1][1].bold and not runs[1][1].italic
 helper.change_style(color='primary', shadow=True, width='wide')
 assert '{primary}' in emitted[-1]
-helper.set_preview('$F80KR7$g - $08FJoseph.zip', {'primary': 'F80', 'secondary': '08F'})
-assert helper.preview.toPlainText() == 'KR7 - Joseph.zip'
+helper.set_preview('$F80CUP$g - $08FJoseph.zip', {'primary': 'F80', 'secondary': '08F'})
+assert helper.preview.toPlainText() == 'CUP - Joseph.zip'
 assert document_runs(helper.preview.document())[0][1].color == 'F80'
 helper.show()
 app.processEvents()  # Exercises the per-run shadow paint path.

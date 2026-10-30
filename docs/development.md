@@ -9,8 +9,8 @@ downloading the initial checkout currently requires repository access.
 
 1. Get the current repository source, preserving its directory structure. Use main's
    source checkout rather than an older installer ZIP that predates Dev.cmd.
-2. Close Painter and run Instalar.cmd from that source folder to install a copy.
-3. Open Painter and enable Python → kr7_batch. Open a test project.
+2. Close Painter and run Install.cmd from that source folder to install a copy.
+3. Open Painter and enable Python → cream. Open a test project.
 
 ## Edit → stage → reload
 
@@ -29,7 +29,7 @@ Prefer a terminal? With Python 3.10+:
 ```powershell
 python scripts/dev.py
 # Custom installed location:
-python scripts/dev.py --target 'C:\path\to\Painter\python\plugins\kr7_batch'
+python scripts/dev.py --target 'C:\path\to\Painter\python\plugins\cream'
 ```
 
 To select an interpreter explicitly:
@@ -73,5 +73,5 @@ in their source. A local build includes uncommitted/untracked source files from 
 packaged directories: review the package before distributing it.
 
 Builds are stored in dist/CREAM-plugin.zip; stage/recovery data uses the current
-user's local CREAM data directory (legacy name KR7BatchExporter). Local source paths
+user's local CREAM data directory (`CREAM`). Local source paths
 are recorded only in that user's staging marker, not as shared package defaults.

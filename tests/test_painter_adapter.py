@@ -80,8 +80,8 @@ sp.layerstack.ScopedModification = Scope
 sp.textureset.ChannelType = types.SimpleNamespace(BaseColor='base')
 sp.project.is_open = lambda: True
 sp.project.file_path = lambda: 'example.spp'
-from kr7_batch import painter
-from kr7_batch.compatibility import Capabilities
+from cream import painter
+from cream.compatibility import Capabilities
 
 class AdapterTests(unittest.TestCase):
     def setUp(self):
@@ -97,7 +97,7 @@ class AdapterTests(unittest.TestCase):
         sp.layerstack.get_root_layer_nodes = lambda s: s.roots
 
     def test_export_only_never_reads_or_writes_layers(self):
-        with patch('kr7_batch.compatibility.current', return_value=Capabilities((9, 0, 0))), \
+        with patch('cream.compatibility.current', return_value=Capabilities((9, 0, 0))), \
              patch.object(painter, 'nodes', side_effect=AssertionError('No layer API in Painter 9')):
             saved = painter.snapshot()
             self.assertEqual(saved['targets'], [])
