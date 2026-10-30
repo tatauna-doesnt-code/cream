@@ -42,7 +42,10 @@ with tempfile.TemporaryDirectory() as folder:
     old.fields['output'].setText(str(root / 'skins'))
     old.fields['name_pattern'].setText('Community - {name}')
     old.styling_enabled.setChecked(True)
-    old.maps.item(0, 0).setCheckState(QtCore.Qt.Checked)
+    old.texture_sets.groups['Details'].table.item(0, 0).setCheckState(QtCore.Qt.Checked)
+    details = old.texture_sets.groups['Details']
+    details.resolution.setCurrentIndex(details.resolution.findData(4096))
+    details.sizes[1].setCurrentIndex(details.sizes[1].findData(1024))
     old.restore_reload_state({'rows': [{'line': 2, 'id': '1', 'name': 'Joseph', 'stem': 'Joseph',
                                       'colors': ['#AABBCC', None, None]}],
                              'loaded_sheet': ('input.csv', 10), 'checked': [False], 'selected': 0, 'log': 'Keep this log'})
@@ -91,7 +94,11 @@ with tempfile.TemporaryDirectory() as folder:
     assert current.name_cells[0].editor.font().bold() and current.name_cells[0].editor.font().italic()
     assert current.name_originals[0]['name'] == 'Joseph'
     assert current.backers.item(0, 0).checkState() == QtCore.Qt.Unchecked
-    assert current.maps.item(0, 0).checkState() == QtCore.Qt.Checked
+    assert current.texture_sets.groups['Details'].table.item(0, 0).checkState() == QtCore.Qt.Checked
+    details = current.texture_sets.groups['Details']
+    assert details.sizes[0].currentData() == 4096 and details.sizes[1].currentData() == 1024
+    assert details.resolution.currentText() == 'Mixed' and details.body.isHidden()
+    assert 'converter' not in current.fields
     assert current.log.toPlainText() == 'Keep this log'
     assert not bootstrap.pending_path(target).exists()
     stage(broken=True)
