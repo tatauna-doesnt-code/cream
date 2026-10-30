@@ -144,9 +144,11 @@ with tempfile.TemporaryDirectory() as folder, patch.object(ui, "DATA", Path(fold
     settings = json.loads((Path(folder) / "settings.json").read_text())
     settings["fields"].pop("name_pattern")
     settings['fields']['converter'] = 'C:/obsolete/custom/texconv.exe'
+    settings['tm_styling'] = True
     (Path(folder) / "settings.json").write_text(json.dumps(settings))
     legacy = ui.Window(auto_update=False)
     assert legacy.fields["name_pattern"].text() == "{name}"
+    assert not legacy.styling_enabled.isChecked()
     assert 'converter' not in legacy.fields and ui.CONVERTER == Path(ui.__file__).parent / 'bin/texconv.exe'
     for item in (window, second, legacy):
         item.stop_updater()

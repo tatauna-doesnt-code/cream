@@ -1,5 +1,12 @@
 # Changes
 
+## 1.9.2
+
+- Start the TM styling helper disabled in each new session, even if old preferences
+  saved it enabled. Keep its active-session state through CREAM-only reloads.
+- Resolve installation from the current user's Windows Documents known folder first,
+  supporting redirected/OneDrive Documents. No developer-specific paths ship as defaults.
+
 ## 1.9.1
 
 - Double the in-game filename preview from 12 to 24 points and enlarge its viewport.

@@ -101,6 +101,9 @@ and styled preview for the selected backer. It is off by default. Select a porti
 the pattern and use bold, italic, uppercase, shadow, width, color or reset controls;
 with no selection, the style applies to subsequent typing. Ctrl+B/Ctrl+I are supported.
 The raw field remains available. Turning the helper off hides it without removing codes.
+The helper starts off in every new session, including when older preferences saved it
+enabled. Its current-session state survives CREAM-only updates. File selections and
+filename patterns are still remembered; they are local preferences, not shipped defaults.
 Only ZIP filenames are styled; the name printed on the car remains unchanged.
 
 **Text color…** accepts exactly three hex digits, e.g. `F80`, and offers 0–F RGB sliders,

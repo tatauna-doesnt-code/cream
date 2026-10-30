@@ -312,7 +312,7 @@ class Window(W.QDialog):
                 "checked": [self.backers.item(i, 0).checkState() == QtCore.Qt.Checked
                             for i in range(self.backers.rowCount())],
                 "selected": self.backers.currentRow(), "log": self.log.toPlainText(),
-                "page": self.tabs.currentIndex()}
+                "page": self.tabs.currentIndex(), "tm_styling": self.styling_enabled.isChecked()}
 
     def restore_reload_state(self, state):
         if not state:
@@ -328,6 +328,7 @@ class Window(W.QDialog):
             for column, value in enumerate(values, 1):
                 self.backers.setItem(i, column, W.QTableWidgetItem(str(value)))
         self.install_name_cells()
+        self.styling_enabled.setChecked(bool(state.get("tm_styling", self.styling_enabled.isChecked())))
         self.refresh_destinations()
         if state["selected"] >= 0:
             self.backers.selectRow(state["selected"])
@@ -574,7 +575,6 @@ class Window(W.QDialog):
 
     def save_settings(self):
         core.atomic_json(DATA / "settings.json", {"fields": {k: v.text() for k, v in self.fields.items()},
-                         "tm_styling": self.styling_enabled.isChecked(),
                          "column_profile": self.column_profile,
                          "maps": self.texture_sets.settings()})
 
@@ -584,7 +584,8 @@ class Window(W.QDialog):
             # Before configurable naming every export had this prefix. Preserve it on upgrade.
             self.fields["name_pattern"].setText(settings.get("fields", {}).get("name_pattern", core.DEFAULT_NAME_PATTERN))
             self.column_profile = settings.get("column_profile")
-            self.styling_enabled.setChecked(bool(settings.get("tm_styling", False)))
+            # The visual helper is opt-in for each session, including old saved preferences.
+            self.styling_enabled.setChecked(False)
             for key, value in settings.get("fields", {}).items():
                 if key in self.fields:
                     self.fields[key].setText(value)

@@ -7,10 +7,9 @@ try {
     if (Get-Process -Name 'Adobe Substance 3D Painter' -ErrorAction SilentlyContinue) {
         throw 'Save your work and close Substance Painter before installing. Then run Instalar.cmd again.'
     }
-    $kr7Adobe = Join-Path $env:USERPROFILE 'Documents\Adobe\Adobe Substance 3D Painter'
-    if (-not (Test-Path -LiteralPath $kr7Adobe)) {
-        $kr7Adobe = Join-Path ([Environment]::GetFolderPath('MyDocuments')) 'Adobe\Adobe Substance 3D Painter'
-    }
+    $creamDocuments = [Environment]::GetFolderPath('MyDocuments')
+    if (-not $creamDocuments) { $creamDocuments = Join-Path $env:USERPROFILE 'Documents' }
+    $kr7Adobe = Join-Path $creamDocuments 'Adobe\Adobe Substance 3D Painter'
     $kr7Plugins = Join-Path $kr7Adobe 'python\plugins'
     $kr7Target = Join-Path $kr7Plugins 'kr7_batch'
     New-Item -ItemType Directory -Path $kr7Plugins -Force | Out-Null
