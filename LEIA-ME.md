@@ -1,4 +1,4 @@
-# CREAM 1.6.0
+# CREAM 1.7.0
 
 Color Replacement & Export Automation Manager for Adobe Substance 3D Painter on Windows.
 The filename is retained for installer compatibility; these instructions are in English.
@@ -13,6 +13,8 @@ The filename is retained for installer compatibility; these instructions are in 
 
 The installer backs up an existing installation and preserves an existing TM2020 preset.
 The texconv converter is included; Python, Pillow and Excel are not required to use CREAM.
+CREAM always uses the bundled converter; no converter path needs to be selected.
+If it is missing, reinstall or update CREAM.
 
 ## Prepare the project
 
@@ -69,7 +71,9 @@ starts again with its imported values.
 
 1. Load and map the spreadsheet.
 2. Select the base ZIP, output folder and ZIP name pattern. Check the filename preview.
-3. Select textures and individual resolutions in Textures.
+3. In Textures, expand a texture set to select individual textures. The header checkbox
+   selects or clears the full set. Its Resolution control applies to every texture in
+   the set; individual size overrides remain available. Mixed indicates differing sizes.
 4. Validate configuration.
 5. Preview a selected backer, inspect the model, then Restore names and colors.
 6. Export one or two backers and check them in Trackmania before running the full batch.
@@ -80,6 +84,9 @@ The output folder preference is retained; CREAM does not automatically copy into
 
 The base ZIP must contain files directly at its root. Selected outputs replace matching
 files; all others are preserved. Settings apply to every selected backer.
+Texture-set accordions start collapsed. A partial checkbox means only some textures
+are selected. Changing a set's resolution replaces sizes for all its textures, including
+unchecked ones. Existing selections/sizes are migrated from previous versions.
 
 ### ZIP name pattern
 
