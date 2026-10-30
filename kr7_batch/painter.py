@@ -11,6 +11,7 @@ import substance_painter.source
 import substance_painter.textureset
 
 from .core import dimensions
+from . import tm_text
 
 
 def project_path():
@@ -99,6 +100,19 @@ def original_color(target):
     space = target["space"]
     color_space = sp.colormanagement.GenericColorSpace[space["enum"]] if "enum" in space else space["string"]
     return sp.colormanagement.Color(*target["value"], color_space=color_space)
+
+
+def filename_color_defaults(saved):
+    """Only a single original color (at TM palette precision) can name all texture sets."""
+    colors = [{}, {}]
+    for target in saved["targets"]:
+        index = target.get("index")
+        if target.get("kind") != "color" or index not in (0, 1):
+            continue
+        rgb = original_color(target).value
+        value = "#" + "".join(format(max(0, min(255, round(channel * 255))), "02X") for channel in rgb)
+        colors[index][tm_text.from_hex6(value)] = value
+    return [next(iter(values.values())) if len(values) == 1 else None for values in colors]
 
 
 def apply(saved, row=None):

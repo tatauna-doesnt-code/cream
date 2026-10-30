@@ -44,12 +44,14 @@ sys.modules["substance_painter"] = sp
 sys.modules["substance_painter.ui"] = sp.ui
 sys.modules["kr7_batch.painter"] = types.ModuleType("kr7_batch.painter")
 from kr7_batch import ui
+ui.painter.ready = lambda: False
 
 with tempfile.TemporaryDirectory() as folder, patch.object(ui, "DATA", Path(folder)):
     path = Path(folder) / "input.csv"
     path.write_text("Nickname;Color;Color\nJoseph;#AABBCC;#DDEEFF\n", encoding="utf-8")
     window = ui.Window(auto_update=False)
     assert window.fields["name_pattern"].text() == "{name}"
+    assert not window.styling_enabled.isChecked()
     window.fields["sheet"].setText(str(path))
     def accept_import(self):
         for field, index in {"nome_player": 1, "cor_1": 2, "cor_2": 3}.items():
@@ -60,6 +62,14 @@ with tempfile.TemporaryDirectory() as folder, patch.object(ui, "DATA", Path(fold
         window.load_sheet()
     assert window.rows[0]["colors"] == ["#AABBCC", "#DDEEFF", None]
     assert window.backers.item(0, 2).text() == "Joseph"
+    window.styling_enabled.setChecked(True)
+    assert not window.name_style.isHidden()
+    window.fields["name_pattern"].setText("{primary}{name}$g - {secondary}Event")
+    assert window.name_preview.text() == "$ABCJoseph$g - $DEFEvent.zip"
+    assert window.name_style.preview.toPlainText() == "Joseph - Event.zip"
+    raw = window.fields["name_pattern"].text()
+    window.styling_enabled.setChecked(False)
+    assert window.fields["name_pattern"].text() == raw
     window.fields["name_pattern"].setText("Community - {name} - {id}")
     assert window.backers.item(0, 6).text() == "Community - Joseph - 2.zip"
     assert window.name_preview.text() == window.backers.item(0, 6).text()

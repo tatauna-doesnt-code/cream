@@ -51,6 +51,7 @@ with tempfile.TemporaryDirectory() as temp:
     window.fields['converter'].setText(str(ROOT / 'kr7_batch/bin/texconv.exe'))
     state = {'name': None, 'color': None, 'waits': 0}
     painter.project_path = lambda: str(Path(temp) / 'project.spp')
+    painter.snapshot = lambda: {'project': painter.project_path(), 'targets': []}
     def ready():
         state['waits'] += 1
         return state['waits'] > 3
@@ -67,11 +68,11 @@ with tempfile.TemporaryDirectory() as temp:
         assert im.save(str(path))
         return path
     painter.export_one = export_one
-    def run(cancel_second=False):
-        output = Path(temp) / ('cancelled' if cancel_second else 'completed')
+    def run(cancel_second=False, styled=False):
+        output = Path(temp) / ('styled' if styled else 'cancelled' if cancel_second else 'completed')
         output.mkdir()
         window.fields['output'].setText(str(output))
-        window.fields['name_pattern'].setText('Community - {name}')
+        window.fields['name_pattern'].setText('{primary}Community - {name}$z' if styled else 'Community - {name}')
         window.rows = [{'id':str(i), 'line':i+2, 'name':'Joseph', 'stem':'Joseph',
                         'colors':[color, None, None]} for i, color in enumerate(['#FF0000', '#00FF00'])]
         window.backers.setRowCount(2)
@@ -98,14 +99,16 @@ with tempfile.TemporaryDirectory() as temp:
         assert state['name'] is None
         assert window.saved is None
         assert not window.recovery_path().exists()
-        assert (output/'Community - Joseph.zip').is_file()
+        first = '$F00Community - Joseph$z.zip' if styled else 'Community - Joseph.zip'
+        second = '$0F0Community - Joseph$z.zip' if styled else 'Community - Joseph 2.zip'
+        assert (output/first).is_file()
         if cancel_second:
-            assert not (output/'Community - Joseph 2.zip').exists()
+            assert not (output/second).exists()
             assert window.report['status'] == 'cancelled'
         else:
-            assert (output/'Community - Joseph 2.zip').is_file()
+            assert (output/second).is_file()
             assert window.report['status'] == 'completed'
-            with zipfile.ZipFile(output/'Community - Joseph.zip') as a, zipfile.ZipFile(output/'Community - Joseph 2.zip') as b:
+            with zipfile.ZipFile(output/first) as a, zipfile.ZipFile(output/second) as b:
                 assert a.read('Skin_B.dds') != b.read('Skin_B.dds')
                 assert a.read('Details_R.dds') == b'preserved base data'
         assert not list(output.glob('*.partial'))
@@ -113,6 +116,15 @@ with tempfile.TemporaryDirectory() as temp:
         window.progress = None
     run()
     run(cancel_second=True)
+    run(styled=True)
+    window.styling_enabled.setChecked(True)
+    window.backers.selectRow(0)
+    window.fields['name_pattern'].setText('$o{primary}Community - {name}$z')
+    window.tabs.setCurrentIndex(0)
+    app.processEvents()
+    app.processEvents()  # Allow the expanded helper's layout request to settle.
+    assert window.name_style.geometry().bottom() < window.tabs.geometry().top()
+    window.grab().save(str(ROOT / 'dist/ui-name-styling.png'))
     print('Controller integration: busy wait, two same-name different-color ZIPs, cancellation on second backer, original restore verified.', flush=True)
     window.pool.shutdown()
     window.hide()

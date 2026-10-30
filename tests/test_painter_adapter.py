@@ -23,6 +23,10 @@ class Color:
         self.value_raw = rgb
         self.color_space = color_space
 
+    @property
+    def value(self):
+        return self.value_raw
+
 class Font:
     def __init__(self):
         self.resource_id = types.SimpleNamespace(url=lambda: 'resource://font')
@@ -109,6 +113,15 @@ class AdapterTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             painter.apply(saved, {'name': 'Wrong', 'colors': ['#FF0000', None, None]})
         self.assertTrue(all(f.params.text == 'Original' for f in self.fonts))
+
+    def test_filename_color_defaults_are_unambiguous_and_non_mutating(self):
+        saved = painter.snapshot()
+        self.assertEqual(painter.filename_color_defaults(saved), ['#4080BF', None])
+        other = copy.deepcopy(next(t for t in saved['targets'] if t.get('kind') == 'color'))
+        other['value'] = [1, 0, 0]
+        saved['targets'].append(other)
+        self.assertEqual(painter.filename_color_defaults(saved), [None, None])
+        self.assertEqual(self.color.color.value_raw, (.25, .5, .75))
 
     def test_anchor_named_like_color_layer_is_ignored(self):
         self.root.children[0].content_effects = lambda: [Node('PLAYER_COLOR1')]

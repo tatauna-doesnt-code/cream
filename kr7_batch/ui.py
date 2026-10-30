@@ -14,6 +14,7 @@ import substance_painter.ui
 
 from . import core, painter, updater, bootstrap
 from .columns import ColumnDialog
+from .name_style import NameStyleHelper
 from .version import VERSION
 
 DATA = Path(os.environ.get("LOCALAPPDATA", str(Path.home()))) / "KR7BatchExporter"
@@ -59,6 +60,8 @@ class Window(W.QDialog):
         self.resize(1040, 820)
         self.rows = []
         self.column_profile = None
+        self.filename_defaults = None
+        self.filename_defaults_project = None
         self.reload_callback = reload_callback
         self.saved = None
         self.runner = None
@@ -88,8 +91,22 @@ class Window(W.QDialog):
         self.fields["name_pattern"].setPlaceholderText("Event - {name}")
         self.fields["name_pattern"].setMaxLength(200)
         self.fields["name_pattern"].setToolTip(
-            "{name}: ZIP-name column (or player name). {player}: printed name. {id}: row ID. {row}: spreadsheet row. ZIP extension is added automatically.")
-        form.addRow("ZIP name pattern", self.fields["name_pattern"])
+            "{name}: ZIP-name column (or player name). {player}: printed name. {id}: row ID. {row}: spreadsheet row. "
+            "{primary}/{secondary}: per-backer text colors. ZIP extension is added automatically.")
+        name_row = W.QWidget()
+        name_layout = W.QHBoxLayout(name_row)
+        name_layout.setContentsMargins(0, 0, 0, 0)
+        name_layout.addWidget(self.fields["name_pattern"], 1)
+        self.styling_enabled = W.QCheckBox("TM styling helper")
+        self.styling_enabled.setToolTip("Show a visual Trackmania text-style editor. Off by default; hiding it keeps your filename codes.")
+        name_layout.addWidget(self.styling_enabled)
+        form.addRow("ZIP name pattern", name_row)
+        self.name_style = NameStyleHelper()
+        self.name_style.hide()
+        self.name_style.pattern_changed.connect(self.fields["name_pattern"].setText)
+        self.name_style.color_requested.connect(self.refresh_name_colors)
+        self.styling_enabled.toggled.connect(self.toggle_name_helper)
+        layout.addWidget(self.name_style)
         self.name_preview = W.QLabel()
         self.name_preview.setWordWrap(True)
         form.addRow("Filename preview", self.name_preview)
@@ -157,6 +174,7 @@ class Window(W.QDialog):
         self.load_settings()
         self.fields["name_pattern"].textChanged.connect(self.naming_changed)
         self.fields["output"].textChanged.connect(self.naming_changed)
+        self.backers.currentCellChanged.connect(lambda *args: self.naming_changed())
         self.naming_changed()
         self.update_pool = ThreadPoolExecutor(max_workers=1, thread_name_prefix="CREAM-updates")
         self.update_future = None
@@ -408,21 +426,55 @@ class Window(W.QDialog):
 
     def refresh_destinations(self):
         pattern = core.validate_name_pattern(self.fields["name_pattern"].text())
+        defaults = self.get_filename_defaults() if core.name_color_fields(pattern) else None
         occupied = set()
         for i, row in enumerate(self.rows):
-            path = core.next_destination(self.fields["output"].text(), core.format_skin_name(pattern, row), occupied)
+            path = core.next_destination(self.fields["output"].text(), core.format_skin_name(pattern, row, defaults), occupied)
             self.backers.item(i, 6).setText(path.name)
-            if i == 0:
+            if i == max(0, self.backers.currentRow()):
                 self.name_preview.setText(path.name)
 
-    def naming_changed(self):
+    def get_filename_defaults(self, refresh=False):
         try:
-            pattern = self.fields["name_pattern"].text()
-            example = self.rows[0] if self.rows else {"stem": "Joseph", "name": "Joseph", "id": "001", "line": 2}
-            self.name_preview.setText(core.format_skin_name(pattern, example) + ".zip")
+            if not painter.ready():
+                return self.filename_defaults
+            project = painter.project_path()
+            if refresh or self.filename_defaults_project != project:
+                self.filename_defaults = painter.filename_color_defaults(self.saved if self.saved is not None else painter.snapshot())
+                self.filename_defaults_project = project
+            return self.filename_defaults
+        except (ValueError, RuntimeError):
+            return None
+
+    def toggle_name_helper(self, enabled):
+        self.name_style.setVisible(enabled)
+        if enabled and hasattr(self, "backers"):
+            self.get_filename_defaults(refresh=True)
+            self.naming_changed()
+
+    def refresh_name_colors(self):
+        self.get_filename_defaults(refresh=True)
+        self.naming_changed()
+
+    def naming_changed(self):
+        pattern = self.fields["name_pattern"].text()
+        self.name_style.set_source(pattern)
+        try:
+            example = self.rows[max(0, self.backers.currentRow())] if self.rows else {
+                "stem": "Joseph", "name": "Joseph", "id": "001", "line": 2, "colors": ["#FF8800", "#0088FF", None]}
+            defaults = self.get_filename_defaults() if core.name_color_fields(pattern) else self.filename_defaults
+            self.name_preview.setText(core.format_skin_name(pattern, example, defaults) + ".zip")
             self.refresh_destinations()
+            colors = {}
+            for key in ("primary", "secondary"):
+                try:
+                    colors[key] = core.resolve_name_color(example, key, defaults)
+                except ValueError:
+                    colors[key] = None
+            self.name_style.set_preview(self.name_preview.text(), colors)
         except ValueError as exc:
             self.name_preview.setText(str(exc))
+            self.name_style.set_preview("", {})
             for i in range(self.backers.rowCount()):
                 if self.backers.item(i, 6) is not None:
                     self.backers.item(i, 6).setText("Invalid name pattern")
@@ -434,6 +486,7 @@ class Window(W.QDialog):
 
     def save_settings(self):
         core.atomic_json(DATA / "settings.json", {"fields": {k: v.text() for k, v in self.fields.items()},
+                         "tm_styling": self.styling_enabled.isChecked(),
                          "column_profile": self.column_profile,
                          "maps": [{"checked": self.maps.item(i, 0).checkState() == QtCore.Qt.Checked,
                                    "size": self.maps.cellWidget(i, 3).currentData()} for i in range(self.maps.rowCount())]})
@@ -444,6 +497,7 @@ class Window(W.QDialog):
             # Before configurable naming every export had this prefix. Preserve it on upgrade.
             self.fields["name_pattern"].setText(settings.get("fields", {}).get("name_pattern", core.LEGACY_NAME_PATTERN))
             self.column_profile = settings.get("column_profile")
+            self.styling_enabled.setChecked(bool(settings.get("tm_styling", False)))
             for key, value in settings.get("fields", {}).items():
                 if key in self.fields:
                     self.fields[key].setText(value)
@@ -483,6 +537,8 @@ class Window(W.QDialog):
         pattern = self.fields["name_pattern"].text()
         if pattern != core.LEGACY_NAME_PATTERN:
             signature["zip_name_pattern"] = pattern
+        if core.name_color_fields(pattern):
+            signature["filename_color_defaults"] = painter.filename_color_defaults(painter.snapshot())
         return core.fingerprint(signature)
 
     def check(self):
@@ -490,8 +546,6 @@ class Window(W.QDialog):
             raise ValueError("Wait for Painter to finish its current operation and open a saved project in painting mode.")
         self.ensure_rows()
         core.validate_name_pattern(self.fields["name_pattern"].text())
-        for row in self.rows:
-            core.format_skin_name(self.fields["name_pattern"].text(), row)
         if self.saved or self.recovery_path().exists():
             raise ValueError("Restore names and colors before validating or starting a new batch.")
         selections = self.selections()
@@ -509,6 +563,9 @@ class Window(W.QDialog):
         with tempfile.TemporaryFile(dir=output):
             pass
         saved = painter.snapshot()
+        self.filename_defaults = painter.filename_color_defaults(saved) if core.name_color_fields(self.fields["name_pattern"].text()) else None
+        for row in self.rows:
+            core.format_skin_name(self.fields["name_pattern"].text(), row, self.filename_defaults)
         maps = painter.preset_maps()
         painter.preflight_exports(maps, selections, output)
         for i in range(3):
@@ -635,6 +692,7 @@ class Window(W.QDialog):
         output = Path(self.fields["output"].text())
         converter = Path(self.fields["converter"].text())
         try:
+            name_colors = painter.filename_color_defaults(saved) if core.name_color_fields(name_pattern) else None
             for position, index in enumerate(indices):
                 core.check_cancel(self.cancel)
                 row = self.rows[index]
@@ -666,7 +724,7 @@ class Window(W.QDialog):
                         replacements[filename + ".dds"] = dds
                         source.unlink(missing_ok=True)
                     core.check_cancel(self.cancel)
-                    destination = core.next_destination(output, core.format_skin_name(name_pattern, row))
+                    destination = core.next_destination(output, core.format_skin_name(name_pattern, row, name_colors))
                     entry["output"] = str(destination)
                     core.atomic_json(self.report_path, self.report)
                     self.say(f"{row['name']}: building and verifying {destination.name}")

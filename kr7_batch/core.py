@@ -18,6 +18,8 @@ import uuid
 import zipfile
 import xml.etree.ElementTree as ET
 
+from . import tm_text
+
 MAPS = {"B": "BC1_UNORM", "R": "BC5_UNORM", "I": "BC3_UNORM",
         "N": "BC5_UNORM", "CoatR": "BC4_UNORM", "DirtMask": "BC4_UNORM", "AO": "BC1_UNORM"}
 DDS_FOURCC = {"BC1_UNORM": b"DXT1", "BC3_UNORM": b"DXT5",
@@ -25,7 +27,7 @@ DDS_FOURCC = {"BC1_UNORM": b"DXT1", "BC3_UNORM": b"DXT5",
 HEADERS = ["ativo", "id", "nome_player", "nome_arquivo", "cor_1", "cor_2", "cor_3"]
 DEFAULT_NAME_PATTERN = "{name}"
 LEGACY_NAME_PATTERN = "KR7 - {name}"
-NAME_FIELDS = {"name", "player", "id", "row"}
+NAME_FIELDS = {"name", "player", "id", "row", "primary", "secondary"}
 NS = {"m": "http://schemas.openxmlformats.org/spreadsheetml/2006/main"}
 
 
@@ -181,12 +183,12 @@ def safe_stem(name):
     name = re.sub(r'[<>:"/\\|?*\x00-\x1f]', "_", name).strip().rstrip(". ")
     if not name:
         raise ValueError("The filename is empty after removing invalid characters.")
-    name = name[:100].rstrip(". ")
+    name = tm_text.truncate(name, 100).rstrip(". ")
     reserved = {"CON", "PRN", "AUX", "NUL", *("COM" + str(i) for i in range(1, 10)),
                 *("LPT" + str(i) for i in range(1, 10))}
     if name.split(".")[0].upper() in reserved:
         name = "_" + name
-    return name[:100].rstrip(". ")
+    return tm_text.truncate(name, 100).rstrip(". ")
 
 
 def validate_name_pattern(pattern):
@@ -202,14 +204,32 @@ def validate_name_pattern(pattern):
         if re.search(r'[<>:"/\\|?*\x00-\x1f]', literal):
             raise ValueError("The ZIP name pattern cannot contain folders or invalid filename characters.")
         if field is not None and (field not in NAME_FIELDS or spec or conversion is not None):
-            raise ValueError("Use only {name}, {player}, {id} and {row}, without format modifiers.")
+            raise ValueError("Use only {name}, {player}, {id}, {row}, {primary} and {secondary}, without format modifiers.")
     return pattern
 
 
-def format_skin_name(pattern, row):
+def name_color_fields(pattern):
+    validate_name_pattern(pattern)
+    return {field for _, field, _, _ in string.Formatter().parse(pattern) if field in ("primary", "secondary")}
+
+
+def resolve_name_color(row, key, defaults=None):
+    index = 0 if key == "primary" else 1
+    colors = row.get("colors", [])
+    value = colors[index] if index < len(colors) else None
+    if not value and defaults and index < len(defaults):
+        value = defaults[index]
+    if not value:
+        raise ValueError(f"The {key} text color is unavailable for row {row['line']}. Set color {index + 1} in the spreadsheet or use a single original project color across texture sets.")
+    return tm_text.from_hex6(value)
+
+
+def format_skin_name(pattern, row, color_defaults=None):
     """Produce a safe filename stem. Never alter the name applied to the project."""
     validate_name_pattern(pattern)
     values = {"name": row["stem"], "player": row["name"], "id": row["id"], "row": str(row["line"])}
+    for field in name_color_fields(pattern):
+        values[field] = "$" + resolve_name_color(row, field, color_defaults)
     name = pattern.format_map(values).strip()
     if name.lower().endswith(".zip"):
         name = name[:-4]

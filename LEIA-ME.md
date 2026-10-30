@@ -1,4 +1,4 @@
-# CREAM 1.4.0
+# CREAM 1.5.0
 
 Color Replacement & Export Automation Manager for Adobe Substance 3D Painter on Windows.
 The filename is retained for installer compatibility; these instructions are in English.
@@ -81,6 +81,26 @@ Existing settings keep `KR7 - {name}`. New installations start with `{name}` and
 current user's Documents/Trackmania/Skins/Models/CarSport folder. Saved output folders
 are preserved. Naming preferences survive CREAM reloads. Changing the pattern prevents
 resuming a report created with a different naming configuration.
+
+### Trackmania name styling
+
+Turn on **TM styling helper** next to ZIP name pattern. It is off by default and shows
+an editable styled pattern plus the selected backer's in-game-name preview. Select text
+and use the toolbar, or choose a style and type. Bold, italic, uppercase, shadow,
+normal/narrow/wide width, default color, full reset and literal dollar are available.
+Ctrl+B and Ctrl+I also work. The preview uses local fonts, so exact metrics can differ
+from Trackmania. The raw pattern and actual ZIP filename remain visible.
+
+**Text color…** accepts exactly three hexadecimal digits such as F80, not FF8800.
+Channel sliders use values 0–F. Inside this picker, choose **Use skin primary color**
+or **Use skin secondary color** to use color 1 or 2 independently for each backer.
+The pattern tokens are `{primary}` and `{secondary}`; each becomes a `$RGB` color code.
+Example: `{primary}My Event$g - {secondary}{name}$z`.
+
+Skin colors are rounded from 6-digit sRGB to Trackmania's 3-digit text palette. For blank
+spreadsheet colors, the project original is used. If originals differ across texture
+sets at this palette precision, supply a spreadsheet color instead of relying on defaults.
+The helper changes ZIP-name styling only. Turning it off keeps the existing raw codes.
 
 | Texture | Compression / DDS identifier |
 |---|---|

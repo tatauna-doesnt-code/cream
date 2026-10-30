@@ -41,6 +41,7 @@ with tempfile.TemporaryDirectory() as folder:
     old = plugin._window
     old.fields['output'].setText(str(root / 'skins'))
     old.fields['name_pattern'].setText('Community - {name}')
+    old.styling_enabled.setChecked(True)
     old.maps.item(0, 0).setCheckState(QtCore.Qt.Checked)
     old.restore_reload_state({'rows': [{'line': 2, 'id': '1', 'name': 'Joseph', 'stem': 'Joseph',
                                       'colors': ['#AABBCC', None, None]}],
@@ -83,6 +84,7 @@ with tempfile.TemporaryDirectory() as folder:
     assert current is not old and sys.modules['kr7_batch.ui'] is not old_module
     assert '99.0.0' in current.windowTitle()
     assert current.fields['name_pattern'].text() == 'Community - {name}'
+    assert current.styling_enabled.isChecked() and not current.name_style.isHidden()
     assert current.backers.item(0, 6).text() == 'Community - Joseph.zip'
     assert current.rows[0]['name'] == 'Joseph'
     assert current.backers.item(0, 0).checkState() == QtCore.Qt.Unchecked

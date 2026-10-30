@@ -1,5 +1,18 @@
 # Changes
 
+## 1.5.0
+
+- Add an optional TM styling helper next to the ZIP name pattern, off by default.
+  Edit selected text visually with bold, italic, uppercase, shadow, normal/narrow/wide
+  widths, default color, full reset and literal-dollar controls. Raw codes remain editable.
+- Add a strict 3-digit RGB picker with channel sliders and per-backer primary/secondary
+  skin-color choices. Dynamic colors use {primary}/{secondary} tokens and are quantized
+  to Trackmania's 12-bit text palette independently for every exported ZIP.
+- Preview the selected backer's styled filename with local fonts. Use a single original
+  project color for blank spreadsheet colors; reject ambiguous or unavailable defaults.
+- Keep styling limited to filenames, preserve helper preferences across reloads, and avoid
+  splitting $RGB/style codes when limiting filename length.
+
 ## 1.4.0
 
 - Configure ZIP filenames with {name}, {player}, {id} and {row}, with a live example
