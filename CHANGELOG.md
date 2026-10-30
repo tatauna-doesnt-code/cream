@@ -1,5 +1,17 @@
 # Changes
 
+## 1.7.0
+
+- Remove the DDS converter input and always use the verified bundled texconv.exe.
+  Obsolete converter-path preferences are ignored; missing files prompt reinstallation.
+- Group Textures into collapsed Details, Glass, Skin and Wheels accordions. Each
+  header has a tri-state select-all checkbox and a resolution control for the full set.
+- Keep individual texture export flags and resolution overrides. Mixed set resolutions
+  are shown explicitly; Wheels retains its 1:4 output dimensions.
+- Remove redundant Texture set and DDS columns. Compression details remain in tooltips.
+- Preserve the existing flat settings layout, selection order and resume signatures.
+  Selections and overrides survive migration and CREAM reloads.
+
 ## 1.6.0
 
 - Edit Player name directly in each loaded row. Manually changed names appear bold
