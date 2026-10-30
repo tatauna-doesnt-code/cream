@@ -68,7 +68,7 @@ class DevelopmentTests(unittest.TestCase):
         stage = bootstrap.pending_info(self.target, self.data)['stage']
         self.stage()
         self.assertTrue(Path(stage).is_dir())
-        self.assertEqual(first['marker'], str(bootstrap.pending_path(self.target, self.data)))
+        self.assertTrue(Path(first['marker']).samefile(bootstrap.pending_path(self.target, self.data)))
         with self.assertRaisesRegex(ValueError, 'source checkout'):
             dev.stage_local(dev.ROOT / 'kr7_batch', self.data, archive=self.archive)
 
@@ -78,3 +78,4 @@ class DevelopmentTests(unittest.TestCase):
         (source / 'broken.py').write_text('if :\n')
         with self.assertRaises(SyntaxError):
             dev.validate_sources(source.parent)
+
