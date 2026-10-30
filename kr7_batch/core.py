@@ -136,6 +136,33 @@ def read_rows(path, mapping=None):
     return rows_from_table(read_table(path), mapping)
 
 
+def normalize_player_name(value, number):
+    name = unicodedata.normalize("NFC", value)
+    if not name.strip() or any(unicodedata.category(c) == "Cc" for c in name):
+        raise ValueError(f"Row {number}: name is empty or contains control characters.")
+    if re.search(r"\$(?:[0-9a-fA-F]{3}|[oswniztlgmhpuOSWNIZTLGMHPU])", name):
+        raise ValueError(f"Row {number}: remove Trackmania formatting codes.")
+    warnings = [f"Row {number}: name truncated to {name[:20]!r}."] if len(name) > 20 else []
+    return name[:20], warnings
+
+
+def name_originals(rows, table=None, filename_column=None):
+    originals = []
+    for row in rows:
+        if table is not None:
+            cells = table[row["line"] - 1]
+            explicit = filename_column is not None and filename_column < len(cells) and bool(str(cells[filename_column]).strip())
+        else:
+            explicit = row["stem"] != safe_stem(row["name"])
+        originals.append({"name": row["name"], "stem": row["stem"], "zip_from_player": not explicit})
+    return originals
+
+
+def edited_player_name(row, original, value):
+    name, warnings = normalize_player_name(value, row["line"])
+    return dict(row, name=name, stem=safe_stem(name) if original["zip_from_player"] else original["stem"]), warnings
+
+
 def rows_from_table(table, mapping=None):
     if not table:
         raise ValueError("The spreadsheet is empty.")
@@ -151,14 +178,8 @@ def rows_from_table(table, mapping=None):
             continue
         if active not in ("", "sim", "yes", "true", "1", "s"):
             raise ValueError(f"Row {number}: active must be yes or no.")
-        name = unicodedata.normalize("NFC", record.get("nome_player", ""))
-        if not name.strip() or any(unicodedata.category(c) == "Cc" for c in name):
-            raise ValueError(f"Row {number}: name is empty or contains control characters.")
-        if re.search(r"\$(?:[0-9a-fA-F]{3}|[oswniztlgmhpuOSWNIZTLGMHPU])", name):
-            raise ValueError(f"Row {number}: remove Trackmania formatting codes.")
-        if len(name) > 20:
-            warnings.append(f"Row {number}: name truncated to {name[:20]!r}.")
-        name = name[:20]
+        name, name_warnings = normalize_player_name(record.get("nome_player", ""), number)
+        warnings.extend(name_warnings)
         colors = []
         for index in range(1, 4):
             color = record.get(f"cor_{index}", "").strip()
@@ -236,10 +257,11 @@ def format_skin_name(pattern, row, color_defaults=None):
     return safe_stem(name)
 
 
-def next_destination(folder, stem, occupied=None):
+def next_destination(folder, stem, occupied=None, existing_names=None):
     stem = safe_stem(stem)
     occupied = occupied if occupied is not None else set()
-    existing = {p.name.casefold() for p in Path(folder).glob("*")} if Path(folder).exists() else set()
+    existing = existing_names if existing_names is not None else (
+        {p.name.casefold() for p in Path(folder).glob("*")} if Path(folder).exists() else set())
     for index in range(1, 1000000):
         suffix = "" if index == 1 else f" {index}"
         name = f"{stem}{suffix}.zip"

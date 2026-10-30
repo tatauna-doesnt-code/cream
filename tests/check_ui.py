@@ -68,8 +68,8 @@ with tempfile.TemporaryDirectory() as temp:
         assert im.save(str(path))
         return path
     painter.export_one = export_one
-    def run(cancel_second=False, styled=False):
-        output = Path(temp) / ('styled' if styled else 'cancelled' if cancel_second else 'completed')
+    def run(cancel_second=False, styled=False, edited=False):
+        output = Path(temp) / ('edited' if edited else 'styled' if styled else 'cancelled' if cancel_second else 'completed')
         output.mkdir()
         window.fields['output'].setText(str(output))
         window.fields['name_pattern'].setText('{primary}Community - {name}$z' if styled else 'Community - {name}')
@@ -79,6 +79,10 @@ with tempfile.TemporaryDirectory() as temp:
         for i in range(2):
             for col in range(8):
                 window.backers.setItem(i,col,window.check_item(True) if col == 0 else W.QTableWidgetItem(''))
+        if edited:
+            window.name_originals = core.name_originals(window.rows)
+            window.install_name_cells()
+            window.name_cells[0].editor.setText('Bompi')
         window.saved = {'project':painter.project_path(), 'targets':[]}
         core.atomic_json(window.recovery_path(), window.saved)
         window.report = {'rows':[], 'status':'running'}
@@ -99,8 +103,8 @@ with tempfile.TemporaryDirectory() as temp:
         assert state['name'] is None
         assert window.saved is None
         assert not window.recovery_path().exists()
-        first = '$F00Community - Joseph$z.zip' if styled else 'Community - Joseph.zip'
-        second = '$0F0Community - Joseph$z.zip' if styled else 'Community - Joseph 2.zip'
+        first = 'Community - Bompi.zip' if edited else '$F00Community - Joseph$z.zip' if styled else 'Community - Joseph.zip'
+        second = 'Community - Joseph.zip' if edited else '$0F0Community - Joseph$z.zip' if styled else 'Community - Joseph 2.zip'
         assert (output/first).is_file()
         if cancel_second:
             assert not (output/second).exists()
@@ -117,6 +121,7 @@ with tempfile.TemporaryDirectory() as temp:
     run()
     run(cancel_second=True)
     run(styled=True)
+    run(edited=True)
     window.styling_enabled.setChecked(True)
     window.backers.selectRow(0)
     window.fields['name_pattern'].setText('$o{primary}Community - {name}$z')

@@ -1,4 +1,4 @@
-# CREAM 1.5.0
+# CREAM 1.6.0
 
 Color Replacement & Export Automation Manager for Adobe Substance 3D Painter on Windows.
 The filename is retained for installer compatibility; these instructions are in English.
@@ -50,6 +50,20 @@ a warning. Empty names, control characters and common Trackmania formatting code
 are rejected. Duplicate names are allowed; explicit IDs must be unique.
 ZIP collisions receive suffixes: KR7 - Joseph.zip, KR7 - Joseph 2.zip, etc.
 Existing ZIPs are never overwritten. Invalid filename characters are replaced with _.
+
+### Edit a player name manually
+
+Edit the **Player name** field directly in the loaded table. A changed name appears
+bold italic. Click its refresh icon to restore the imported spreadsheet value.
+The same 20-character, Unicode and formatting-code validation applies to manual edits.
+Invalid edits must be fixed or reset before preview/export. Names are read-only while
+a batch or preview is active; restore the preview before editing.
+
+Edits are used for the skin text, `{player}` and any ZIP name derived from the player
+name. An explicit ZIP-name column remains unchanged. Select the desired rows before
+exporting again; existing ZIPs are preserved. Edits survive CREAM reloads within the
+current session but do not modify the source spreadsheet. Reloading the spreadsheet
+starts again with its imported values.
 
 ## Export
 

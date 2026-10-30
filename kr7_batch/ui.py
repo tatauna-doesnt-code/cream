@@ -15,6 +15,7 @@ import substance_painter.ui
 from . import core, painter, updater, bootstrap
 from .columns import ColumnDialog
 from .name_style import NameStyleHelper
+from .name_cell import PlayerNameCell, PlayerNameDelegate
 from .version import VERSION
 
 DATA = Path(os.environ.get("LOCALAPPDATA", str(Path.home()))) / "KR7BatchExporter"
@@ -59,6 +60,9 @@ class Window(W.QDialog):
         self.setWindowTitle("CREAM — " + VERSION)
         self.resize(1040, 820)
         self.rows = []
+        self.name_originals = []
+        self.name_cells = {}
+        self.invalid_names = {}
         self.column_profile = None
         self.filename_defaults = None
         self.filename_defaults_project = None
@@ -126,6 +130,10 @@ class Window(W.QDialog):
         self.backers.setSelectionBehavior(W.QAbstractItemView.SelectRows)
         self.backers.setSelectionMode(W.QAbstractItemView.SingleSelection)
         self.backers.setEditTriggers(W.QAbstractItemView.NoEditTriggers)
+        self.name_delegate = PlayerNameDelegate(self.backers)
+        self.backers.setItemDelegateForColumn(2, self.name_delegate)
+        self.backers.horizontalHeaderItem(2).setToolTip("Edit names directly. Changed names are bold italic; the refresh icon restores the spreadsheet value.")
+        self.backers.selectionModel().selectionChanged.connect(self.sync_name_selection)
         self.backers.horizontalHeader().setSectionResizeMode(W.QHeaderView.ResizeToContents)
         self.backers.horizontalHeader().setStretchLastSection(True)
         box.addWidget(self.backers)
@@ -309,6 +317,8 @@ class Window(W.QDialog):
             return "Wait for the current batch or background task to finish before applying the update."
         if self.saved is not None:
             return "Restore names and colors before applying the update."
+        if self.invalid_names:
+            return "Fix or reset the invalid player name before applying the update."
         if sp.project.is_open():
             if sp.project.is_busy():
                 return "Painter is busy. Wait for the current operation to finish."
@@ -324,6 +334,7 @@ class Window(W.QDialog):
 
     def capture_reload_state(self):
         return {"rows": self.rows, "loaded_sheet": getattr(self, "loaded_sheet", None),
+                "name_originals": self.name_originals,
                 "checked": [self.backers.item(i, 0).checkState() == QtCore.Qt.Checked
                             for i in range(self.backers.rowCount())],
                 "selected": self.backers.currentRow(), "log": self.log.toPlainText()}
@@ -333,6 +344,7 @@ class Window(W.QDialog):
             return
         self.rows = state["rows"]
         self.loaded_sheet = state["loaded_sheet"]
+        self.name_originals = state.get("name_originals") or self.infer_name_originals()
         self.backers.setRowCount(len(self.rows))
         for i, row in enumerate(self.rows):
             self.backers.setItem(i, 0, self.check_item(state["checked"][i]))
@@ -340,6 +352,7 @@ class Window(W.QDialog):
                       *[c or "Original" for c in row["colors"]], "", "Pending"]
             for column, value in enumerate(values, 1):
                 self.backers.setItem(i, column, W.QTableWidgetItem(str(value)))
+        self.install_name_cells()
         self.refresh_destinations()
         if state["selected"] >= 0:
             self.backers.selectRow(state["selected"])
@@ -408,6 +421,7 @@ class Window(W.QDialog):
             rows, warnings = dialog.rows, dialog.warnings
             self.column_profile = {"headers": table[0], "mapping": dialog.mapping}
             self.rows = rows
+            self.name_originals = core.name_originals(rows, table, dialog.mapping.get("nome_arquivo"))
             self.loaded_sheet = (self.fields["sheet"].text(), stamp)
             self.backers.setRowCount(len(rows))
             for i, row in enumerate(rows):
@@ -415,6 +429,7 @@ class Window(W.QDialog):
                 values = [f"{row['line']} / {row['id']}", row["name"], *[c or "Original" for c in row["colors"]], "", "Pending"]
                 for column, value in enumerate(values, 1):
                     self.backers.setItem(i, column, W.QTableWidgetItem(str(value)))
+            self.install_name_cells()
             self.refresh_destinations()
             self.backers.selectRow(0)
             for warning in warnings:
@@ -424,12 +439,87 @@ class Window(W.QDialog):
         except Exception as exc:
             self.error(exc)
 
+    def infer_name_originals(self):
+        try:
+            path, stamp = self.loaded_sheet
+            if Path(path).stat().st_mtime_ns == stamp and self.column_profile:
+                table = core.read_table(path)
+                if table[0] == self.column_profile["headers"]:
+                    return core.name_originals(self.rows, table, self.column_profile["mapping"].get("nome_arquivo"))
+        except (OSError, TypeError, ValueError, KeyError):
+            pass
+        return core.name_originals(self.rows)
+
+    def install_name_cells(self):
+        self.name_cells = {}
+        self.invalid_names = {}
+        for index, row in enumerate(self.rows):
+            cell = PlayerNameCell(row["name"], self.name_originals[index]["name"])
+            self.name_cells[index] = cell
+            self.backers.setCellWidget(index, 2, cell)
+            self.backers.item(index, 2).setFont(cell.editor.font())
+            cell.changed.connect(lambda value, i=index: self.edit_player_name(i, value))
+            cell.reset_requested.connect(lambda i=index: self.reset_player_name(i))
+            cell.focused.connect(lambda i=index: self.backers.selectRow(i))
+        self.sync_name_editing()
+        self.sync_name_selection()
+
+    def sync_name_selection(self, *args):
+        selected = {index.row() for index in self.backers.selectionModel().selectedRows()}
+        for index, cell in self.name_cells.items():
+            cell.set_selected(index in selected)
+
+    def sync_name_editing(self):
+        allowed = self.runner is None and self.saved is None
+        for cell in self.name_cells.values():
+            cell.set_allowed(allowed)
+
+    def edit_player_name(self, index, value):
+        cell = self.name_cells[index]
+        if self.runner is not None or self.saved is not None:
+            cell.set_text(self.rows[index]["name"])
+            return
+        try:
+            updated, warnings = core.edited_player_name(self.rows[index], self.name_originals[index], value)
+        except ValueError as exc:
+            self.invalid_names[index] = str(exc)
+            cell.invalid = str(exc)
+            self.backers.item(index, 7).setText("Invalid name")
+            self.backers.item(index, 6).setText("Invalid player name")
+            if self.backers.currentRow() == index:
+                self.name_preview.setText(str(exc))
+                self.name_style.set_preview("", {})
+            self.status.setText(str(exc))
+        else:
+            self.rows[index] = updated
+            self.invalid_names.pop(index, None)
+            cell.invalid = ""
+            if updated["name"] != value:
+                cell.set_text(updated["name"])
+            self.backers.item(index, 2).setText(updated["name"])
+            self.backers.item(index, 7).setText("Pending")
+            self.status.setText(warnings[-1] if warnings else f"Row {updated['line']}: player name updated for this session.")
+            self.naming_changed()
+        cell.refresh_appearance()
+        self.backers.item(index, 2).setFont(cell.editor.font())
+
+    def reset_player_name(self, index):
+        if self.runner is None and self.saved is None:
+            value = self.name_originals[index]["name"]
+            self.name_cells[index].set_text(value)
+            self.edit_player_name(index, value)
+
     def refresh_destinations(self):
         pattern = core.validate_name_pattern(self.fields["name_pattern"].text())
         defaults = self.get_filename_defaults() if core.name_color_fields(pattern) else None
         occupied = set()
+        folder = Path(self.fields["output"].text())
+        existing = {path.name.casefold() for path in folder.glob("*")} if folder.exists() else set()
         for i, row in enumerate(self.rows):
-            path = core.next_destination(self.fields["output"].text(), core.format_skin_name(pattern, row, defaults), occupied)
+            if i in self.invalid_names:
+                self.backers.item(i, 6).setText("Invalid player name")
+                continue
+            path = core.next_destination(folder, core.format_skin_name(pattern, row, defaults), occupied, existing)
             self.backers.item(i, 6).setText(path.name)
             if i == max(0, self.backers.currentRow()):
                 self.name_preview.setText(path.name)
@@ -459,6 +549,11 @@ class Window(W.QDialog):
     def naming_changed(self):
         pattern = self.fields["name_pattern"].text()
         self.name_style.set_source(pattern)
+        selected = max(0, self.backers.currentRow())
+        if selected in self.invalid_names:
+            self.name_preview.setText(self.invalid_names[selected])
+            self.name_style.set_preview("", {})
+            return
         try:
             example = self.rows[max(0, self.backers.currentRow())] if self.rows else {
                 "stem": "Joseph", "name": "Joseph", "id": "001", "line": 2, "colors": ["#FF8800", "#0088FF", None]}
@@ -518,11 +613,14 @@ class Window(W.QDialog):
         saved = painter.snapshot()
         core.atomic_json(path, saved)  # Must reach disk before editing the project.
         self.saved = saved
+        self.sync_name_editing()
         return saved
 
     def ensure_rows(self):
         if not self.rows:
             raise ValueError("Load the spreadsheet first.")
+        if self.invalid_names:
+            raise ValueError(next(iter(self.invalid_names.values())) + " Fix or reset the edited player name.")
         sheet = self.fields["sheet"].text()
         if (sheet, Path(sheet).stat().st_mtime_ns) != self.loaded_sheet:
             raise ValueError("The spreadsheet changed. Click Load spreadsheet again.")
@@ -599,6 +697,7 @@ class Window(W.QDialog):
                 painter.apply(saved)
                 self.recovery_path().unlink(missing_ok=True)
                 self.saved = None
+                self.sync_name_editing()
                 raise
             self.say("Preview applied. Check the model, then use Restore names and colors. Do not save the preview over your original.")
         except Exception as exc:
@@ -616,6 +715,7 @@ class Window(W.QDialog):
             painter.apply(saved)
             path.unlink(missing_ok=True)
             self.saved = None
+            self.sync_name_editing()
             self.say("Original names and colors restored. The plugin did not save the .spp.")
         except Exception as exc:
             self.error(exc)
@@ -669,6 +769,7 @@ class Window(W.QDialog):
                 try:
                     self.recovery_path().unlink(missing_ok=True)
                     self.saved = None
+                    self.sync_name_editing()
                 except Exception:
                     pass
             self.error(exc)
@@ -758,6 +859,7 @@ class Window(W.QDialog):
             painter.apply(saved)
             self.recovery_path().unlink(missing_ok=True)
             self.saved = None
+            self.sync_name_editing()
             core.atomic_json(self.report_path, self.report)
 
     def tick(self):
@@ -781,6 +883,7 @@ class Window(W.QDialog):
     def finish(self):
         self.timer.stop()
         self.runner = None
+        self.sync_name_editing()
         if self.progress:
             self.progress.hide()
             self.progress.deleteLater()

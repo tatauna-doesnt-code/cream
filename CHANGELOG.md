@@ -1,5 +1,17 @@
 # Changes
 
+## 1.6.0
+
+- Edit Player name directly in each loaded row. Manually changed names appear bold
+  italic with an icon-only refresh button to restore the original spreadsheet value.
+- Use edited names in previews, text layers, ZIP patterns and report fingerprints.
+  Update ZIP-name fallbacks while preserving explicitly supplied ZIP names.
+- Apply the same Unicode, 20-character and formatting-code validation as spreadsheet
+  imports. Invalid edits block preview/export; editing is locked during batches/previews.
+- Preserve session edits and their original reset values across CREAM-only updates.
+  The source spreadsheet is never modified. Reloading a spreadsheet starts a new baseline.
+- Scan the output directory once per filename-preview refresh instead of once per row.
+
 ## 1.5.0
 
 - Add an optional TM styling helper next to the ZIP name pattern, off by default.

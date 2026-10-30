@@ -46,6 +46,7 @@ with tempfile.TemporaryDirectory() as folder:
     old.restore_reload_state({'rows': [{'line': 2, 'id': '1', 'name': 'Joseph', 'stem': 'Joseph',
                                       'colors': ['#AABBCC', None, None]}],
                              'loaded_sheet': ('input.csv', 10), 'checked': [False], 'selected': 0, 'log': 'Keep this log'})
+    old.name_cells[0].editor.setText('Bompi')
     def stage(broken=False):
         stage = bootstrap.DATA / 'updates' / uuid.uuid4().hex
         shutil.copytree(target, stage / 'kr7_batch', ignore=shutil.ignore_patterns('__pycache__'))
@@ -85,8 +86,10 @@ with tempfile.TemporaryDirectory() as folder:
     assert '99.0.0' in current.windowTitle()
     assert current.fields['name_pattern'].text() == 'Community - {name}'
     assert current.styling_enabled.isChecked() and not current.name_style.isHidden()
-    assert current.backers.item(0, 6).text() == 'Community - Joseph.zip'
-    assert current.rows[0]['name'] == 'Joseph'
+    assert current.backers.item(0, 6).text() == 'Community - Bompi.zip'
+    assert current.rows[0]['name'] == 'Bompi'
+    assert current.name_cells[0].editor.font().bold() and current.name_cells[0].editor.font().italic()
+    assert current.name_originals[0]['name'] == 'Joseph'
     assert current.backers.item(0, 0).checkState() == QtCore.Qt.Unchecked
     assert current.maps.item(0, 0).checkState() == QtCore.Qt.Checked
     assert current.log.toPlainText() == 'Keep this log'
@@ -96,7 +99,9 @@ with tempfile.TemporaryDirectory() as folder:
     app.processEvents()
     restored = plugin._window
     assert restored is not current and '99.0.0' in restored.windowTitle()
-    assert restored.rows[0]['name'] == 'Joseph'
+    assert restored.rows[0]['name'] == 'Bompi'
+    restored.name_cells[0].reset.click()
+    assert restored.rows[0]['name'] == 'Joseph' and restored.rows[0]['stem'] == 'Joseph'
     assert 'simulated UI import failure' in restored.update_status.text()
     assert bootstrap.pending_info(target)['restart'] == 'painter'
     restored.show_pending_update()

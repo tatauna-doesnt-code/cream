@@ -36,6 +36,18 @@ required. Original template headers and existing CSV values remain supported.
 Names are limited to 20 Unicode code points after NFC normalization. Colors are sRGB
 `#RRGGBB`; omitted colors use the original project color.
 
+Edit **Player name** directly in the loaded table. An override appears **bold italic**;
+the refresh-icon button restores the imported spreadsheet name. Names are normalized
+and limited to 20 characters using the same rules as imports. Invalid drafts block
+preview/export until fixed or reset. Editing is locked during a batch or active preview.
+
+Overrides affect the name printed on the skin and `{player}` in filenames. If the ZIP
+name falls back to the player name, `{name}` follows the edit too; an explicitly mapped
+ZIP name is preserved. Completed ZIPs are not renamed or overwritten. Row export
+checkboxes retain their selection, so select edited rows before exporting again.
+Edits are session-only, survive CREAM reloads and never modify the spreadsheet.
+Reloading the spreadsheet replaces the edits and resets the baseline.
+
 The **ZIP name pattern** is configurable, with a live preview:
 
 | Pattern | Example |

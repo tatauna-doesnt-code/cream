@@ -11,10 +11,12 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 # Adobe keeps Qt/Shiboken DLLs next to Painter rather than the embedded interpreter.
 _dll_path = Path(sys.executable).resolve().parents[2]
 _dll_handle = os.add_dll_directory(str(_dll_path)) if os.name == "nt" else None
-from PySide6 import QtWidgets as W
+from PySide6 import QtGui, QtWidgets as W
 from kr7_batch.columns import ColumnDialog, column_letter
 
 app = W.QApplication.instance() or W.QApplication([])
+QtGui.QFontDatabase.addApplicationFont(r'C:\Windows\Fonts\segoeui.ttf')
+app.setFont(QtGui.QFont('Segoe UI', 9))
 table = [["Nickname", "Color", "Color"], ["Joseph", "#AABBCC", "#DDEEFF"]]
 dialog = ColumnDialog(table)
 assert not dialog.import_button.isEnabled()
@@ -53,6 +55,8 @@ with tempfile.TemporaryDirectory() as folder, patch.object(ui, "DATA", Path(fold
     assert window.fields["name_pattern"].text() == "{name}"
     assert not window.styling_enabled.isChecked()
     window.fields["sheet"].setText(str(path))
+    window.fields["output"].setText(str(Path(folder) / 'skins'))
+    original_sheet = path.read_bytes()
     def accept_import(self):
         for field, index in {"nome_player": 1, "cor_1": 2, "cor_2": 3}.items():
             self.combos[field].setCurrentIndex(index)
@@ -62,6 +66,31 @@ with tempfile.TemporaryDirectory() as folder, patch.object(ui, "DATA", Path(fold
         window.load_sheet()
     assert window.rows[0]["colors"] == ["#AABBCC", "#DDEEFF", None]
     assert window.backers.item(0, 2).text() == "Joseph"
+    cell = window.name_cells[0]
+    assert not cell.reset.isEnabled() and not cell.reset.icon().isNull() and not cell.reset.text()
+    cell.editor.setText("Bompi")
+    assert window.rows[0]['name'] == 'Bompi' and window.rows[0]['stem'] == 'Bompi'
+    assert cell.editor.font().bold() and cell.editor.font().italic() and cell.reset.isEnabled()
+    assert window.backers.item(0, 6).text() == 'Bompi.zip'
+    cell.editor.setText('')
+    try:
+        window.ensure_rows()
+        raise AssertionError('Invalid edited name was accepted')
+    except ValueError:
+        pass
+    assert window.invalid_names and 'invalid player name' in window.reload_block_reason()
+    cell.reset.click()
+    assert window.rows[0]['name'] == 'Joseph' and not window.invalid_names
+    assert not cell.editor.font().bold() and not cell.editor.font().italic() and not cell.reset.isEnabled()
+    window.saved = {}
+    window.sync_name_editing()
+    assert cell.editor.isReadOnly() and not cell.reset.isEnabled()
+    cell.editor.setText('Blocked change')
+    assert window.rows[0]['name'] == 'Joseph' and cell.editor.text() == 'Joseph'
+    window.saved = None
+    window.sync_name_editing()
+    assert not cell.editor.isReadOnly()
+    assert path.read_bytes() == original_sheet
     window.styling_enabled.setChecked(True)
     assert not window.name_style.isHidden()
     window.fields["name_pattern"].setText("{primary}{name}$g - {secondary}Event")
@@ -100,6 +129,12 @@ with tempfile.TemporaryDirectory() as folder, patch.object(ui, "DATA", Path(fold
     with patch.object(ColumnDialog, "exec", return_value=W.QDialog.Rejected):
         window.load_sheet()
     assert window.rows[0]["name"] == "Joseph"
+    window.name_cells[0].editor.setText('Bompi')
+    window.show()
+    app.processEvents()
+    app.processEvents()
+    window.grab().save(str(Path(__file__).resolve().parents[1] / 'dist/ui-manual-player-name.png'))
+    window.name_cells[0].reset.click()
     settings = json.loads((Path(folder) / "settings.json").read_text())
     settings["fields"].pop("name_pattern")
     (Path(folder) / "settings.json").write_text(json.dumps(settings))
