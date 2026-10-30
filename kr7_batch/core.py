@@ -10,6 +10,7 @@ from pathlib import Path, PurePosixPath
 import re
 import shutil
 import struct
+import string
 import subprocess
 import threading
 import unicodedata
@@ -22,6 +23,9 @@ MAPS = {"B": "BC1_UNORM", "R": "BC5_UNORM", "I": "BC3_UNORM",
 DDS_FOURCC = {"BC1_UNORM": b"DXT1", "BC3_UNORM": b"DXT5",
               "BC4_UNORM": b"BC4U", "BC5_UNORM": b"BC5U"}
 HEADERS = ["ativo", "id", "nome_player", "nome_arquivo", "cor_1", "cor_2", "cor_3"]
+DEFAULT_NAME_PATTERN = "{name}"
+LEGACY_NAME_PATTERN = "KR7 - {name}"
+NAME_FIELDS = {"name", "player", "id", "row"}
 NS = {"m": "http://schemas.openxmlformats.org/spreadsheetml/2006/main"}
 
 
@@ -177,15 +181,48 @@ def safe_stem(name):
     name = re.sub(r'[<>:"/\\|?*\x00-\x1f]', "_", name).strip().rstrip(". ")
     if not name:
         raise ValueError("The filename is empty after removing invalid characters.")
+    name = name[:100].rstrip(". ")
+    reserved = {"CON", "PRN", "AUX", "NUL", *("COM" + str(i) for i in range(1, 10)),
+                *("LPT" + str(i) for i in range(1, 10))}
+    if name.split(".")[0].upper() in reserved:
+        name = "_" + name
     return name[:100].rstrip(". ")
 
 
+def validate_name_pattern(pattern):
+    if not isinstance(pattern, str) or not pattern.strip():
+        raise ValueError("Enter a ZIP name pattern, such as {name} or Event - {name}.")
+    if len(pattern) > 200:
+        raise ValueError("The ZIP name pattern must not exceed 200 characters.")
+    try:
+        parts = list(string.Formatter().parse(pattern))
+    except ValueError as exc:
+        raise ValueError("Invalid braces in the ZIP name pattern.") from exc
+    for literal, field, spec, conversion in parts:
+        if re.search(r'[<>:"/\\|?*\x00-\x1f]', literal):
+            raise ValueError("The ZIP name pattern cannot contain folders or invalid filename characters.")
+        if field is not None and (field not in NAME_FIELDS or spec or conversion is not None):
+            raise ValueError("Use only {name}, {player}, {id} and {row}, without format modifiers.")
+    return pattern
+
+
+def format_skin_name(pattern, row):
+    """Produce a safe filename stem. Never alter the name applied to the project."""
+    validate_name_pattern(pattern)
+    values = {"name": row["stem"], "player": row["name"], "id": row["id"], "row": str(row["line"])}
+    name = pattern.format_map(values).strip()
+    if name.lower().endswith(".zip"):
+        name = name[:-4]
+    return safe_stem(name)
+
+
 def next_destination(folder, stem, occupied=None):
+    stem = safe_stem(stem)
     occupied = occupied if occupied is not None else set()
     existing = {p.name.casefold() for p in Path(folder).glob("*")} if Path(folder).exists() else set()
     for index in range(1, 1000000):
         suffix = "" if index == 1 else f" {index}"
-        name = f"KR7 - {stem}{suffix}.zip"
+        name = f"{stem}{suffix}.zip"
         if name.casefold() not in existing | occupied:
             occupied.add(name.casefold())
             return Path(folder) / name

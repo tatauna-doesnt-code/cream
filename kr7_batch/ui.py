@@ -17,7 +17,8 @@ from .columns import ColumnDialog
 from .version import VERSION
 
 DATA = Path(os.environ.get("LOCALAPPDATA", str(Path.home()))) / "KR7BatchExporter"
-DEFAULT_OUTPUT = r"C:\Users\lucas\Documents\Trackmania\Skins\Models\CarSport\KR7BACKERS"
+DEFAULT_OUTPUT = str(Path(QtCore.QStandardPaths.writableLocation(QtCore.QStandardPaths.DocumentsLocation))
+                     / "Trackmania" / "Skins" / "Models" / "CarSport")
 
 
 class Progress(W.QDialog):
@@ -83,6 +84,15 @@ class Window(W.QDialog):
         self.field(form, "base", "Base ZIP", "", "Skin (*.zip)")
         self.field(form, "output", "ZIP output folder", DEFAULT_OUTPUT, None)
         self.field(form, "converter", "DDS converter", str(Path(__file__).parent / "bin" / "texconv.exe"), "Converter (texconv.exe)")
+        self.fields["name_pattern"] = W.QLineEdit(core.DEFAULT_NAME_PATTERN)
+        self.fields["name_pattern"].setPlaceholderText("Event - {name}")
+        self.fields["name_pattern"].setMaxLength(200)
+        self.fields["name_pattern"].setToolTip(
+            "{name}: ZIP-name column (or player name). {player}: printed name. {id}: row ID. {row}: spreadsheet row. ZIP extension is added automatically.")
+        form.addRow("ZIP name pattern", self.fields["name_pattern"])
+        self.name_preview = W.QLabel()
+        self.name_preview.setWordWrap(True)
+        form.addRow("Filename preview", self.name_preview)
         self.tabs = W.QTabWidget()
         layout.addWidget(self.tabs, 1)
         page = W.QWidget()
@@ -103,7 +113,7 @@ class Window(W.QDialog):
         self.backers.horizontalHeader().setStretchLastSection(True)
         box.addWidget(self.backers)
         box.addWidget(W.QLabel("Names: up to 20 characters. Blank colors: project original. Duplicate ZIP names receive 2, 3…"))
-        upload_note = W.QLabel("To upload in-game, copy ZIPs directly into CarSport; uploads may fail from subfolders such as KR7BACKERS.")
+        upload_note = W.QLabel("To upload in-game, place ZIPs directly in CarSport; uploads may fail from subfolders.")
         upload_note.setWordWrap(True)
         box.addWidget(upload_note)
         self.tabs.addTab(page, "Backers")
@@ -145,6 +155,9 @@ class Window(W.QDialog):
         self.status.setWordWrap(True)
         layout.addWidget(self.status)
         self.load_settings()
+        self.fields["name_pattern"].textChanged.connect(self.naming_changed)
+        self.fields["output"].textChanged.connect(self.naming_changed)
+        self.naming_changed()
         self.update_pool = ThreadPoolExecutor(max_workers=1, thread_name_prefix="CREAM-updates")
         self.update_future = None
         self._updates_stopped = False
@@ -394,10 +407,25 @@ class Window(W.QDialog):
             self.error(exc)
 
     def refresh_destinations(self):
+        pattern = core.validate_name_pattern(self.fields["name_pattern"].text())
         occupied = set()
         for i, row in enumerate(self.rows):
-            path = core.next_destination(self.fields["output"].text(), row["stem"], occupied)
+            path = core.next_destination(self.fields["output"].text(), core.format_skin_name(pattern, row), occupied)
             self.backers.item(i, 6).setText(path.name)
+            if i == 0:
+                self.name_preview.setText(path.name)
+
+    def naming_changed(self):
+        try:
+            pattern = self.fields["name_pattern"].text()
+            example = self.rows[0] if self.rows else {"stem": "Joseph", "name": "Joseph", "id": "001", "line": 2}
+            self.name_preview.setText(core.format_skin_name(pattern, example) + ".zip")
+            self.refresh_destinations()
+        except ValueError as exc:
+            self.name_preview.setText(str(exc))
+            for i in range(self.backers.rowCount()):
+                if self.backers.item(i, 6) is not None:
+                    self.backers.item(i, 6).setText("Invalid name pattern")
 
     def selections(self):
         return [{"set": self.maps.item(i, 1).text(), "map": self.maps.item(i, 2).text(),
@@ -413,6 +441,8 @@ class Window(W.QDialog):
     def load_settings(self):
         try:
             settings = json.loads((DATA / "settings.json").read_text(encoding="utf-8"))
+            # Before configurable naming every export had this prefix. Preserve it on upgrade.
+            self.fields["name_pattern"].setText(settings.get("fields", {}).get("name_pattern", core.LEGACY_NAME_PATTERN))
             self.column_profile = settings.get("column_profile")
             for key, value in settings.get("fields", {}).items():
                 if key in self.fields:
@@ -445,16 +475,23 @@ class Window(W.QDialog):
 
     def config_signature(self):
         base = Path(self.fields["base"].text())
-        return core.fingerprint({"project": painter.project_path(), "base": str(base.resolve()),
+        signature = {"project": painter.project_path(), "base": str(base.resolve()),
                                  "base_size": base.stat().st_size, "base_mtime": base.stat().st_mtime_ns,
                                  "maps": self.selections(), "preset": painter.preset_maps(), "normal_invert": False,
                                  "dds_headers": "BC4U_BC5U",
-                                 "normal_export": "Normal_OpenGL"})
+                                 "normal_export": "Normal_OpenGL"}
+        pattern = self.fields["name_pattern"].text()
+        if pattern != core.LEGACY_NAME_PATTERN:
+            signature["zip_name_pattern"] = pattern
+        return core.fingerprint(signature)
 
     def check(self):
         if not painter.ready():
             raise ValueError("Wait for Painter to finish its current operation and open a saved project in painting mode.")
         self.ensure_rows()
+        core.validate_name_pattern(self.fields["name_pattern"].text())
+        for row in self.rows:
+            core.format_skin_name(self.fields["name_pattern"].text(), row)
         if self.saved or self.recovery_path().exists():
             raise ValueError("Restore names and colors before validating or starting a new batch.")
         selections = self.selections()
@@ -567,7 +604,7 @@ class Window(W.QDialog):
             self.progress = Progress(self, self.cancel)
             self.progress.bar.setRange(0, len(indices))
             self.progress.show()
-            self.runner = self.run_batch(indices, saved, maps, self.selections())
+            self.runner = self.run_batch(indices, saved, maps, self.selections(), self.fields["name_pattern"].text())
             self.timer.start()
         except Exception as exc:
             # capture() may have succeeded before setup failed; no mutation yet.
@@ -592,7 +629,8 @@ class Window(W.QDialog):
         future, self.future = self.future, None
         return future.result()
 
-    def run_batch(self, indices, saved, maps, selections):
+    def run_batch(self, indices, saved, maps, selections, name_pattern=None):
+        name_pattern = self.fields["name_pattern"].text() if name_pattern is None else name_pattern
         base = Path(self.fields["base"].text())
         output = Path(self.fields["output"].text())
         converter = Path(self.fields["converter"].text())
@@ -628,7 +666,7 @@ class Window(W.QDialog):
                         replacements[filename + ".dds"] = dds
                         source.unlink(missing_ok=True)
                     core.check_cancel(self.cancel)
-                    destination = core.next_destination(output, row["stem"])
+                    destination = core.next_destination(output, core.format_skin_name(name_pattern, row))
                     entry["output"] = str(destination)
                     core.atomic_json(self.report_path, self.report)
                     self.say(f"{row['name']}: building and verifying {destination.name}")

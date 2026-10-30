@@ -40,8 +40,8 @@ class CoreTests(unittest.TestCase):
         self.assertEqual(len(rows[0]['name']), 20)
         self.assertEqual(rows[0]['colors'], ['#00FFAA', None, None])
         occupied = set()
-        self.assertEqual(core.next_destination(self.root, rows[1]['stem'], occupied).name, 'KR7 - Joseph.zip')
-        self.assertEqual(core.next_destination(self.root, rows[2]['stem'], occupied).name, 'KR7 - Joseph 2.zip')
+        self.assertEqual(core.next_destination(self.root, core.format_skin_name(core.LEGACY_NAME_PATTERN, rows[1]), occupied).name, 'KR7 - Joseph.zip')
+        self.assertEqual(core.next_destination(self.root, core.format_skin_name(core.LEGACY_NAME_PATTERN, rows[2]), occupied).name, 'KR7 - Joseph 2.zip')
         self.assertEqual(len(warnings), 1)
 
     def test_invalid_color_or_formatting_fails(self):
@@ -57,7 +57,7 @@ class CoreTests(unittest.TestCase):
 
     def test_filename_collision_windows_rules(self):
         (self.root / 'KR7 - JOSEPH.zip').write_bytes(b'existing')
-        self.assertEqual(core.next_destination(self.root, 'Joseph').name, 'KR7 - Joseph 2.zip')
+        self.assertEqual(core.next_destination(self.root, 'KR7 - Joseph').name, 'KR7 - Joseph 2.zip')
         self.assertEqual(core.safe_stem('A/B:*? '), 'A_B___')
 
     def test_zip_replace_preserve_and_no_clobber(self):

@@ -1,4 +1,4 @@
-# CREAM 1.3.0
+# CREAM 1.4.0
 
 Color Replacement & Export Automation Manager for Adobe Substance 3D Painter on Windows.
 The filename is retained for installer compatibility; these instructions are in English.
@@ -54,7 +54,7 @@ Existing ZIPs are never overwritten. Invalid filename characters are replaced wi
 ## Export
 
 1. Load and map the spreadsheet.
-2. Select the base ZIP and output folder.
+2. Select the base ZIP, output folder and ZIP name pattern. Check the filename preview.
 3. Select textures and individual resolutions in Textures.
 4. Validate configuration.
 5. Preview a selected backer, inspect the model, then Restore names and colors.
@@ -66,6 +66,21 @@ The output folder preference is retained; CREAM does not automatically copy into
 
 The base ZIP must contain files directly at its root. Selected outputs replace matching
 files; all others are preserved. Settings apply to every selected backer.
+
+### ZIP name pattern
+
+Use a pattern such as `{name}`, `My Event - {name}` or `{player} - {id}`.
+`{name}` uses the ZIP-name column (or the player name if not mapped); `{player}` uses
+the printed name, `{id}` the row ID, and `{row}` the spreadsheet row number.
+The .zip extension is automatic. Duplicate filenames receive numeric suffixes.
+The pattern changes only ZIP filenames, never the text printed on the skin.
+Patterns cannot contain folders or invalid filename characters. Values are sanitized
+and the resulting name is limited to 100 characters, with reserved Windows names escaped.
+
+Existing settings keep `KR7 - {name}`. New installations start with `{name}` and the
+current user's Documents/Trackmania/Skins/Models/CarSport folder. Saved output folders
+are preserved. Naming preferences survive CREAM reloads. Changing the pattern prevents
+resuming a report created with a different naming configuration.
 
 | Texture | Compression / DDS identifier |
 |---|---|

@@ -71,6 +71,7 @@ with tempfile.TemporaryDirectory() as temp:
         output = Path(temp) / ('cancelled' if cancel_second else 'completed')
         output.mkdir()
         window.fields['output'].setText(str(output))
+        window.fields['name_pattern'].setText('Community - {name}')
         window.rows = [{'id':str(i), 'line':i+2, 'name':'Joseph', 'stem':'Joseph',
                         'colors':[color, None, None]} for i, color in enumerate(['#FF0000', '#00FF00'])]
         window.backers.setRowCount(2)
@@ -97,14 +98,14 @@ with tempfile.TemporaryDirectory() as temp:
         assert state['name'] is None
         assert window.saved is None
         assert not window.recovery_path().exists()
-        assert (output/'KR7 - Joseph.zip').is_file()
+        assert (output/'Community - Joseph.zip').is_file()
         if cancel_second:
-            assert not (output/'KR7 - Joseph 2.zip').exists()
+            assert not (output/'Community - Joseph 2.zip').exists()
             assert window.report['status'] == 'cancelled'
         else:
-            assert (output/'KR7 - Joseph 2.zip').is_file()
+            assert (output/'Community - Joseph 2.zip').is_file()
             assert window.report['status'] == 'completed'
-            with zipfile.ZipFile(output/'KR7 - Joseph.zip') as a, zipfile.ZipFile(output/'KR7 - Joseph 2.zip') as b:
+            with zipfile.ZipFile(output/'Community - Joseph.zip') as a, zipfile.ZipFile(output/'Community - Joseph 2.zip') as b:
                 assert a.read('Skin_B.dds') != b.read('Skin_B.dds')
                 assert a.read('Details_R.dds') == b'preserved base data'
         assert not list(output.glob('*.partial'))

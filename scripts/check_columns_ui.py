@@ -49,6 +49,7 @@ with tempfile.TemporaryDirectory() as folder, patch.object(ui, "DATA", Path(fold
     path = Path(folder) / "input.csv"
     path.write_text("Nickname;Color;Color\nJoseph;#AABBCC;#DDEEFF\n", encoding="utf-8")
     window = ui.Window(auto_update=False)
+    assert window.fields["name_pattern"].text() == "{name}"
     window.fields["sheet"].setText(str(path))
     def accept_import(self):
         for field, index in {"nome_player": 1, "cor_1": 2, "cor_2": 3}.items():
@@ -59,13 +60,42 @@ with tempfile.TemporaryDirectory() as folder, patch.object(ui, "DATA", Path(fold
         window.load_sheet()
     assert window.rows[0]["colors"] == ["#AABBCC", "#DDEEFF", None]
     assert window.backers.item(0, 2).text() == "Joseph"
+    window.fields["name_pattern"].setText("Community - {name} - {id}")
+    assert window.backers.item(0, 6).text() == "Community - Joseph - 2.zip"
+    assert window.name_preview.text() == window.backers.item(0, 6).text()
+    window.fields["name_pattern"].setText("{unknown}")
+    assert window.backers.item(0, 6).text() == "Invalid name pattern"
+    window.fields["name_pattern"].setText("Community - {name}")
+    window.save_settings()
+    base = Path(folder) / "base.zip"
+    base.write_bytes(b"signature fixture")
+    window.fields["base"].setText(str(base))
+    with patch.object(ui.painter, "project_path", return_value="project.spp", create=True), \
+            patch.object(ui.painter, "preset_maps", return_value=[], create=True):
+        custom_signature = window.config_signature()
+        window.fields["name_pattern"].setText("KR7 - {name}")
+        legacy_signature = window.config_signature()
+        assert custom_signature != legacy_signature
+        expected_legacy = ui.core.fingerprint({"project": "project.spp", "base": str(base.resolve()),
+            "base_size": base.stat().st_size, "base_mtime": base.stat().st_mtime_ns,
+            "maps": window.selections(), "preset": [], "normal_invert": False,
+            "dds_headers": "BC4U_BC5U", "normal_export": "Normal_OpenGL"})
+        assert legacy_signature == expected_legacy
+    window.fields["name_pattern"].setText("Community - {name}")
+    window.save_settings()
     assert json.loads((Path(folder) / "settings.json").read_text())["column_profile"] == profile
     second = ui.Window(auto_update=False)
     assert second.column_profile == profile
+    assert second.fields["name_pattern"].text() == "Community - {name}"
     with patch.object(ColumnDialog, "exec", return_value=W.QDialog.Rejected):
         window.load_sheet()
     assert window.rows[0]["name"] == "Joseph"
-    for item in (window, second):
+    settings = json.loads((Path(folder) / "settings.json").read_text())
+    settings["fields"].pop("name_pattern")
+    (Path(folder) / "settings.json").write_text(json.dumps(settings))
+    legacy = ui.Window(auto_update=False)
+    assert legacy.fields["name_pattern"].text() == "KR7 - {name}"
+    for item in (window, second, legacy):
         item.stop_updater()
         item.pool.shutdown(wait=True)
 print("Passed: Qt mapping, defaults, invalid values, header changes, Window import, settings, cancellation.")

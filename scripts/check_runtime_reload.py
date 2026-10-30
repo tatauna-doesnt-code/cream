@@ -40,6 +40,7 @@ with tempfile.TemporaryDirectory() as folder:
     plugin.start_plugin()
     old = plugin._window
     old.fields['output'].setText(str(root / 'skins'))
+    old.fields['name_pattern'].setText('Community - {name}')
     old.maps.item(0, 0).setCheckState(QtCore.Qt.Checked)
     old.restore_reload_state({'rows': [{'line': 2, 'id': '1', 'name': 'Joseph', 'stem': 'Joseph',
                                       'colors': ['#AABBCC', None, None]}],
@@ -52,15 +53,16 @@ with tempfile.TemporaryDirectory() as folder:
             ui.write_text("raise RuntimeError('simulated UI import failure')\n", encoding='utf-8')
         else:
             path = stage / 'kr7_batch/version.py'
-            path.write_text(path.read_text().replace('1.3.0', '1.3.1'), encoding='utf-8')
-        manifest = {'schema': 1, 'product': 'CREAM', 'module': 'kr7_batch', 'version': '1.3.1',
+            from kr7_batch.version import VERSION
+            path.write_text(path.read_text().replace('VERSION = "' + VERSION + '"', 'VERSION = "99.0.0"'), encoding='utf-8')
+        manifest = {'schema': 1, 'product': 'CREAM', 'module': 'kr7_batch', 'version': '99.0.0',
                     'update': {'protocol': 1, 'restart': 'cream', 'min_reload_protocol': 1},
                     'files': {p.relative_to(stage).as_posix(): hashlib.sha256(p.read_bytes()).hexdigest()
                               for p in stage.rglob('*') if p.is_file()}}
         (stage / 'manifest.json').write_text(json.dumps(manifest), encoding='utf-8')
         marker = bootstrap.pending_path(target)
         marker.write_text(json.dumps({'target': str(target.resolve()), 'stage': stage.name,
-            'version': '1.3.1', 'process_id': os.getpid(),
+            'version': '99.0.0', 'process_id': os.getpid(),
             'manifest_sha256': bootstrap.sha256(stage / 'manifest.json')}), encoding='utf-8')
     stage()
     old.show_pending_update()
@@ -79,7 +81,9 @@ with tempfile.TemporaryDirectory() as folder:
     app.processEvents()
     current = plugin._window
     assert current is not old and sys.modules['kr7_batch.ui'] is not old_module
-    assert '1.3.1' in current.windowTitle()
+    assert '99.0.0' in current.windowTitle()
+    assert current.fields['name_pattern'].text() == 'Community - {name}'
+    assert current.backers.item(0, 6).text() == 'Community - Joseph.zip'
     assert current.rows[0]['name'] == 'Joseph'
     assert current.backers.item(0, 0).checkState() == QtCore.Qt.Unchecked
     assert current.maps.item(0, 0).checkState() == QtCore.Qt.Checked
@@ -89,7 +93,7 @@ with tempfile.TemporaryDirectory() as folder:
     plugin.request_reload()
     app.processEvents()
     restored = plugin._window
-    assert restored is not current and '1.3.1' in restored.windowTitle()
+    assert restored is not current and '99.0.0' in restored.windowTitle()
     assert restored.rows[0]['name'] == 'Joseph'
     assert 'simulated UI import failure' in restored.update_status.text()
     assert bootstrap.pending_info(target)['restart'] == 'painter'

@@ -36,6 +36,24 @@ required. Original template headers and existing CSV values remain supported.
 Names are limited to 20 Unicode code points after NFC normalization. Colors are sRGB
 `#RRGGBB`; omitted colors use the original project color.
 
+The **ZIP name pattern** is configurable, with a live preview:
+
+| Pattern | Example |
+|---|---|
+| `{name}` | `Joseph.zip` |
+| `My Event - {name}` | `My Event - Joseph.zip` |
+| `{player} - {id}` | `Joseph - 001.zip` |
+| `Skin {row} - {name}` | `Skin 2 - Joseph.zip` |
+
+`{name}` uses the mapped ZIP-name column, falling back to the player name. `{player}`
+always uses the name printed on the skin; `{id}` and `{row}` are the row ID and spreadsheet
+row number. This controls filenames only. The extension is automatic; an optional final
+`.zip` in the pattern is accepted. Invalid filename characters in values are replaced,
+reserved Windows names are escaped and filenames are limited to 100 characters before
+collision suffixes. Folders, unknown tokens and Python format modifiers are rejected.
+Existing settings retain `KR7 - {name}`; new installations use `{name}` and default to
+the current user's Documents/Trackmania/Skins/Models/CarSport. Saved folders are preserved.
+
 Normals are generated as Normal_OpenGL before conversion. Green is preserved.
 The output DDS identifiers are DXT1 (B/AO), DXT5 (I), BC5U (R/N) and BC4U
 (CoatR/DirtMask). ATI aliases are relabeled without changing compressed pixels.

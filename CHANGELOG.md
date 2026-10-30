@@ -1,5 +1,16 @@
 # Changes
 
+## 1.4.0
+
+- Configure ZIP filenames with {name}, {player}, {id} and {row}, with a live example
+  and per-row destination preview. Automatically append .zip and retain collision suffixes.
+- Preserve KR7 - {name} for existing settings; default new installations to {name}.
+  Remove the hardcoded Windows username from the default output folder.
+- Validate patterns and Windows filenames before editing the Painter project. Naming
+  affects only ZIP filenames, never the text applied to the skin.
+- Include custom patterns in resume checks and retain the pattern across CREAM reloads.
+- Eligible for CREAM-only reload when upgrading from 1.3.0.
+
 ## 1.3.0
 
 - Use English throughout the plugin UI, column selection, validation, progress,
