@@ -39,8 +39,13 @@ with tempfile.TemporaryDirectory() as temp:
     window.tabs.setCurrentIndex(1)
     app.processEvents()
     window.grab().save(str(ROOT / 'dist/ui-textures.png'))
-    assert window.maps.rowCount() == 28
-    assert window.maps.cellWidget(21, 3).currentText() == '512 × 2048'
+    assert len(window.texture_sets.settings()) == 28
+    assert window.texture_sets.groups['Wheels'].sizes[0].currentText() == '512 × 2048'
+    assert all(section.body.isHidden() for section in window.texture_sets.groups.values())
+    window.texture_sets.groups['Skin'].expand.click()
+    app.processEvents()
+    app.processEvents()
+    window.grab().save(str(ROOT / 'dist/ui-textures-expanded.png'))
     # Exercise the real Qt controller + external converter + ZIP publisher, with only
     # Painter's native calls simulated. No user's project is opened or modified.
     from kr7_batch import core, painter
@@ -48,7 +53,7 @@ with tempfile.TemporaryDirectory() as temp:
     with zipfile.ZipFile(base, 'w') as z:
         z.writestr('Details_R.dds', b'preserved base data')
     window.fields['base'].setText(str(base))
-    window.fields['converter'].setText(str(ROOT / 'kr7_batch/bin/texconv.exe'))
+    assert 'converter' not in window.fields
     state = {'name': None, 'color': None, 'waits': 0}
     painter.project_path = lambda: str(Path(temp) / 'project.spp')
     painter.snapshot = lambda: {'project': painter.project_path(), 'targets': []}
