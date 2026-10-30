@@ -72,7 +72,7 @@ class Window(W.QDialog):
         self.saved = None
         self.runner = None
         self.future = None
-        self.pool = ThreadPoolExecutor(max_workers=1, thread_name_prefix="KR7-files")
+        self.pool = ThreadPoolExecutor(max_workers=1, thread_name_prefix="CREAM-files")
         self.cancel = threading.Event()
         self.progress = None
         self.report = None
@@ -582,7 +582,7 @@ class Window(W.QDialog):
         try:
             settings = json.loads((DATA / "settings.json").read_text(encoding="utf-8"))
             # Before configurable naming every export had this prefix. Preserve it on upgrade.
-            self.fields["name_pattern"].setText(settings.get("fields", {}).get("name_pattern", core.LEGACY_NAME_PATTERN))
+            self.fields["name_pattern"].setText(settings.get("fields", {}).get("name_pattern", core.DEFAULT_NAME_PATTERN))
             self.column_profile = settings.get("column_profile")
             self.styling_enabled.setChecked(bool(settings.get("tm_styling", False)))
             for key, value in settings.get("fields", {}).items():
@@ -738,7 +738,7 @@ class Window(W.QDialog):
             saved = self.capture()
             captured = True
             output = Path(self.fields["output"].text())
-            report_dir = output / "_KR7_reports"
+            report_dir = output / "_CREAM_reports"
             report_dir.mkdir(parents=True, exist_ok=True)
             stamp = datetime.now().strftime("%Y%m%d-%H%M%S-%f")
             self.report_path = report_dir / (stamp + ".json")
@@ -791,7 +791,7 @@ class Window(W.QDialog):
                 self.report["rows"].append(entry)
                 core.atomic_json(self.report_path, self.report)
                 self.backers.item(index, 7).setText("Processing")
-                temp = Path(tempfile.mkdtemp(prefix="kr7-", dir=DATA))
+                temp = Path(tempfile.mkdtemp(prefix="cream-", dir=DATA))
                 try:
                     yield from self.wait_ready()
                     core.check_cancel(self.cancel)

@@ -117,7 +117,7 @@ def filename_color_defaults(saved):
 
 def apply(saved, row=None):
     resolved = resolve_targets(saved)  # Validate the whole structure before the first edit.
-    with sp.layerstack.ScopedModification("CREAM: restore" if row is None else "KR7: " + row["name"]):
+    with sp.layerstack.ScopedModification("CREAM: restore" if row is None else "CREAM: " + row["name"]):
         for target, source in resolved:
             if target["kind"] == "font":
                 params = source.get_parameters()
@@ -167,7 +167,7 @@ def export_config(maps, texture_set, suffix, size, directory):
               "sizeLog2": [width.bit_length() - 1, height.bit_length() - 1]}
     output.setdefault("parameters", {}).update(params)
     return {"exportPath": str(directory), "exportShaderParams": False,
-            "defaultExportPreset": "KR7_single", "exportPresets": [{"name": "KR7_single", "maps": [output]}],
+            "defaultExportPreset": "CREAM_single", "exportPresets": [{"name": "CREAM_single", "maps": [output]}],
             "exportList": [{"rootPath": texture_set}], "exportParameters": [{"parameters": params}]}
 
 

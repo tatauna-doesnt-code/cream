@@ -1,4 +1,4 @@
-"""KR7 file operations. No Painter imports; all outputs are transactional."""
+"""CREAM file operations. No Painter imports; all outputs are transactional."""
 from __future__ import annotations
 
 import csv
@@ -381,7 +381,7 @@ def build_zip(base, replacements, destination, cancel):
     """Never modify base or an existing final. Publish with a no-clobber rename on Windows."""
     destination = Path(destination)
     destination.parent.mkdir(parents=True, exist_ok=True)
-    temporary = destination.parent / (".kr7-" + uuid.uuid4().hex + ".partial")
+    temporary = destination.parent / (".cream-" + uuid.uuid4().hex + ".partial")
     replacement_names = {name.casefold() for name in replacements}
     if len(replacement_names) != len(replacements):
         raise ValueError("Duplicate output textures.")

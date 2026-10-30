@@ -258,6 +258,11 @@ class NameStyleHelper(W.QWidget):
         instruction.setWordWrap(True)
         layout.addWidget(instruction)
         self.preview = StyledLine()
+        preview_font = game_font()
+        preview_font.setPointSize(24)
+        self.preview.setFont(preview_font)
+        self.preview.document().setDefaultFont(preview_font)
+        self.preview.setFixedHeight(84)
         self.preview.setReadOnly(True)
         self.preview.setAccessibleName("Trackmania filename preview")
         layout.addWidget(self.preview)
@@ -277,7 +282,10 @@ class NameStyleHelper(W.QWidget):
         cursor.removeSelectedText()
         for text, style in tm_text.parse(source, template=widget is self.editor, final=True):
             if text:
-                cursor.insertText(text, text_format(style, self.colors))
+                fmt = text_format(style, self.colors)
+                if widget is self.preview:
+                    fmt.setFontPointSize(24)
+                cursor.insertText(text, fmt)
         if widget is self.editor:
             widget.setTextCursor(cursor)
             widget.setCurrentCharFormat(text_format(style, self.colors))

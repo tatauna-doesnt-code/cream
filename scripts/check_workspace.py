@@ -75,7 +75,7 @@ with tempfile.TemporaryDirectory() as folder, patch.object(ui, "DATA", Path(fold
     window.grab().save(str(ROOT / "dist/workspace-04-textures.png"))
     window.tabs.setCurrentWidget(window.naming_page)
     window.styling_enabled.setChecked(True)
-    window.fields["name_pattern"].setText("$o{primary}KR7 - {name}$z")
+    window.fields["name_pattern"].setText("$o{primary}Event - {name}$z")
     app.processEvents()
     window.grab().save(str(ROOT / "dist/workspace-05-names.png"))
     window.resize(900, 700)
@@ -97,6 +97,8 @@ with tempfile.TemporaryDirectory() as folder, patch.object(ui, "DATA", Path(fold
     app.processEvents()
     window.grab().save(str(ROOT / 'dist/workspace-08-help.png'))
     assert window.name_style.preview.document().defaultFont().family() == 'Montserrat'
+    assert window.name_style.preview.document().defaultFont().pointSize() == 24
+    assert window.name_style.editor.document().defaultFont().pointSize() == 12
     from concurrent.futures import Future
     for interactive in (False, True):
         window.update_future = Future()

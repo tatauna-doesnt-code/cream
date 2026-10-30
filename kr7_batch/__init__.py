@@ -1,4 +1,4 @@
-"""KR7 Backer Batch Exporter — Substance 3D Painter 12.1 / Python plugin."""
+"""CREAM Skin Batch Exporter — Substance 3D Painter 12.1 / Python plugin."""
 _window = None
 _action = None
 _reload_scheduled = False

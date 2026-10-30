@@ -91,7 +91,7 @@ row number. This controls filenames only. The extension is automatic; an optiona
 `.zip` in the pattern is accepted. Invalid filename characters in values are replaced,
 reserved Windows names are escaped and filenames are limited to 100 characters before
 collision suffixes. Folders, unknown tokens and Python format modifiers are rejected.
-Existing settings retain `KR7 - {name}`; new installations use `{name}` and default to
+Saved filename patterns are retained; new installations use `{name}` and default to
 the current user's Documents/Trackmania/Skins/Models/CarSport. Saved folders are preserved.
 
 ### Trackmania styling helper

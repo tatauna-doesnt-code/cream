@@ -133,7 +133,7 @@ def build(window, default_output):
     resume_info.setFixedSize(20, 24)
     resume_info.setAlignment(QtCore.Qt.AlignCenter)
     resume_info.setAccessibleName("How resuming a batch works")
-    resume_info.setToolTip("Choose a JSON report from the output folder’s _KR7_reports directory. CREAM checks that the project and export settings match, then unchecks successfully exported rows whose ZIPs still exist. Failed or unfinished rows stay checked. Review the selection and click Export to continue.")
+    resume_info.setToolTip("Choose a JSON report from the output folder’s _CREAM_reports directory. CREAM checks that the project and export settings match, then unchecks successfully exported rows whose ZIPs still exist. Failed or unfinished rows stay checked. Review the selection and click Export to continue.")
     tools.addWidget(resume_info)
     skins.addLayout(tools)
     w.empty_state = W.QWidget()

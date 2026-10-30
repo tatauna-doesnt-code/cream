@@ -50,7 +50,7 @@ Portuguese sim/não values remain compatible. A column can supply multiple field
 Names longer than 20 Unicode code points after NFC normalization are truncated with
 a warning. Empty names, control characters and common Trackmania formatting codes
 are rejected. Duplicate names are allowed; explicit IDs must be unique.
-ZIP collisions receive suffixes: KR7 - Joseph.zip, KR7 - Joseph 2.zip, etc.
+ZIP collisions receive suffixes: Event - Joseph.zip, Event - Joseph 2.zip, etc.
 Existing ZIPs are never overwritten. Invalid filename characters are replaced with _.
 
 ### Edit a player name manually
@@ -84,7 +84,7 @@ starts again with its imported values.
    running the full batch. **Updates** in the header opens update and access controls.
 
 Copy completed ZIPs directly into Trackmania/Skins/Models/CarSport for in-game upload.
-Uploads from subfolders such as KR7BACKERS can fail with C-AA-00-03 despite a working preview.
+Uploads from subfolders inside CarSport can fail with C-AA-00-03 despite a working preview.
 The output folder preference is retained; CREAM does not automatically copy into CarSport.
 
 The base ZIP must contain files directly at its root. Selected outputs replace matching
@@ -103,7 +103,7 @@ The pattern changes only ZIP filenames, never the text printed on the skin.
 Patterns cannot contain folders or invalid filename characters. Values are sanitized
 and the resulting name is limited to 100 characters, with reserved Windows names escaped.
 
-Existing settings keep `KR7 - {name}`. New installations start with `{name}` and the
+Saved filename patterns are retained. New installations start with `{name}` and the
 current user's Documents/Trackmania/Skins/Models/CarSport folder. Saved output folders
 are preserved. Naming preferences survive CREAM reloads. Changing the pattern prevents
 resuming a report created with a different naming configuration.
@@ -149,7 +149,7 @@ be terminated. A ZIP is written as .partial, checked for CRC and published only 
 An abrupt process exit can leave temporary files. The recovery record is written before
 project edits. Restore original after a crash before starting another batch.
 
-Reports are stored in _KR7_reports. Load the same spreadsheet/settings and use Resume from
+Reports are stored in _CREAM_reports. Load the same spreadsheet/settings and use Resume from
 report to deselect confirmed completed rows. Reports across changed export pipelines cannot
 be resumed. CREAM cannot detect arbitrary manual material edits; check the project first.
 

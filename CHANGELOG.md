@@ -1,5 +1,14 @@
 # Changes
 
+## 1.9.1
+
+- Double the in-game filename preview from 12 to 24 points and enlarge its viewport.
+- Replace event-specific branding, project-operation labels, examples and new report
+  names with generic CREAM terminology. New reports use _CREAM_reports; older reports
+  can still be selected to resume a matching batch. Keep user-defined filename patterns.
+- Preserve legacy module, updater storage and resume-signature identifiers so existing
+  installations, credentials, settings and recovery records remain compatible.
+
 ## 1.9.0
 
 - Join tab navigation to its content panel; align path controls with consistent backgrounds.
