@@ -1,4 +1,4 @@
-# CREAM beta 1.9.3
+# CREAM beta 1.9.4
 
 **Color Replacement & Export Automation Manager** personalizes Trackmania 2020 skin
 names/colors in Painter, exports DDS textures and packages one ZIP per skin.

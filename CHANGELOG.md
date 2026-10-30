@@ -1,5 +1,13 @@
 # Changes
 
+## 1.9.4
+
+- Center the Bornie “Cream” wordmark at 28 pt at the top of Help. Package rendered
+  artwork rather than the font file; other interface text retains CREAM capitalization.
+- Remove the shared top-left brand/exporter header from every page.
+- Square the adjoining navigation and content corners, including Settings and Help.
+- The new logo resource requires a Painter restart for this update.
+
 ## 1.9.3
 
 - Present CREAM beta 1.9.3 with manual skin entry as the primary workflow. Add, edit

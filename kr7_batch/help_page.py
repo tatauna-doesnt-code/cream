@@ -1,5 +1,6 @@
 """In-product setup guide and feature FAQ."""
-from PySide6 import QtCore, QtWidgets as W
+from PySide6 import QtCore, QtGui, QtWidgets as W
+from pathlib import Path
 
 
 FAQ = [
@@ -39,6 +40,20 @@ def add_help(window):
     content.setAttribute(QtCore.Qt.WA_StyledBackground, True)
     layout = W.QVBoxLayout(content)
     layout.setContentsMargins(18, 18, 18, 18)
+    window.cream_logo = W.QLabel()
+    logo = QtGui.QPixmap(str(Path(__file__).parent / 'assets' / 'cream-logo.png'))
+    if not logo.isNull():
+        logo.setDevicePixelRatio(3)
+        window.cream_logo.setPixmap(logo)
+        window.cream_logo.setAccessibleName('Cream logo')
+    else:
+        window.cream_logo.setText('CREAM')
+        fallback = window.cream_logo.font()
+        fallback.setPointSize(28)
+        window.cream_logo.setFont(fallback)
+    window.cream_logo.setAlignment(QtCore.Qt.AlignCenter)
+    window.cream_logo.setContentsMargins(0, 8, 0, 16)
+    layout.addWidget(window.cream_logo)
     title = W.QLabel("Getting started with CREAM")
     title.setStyleSheet("font-size: 18px; font-weight: 600;")
     layout.addWidget(title)
@@ -87,7 +102,7 @@ def add_help(window):
     window.help_link.setToolButtonStyle(QtCore.Qt.ToolButtonTextBesideIcon)
     window.help_link.setCheckable(True)
     window.help_link.setFixedHeight(38)
-    window.help_link.setStyleSheet("QToolButton { padding: 4px 16px; background: #222426; border: 1px solid #494c50; border-bottom: none; } QToolButton:checked { background: #292b2e; border-top: 2px solid #6ca8cf; }")
+    window.help_link.setStyleSheet("QToolButton { padding: 4px 16px; background: #222426; border: 1px solid #494c50; border-bottom: none; border-radius: 0; } QToolButton:checked { background: #292b2e; border-top: 2px solid #6ca8cf; }")
     window.help_link.clicked.connect(lambda: window.tabs.setCurrentWidget(scroll))
     window.tabs.currentChanged.connect(lambda current: window.help_link.setChecked(current == index))
     corner = W.QWidget()

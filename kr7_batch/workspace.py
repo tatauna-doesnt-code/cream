@@ -51,12 +51,12 @@ def build(window, default_output):
         QPushButton#primaryAction:hover { background: #3c7bab; }
         QPushButton#primaryAction:disabled { background: #41464b; color: #a0a4a8; border-color: #555; }
         QPushButton#primaryAction:focus { border: 2px solid #b8ddfa; }
-        QTabBar::tab { padding: 10px 18px; background: #222426; border: 1px solid #494c50; border-bottom: none; }
+        QTabBar::tab { padding: 10px 18px; background: #222426; border: 1px solid #494c50; border-bottom: none; border-radius: 0; }
         QTabBar::tab:selected { background: #292b2e; border-top: 2px solid #6ca8cf; }
         QLineEdit { min-height: 0; background: #202225; color: #eee; border: 1px solid #55595d; border-radius: 3px; padding: 3px 6px; }
         QWidget#pathRow { background: transparent; border: none; }
         QToolButton { min-height: 24px; }
-        QWidget#workspaceCard { background: #292b2e; border: 1px solid #494c50; border-radius: 5px; }
+        QWidget#workspaceCard { background: #292b2e; border: 1px solid #494c50; border-radius: 0; }
         QTabWidget::pane { border: none; margin-top: -1px; }
         QTableWidget { background: #222426; alternate-background-color: #2b2d30;
             color: #eeeeee; border: 1px solid #494c50; selection-background-color: #365568; selection-color: white; }
@@ -68,18 +68,6 @@ def build(window, default_output):
         QFrame#actionPanel { background: #242629; border: 1px solid #494c50; border-radius: 4px; }
         QWidget#textureSetCard { background: #222426; border: 1px solid #494c50; border-radius: 4px; }
     """)
-    header = W.QHBoxLayout()
-    title = note("CREAM")
-    title.setFont(QtGui.QFont("Georgia", 22, QtGui.QFont.Bold))
-    title.setStyleSheet("font-family: Georgia; font-size: 27px; font-weight: bold;")
-    title.setToolTip("Color Replacement & Export Automation Manager")
-    header.addWidget(title)
-    subtitle = note("Trackmania skin exporter")
-    subtitle.setWordWrap(False)
-    header.addWidget(subtitle)
-    header.addStretch()
-    layout.addLayout(header)
-
     # Preview recovery remains reachable from every page.
     w.preview_banner = W.QWidget()
     w.preview_banner.setObjectName("previewBanner")
