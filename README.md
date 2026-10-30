@@ -36,6 +36,15 @@ required. Original template headers and existing CSV values remain supported.
 Names are limited to 20 Unicode code points after NFC normalization. Colors are sRGB
 `#RRGGBB`; omitted colors use the original project color.
 
+The Textures tab groups Details, Glass, Skin and Wheels into collapsed accordions.
+Use the arrow/name to expand a set, its checkbox to select or clear all seven textures,
+and its Resolution control to apply a size to every texture in that set. Partial checks
+indicate a subset of selected textures. Each texture keeps its own checkbox and size
+override; the set control shows Mixed when sizes differ. Changing the set resolution
+replaces all individual sizes, including unchecked textures. Wheels stays at 1:4.
+Selections and per-texture sizes from earlier versions are retained.
+CREAM always uses its bundled DDS converter; there is no executable-path setting.
+
 Edit **Player name** directly in the loaded table. An override appears **bold italic**;
 the refresh-icon button restores the imported spreadsheet name. Names are normalized
 and limited to 20 characters using the same rules as imports. Invalid drafts block
@@ -107,6 +116,7 @@ Run `python -m unittest discover -s tests -p "test_*.py"` (Pillow for real DDS t
 Run `scripts/check_columns_ui.py` and `scripts/check_runtime_reload.py` with Painter's
 SDK Python and Qt platform configured for offscreen testing.
 `scripts/check_name_style.py` checks the real WYSIWYG editor and strict RGB picker.
+`scripts/check_texture_sets.py` checks the texture accordions and legacy settings migration.
 Run `python scripts/build_release.py` to create `dist/CREAM-plugin.zip`.
 
 Set `VERSION` and `UPDATE_RESTART` in `kr7_batch/version.py` for each release.
