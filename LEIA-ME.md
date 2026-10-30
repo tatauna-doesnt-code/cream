@@ -1,14 +1,16 @@
-# CREAM beta 1.9.5
+# CREAM beta 1.10.0
 
 **Color Replacement & Export Automation Manager** personalizes Trackmania 2020 skin
 names/colors in Painter, exports DDS textures and packages one ZIP per skin.
 
 ## Requirements and beta compatibility
 
-**Windows and Adobe Substance 3D Painter 12.1.3 or later.** 12.1.3 is the supported
-minimum and the version used for SDK checks. Earlier versions are unverified; the old
-11.0 API estimate was not a tested compatibility guarantee. No separate Python,
-Excel, Pillow or DDS converter installation is required.
+**Windows and Adobe Substance 3D Painter 9.0.0 or later.** Painter 9.x exports existing
+textures to DDS/ZIP and supports TM filename styling; car name/color customization is
+disabled. Painter 10.0+ enables customization, with a warning below 10.1.2. Older
+releases still need native beta testing; 12.1.3 is the SDK-check baseline. No separate
+Python, Excel, Pillow or DDS converter installation is required. See README.md for
+the full compatibility table and updated instructions.
 
 This beta supports TM2020 texture sets Details, Glass, Skin and Wheels, without
 UDIM or material layering. It is not an exporter for arbitrary games. Test a small
@@ -23,7 +25,7 @@ steps and relevant Logs when reporting issues.
    Documents folder, backs up an existing installation and preserves an existing preset.
 4. Open Painter and enable **Python > kr7_batch**. This legacy internal folder name
    remains for update compatibility; the application is CREAM.
-5. Reopen the window via **Window > CREAM — Batch Exporter** if needed.
+5. Open **Window > CREAM — Batch Exporter**. CREAM does not open automatically with Painter.
 
 Keep the extracted package together. Its texconv converter and fonts are bundled.
 The package ships no developer-specific source/output paths.
@@ -82,6 +84,23 @@ anonymously first, even if an old private-access token is saved. If the reposito
 is private, testers need repository access and a fine-grained token limited to
 `tatauna-doesnt-code/cream` with **Contents: Read-only**. Windows protects the saved
 credential. Startup checks never open credential prompts.
+
+## Development and components
+
+Run `python -m unittest discover -s tests -p 'test_*.py'`, then
+`python scripts/build_release.py`. Qt integration scripts require Painter's SDK runtime.
+CREAM original code is **GPL-3.0-only**; see [LICENSE](LICENSE). You may modify and
+redistribute it under GPLv3, including its source and required notices. It comes
+without warranty. Microsoft texconv retains its MIT license; Montserrat and the
+Righteous logo font retain their SIL Open Font Licenses. See
+[THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md). The logo is live lowercase `cream`
+in Righteous at 28 pt; the rest of the product uses CREAM. Bornie is not bundled.
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for pull requests and
+[SECURITY.md](SECURITY.md) for private vulnerability reporting. Do not post tokens,
+real backer spreadsheets or private paths in issues. The publication audit and
+remaining administration steps are in [docs/publication-audit.md](docs/publication-audit.md)
+and [docs/github-settings-plan.md](docs/github-settings-plan.md).
 
 ## Local development without commits
 

@@ -1,15 +1,17 @@
 """Direct name/color entry using the same validation as spreadsheet imports."""
-from PySide6 import QtCore, QtGui, QtWidgets as W
+from .qt import QtCore, QtGui, QtWidgets as W
 from . import core
 
 
 class SkinDialog(W.QDialog):
-    def __init__(self, parent, row=None):
+    def __init__(self, parent, row=None, customize=True):
         super().__init__(parent)
         self.setWindowTitle("Edit skin" if row else "Add skin")
         self.setMinimumWidth(430)
         layout = W.QVBoxLayout(self)
         layout.addWidget(W.QLabel("Enter a player name and up to three skin colors.\nLeave a color blank to keep the project original."))
+        if not customize:
+            layout.addWidget(W.QLabel('Export-only mode: names and colors style ZIP filenames only.\nThe car stays unchanged. Color 3 has no filename token.'))
         form = W.QFormLayout()
         layout.addLayout(form)
         self.name = W.QLineEdit(row['name'] if row else '')
@@ -28,7 +30,10 @@ class SkinDialog(W.QDialog):
             choose.clicked.connect(lambda checked=False, field=value: self.pick(field))
             line.addWidget(value, 1)
             line.addWidget(choose)
-            form.addRow(f"Color {i+1}", container)
+            form.addRow(f"Color {i+1}" if customize else f"Filename color {i+1}", container)
+            if not customize and i == 2:
+                container.setEnabled(False)
+                container.setToolTip('Color 3 is for car customization, which is disabled in export-only mode.')
             self.colors.append(value)
         self.message = W.QLabel()
         self.message.setWordWrap(True)

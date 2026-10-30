@@ -12,6 +12,12 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 _dll_path = Path(sys.executable).resolve().parents[2]
 _dll_handle = os.add_dll_directory(str(_dll_path)) if os.name == "nt" else None
 from PySide6 import QtGui, QtWidgets as W
+sp = types.ModuleType('substance_painter')
+sp.__path__ = []
+sp.application = types.ModuleType('substance_painter.application')
+sp.application.version_info = lambda: (12, 1, 3)
+sys.modules['substance_painter'] = sp
+sys.modules['substance_painter.application'] = sp.application
 from kr7_batch.columns import ColumnDialog, column_letter
 
 app = W.QApplication.instance() or W.QApplication([])
@@ -44,6 +50,9 @@ sp.ui = types.ModuleType("substance_painter.ui")
 sp.ui.get_main_window = lambda: None
 sys.modules["substance_painter"] = sp
 sys.modules["substance_painter.ui"] = sp.ui
+sp.application = types.ModuleType('substance_painter.application')
+sp.application.version_info = lambda: (12, 1, 3)
+sys.modules['substance_painter.application'] = sp.application
 sys.modules["kr7_batch.painter"] = types.ModuleType("kr7_batch.painter")
 from kr7_batch import ui
 ui.painter.ready = lambda: False

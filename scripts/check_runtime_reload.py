@@ -38,6 +38,8 @@ with tempfile.TemporaryDirectory() as folder:
     import kr7_batch as plugin
     from kr7_batch import bootstrap
     plugin.start_plugin()
+    assert plugin._window is None  # Enabling the plugin must not open CREAM.
+    plugin.show_window()
     old = plugin._window
     old.fields['output'].setText(str(root / 'skins'))
     old.fields['name_pattern'].setText('Community - {name}')

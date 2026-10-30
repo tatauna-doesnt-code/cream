@@ -2,7 +2,7 @@
 from dataclasses import replace
 from pathlib import Path
 
-from PySide6 import QtCore, QtGui, QtWidgets as W
+from .qt import QtCore, QtGui, QtWidgets as W, exec_dialog
 
 from . import tm_text
 
@@ -27,7 +27,10 @@ def style_from_format(fmt):
 
 def text_format(style, colors):
     fmt = QtGui.QTextCharFormat()
-    fmt.setFontFamilies(["Montserrat"])
+    if hasattr(fmt, 'setFontFamilies'):
+        fmt.setFontFamilies(["Montserrat"])
+    else:
+        fmt.setFontFamily('Montserrat')
     fmt.setProperty(STYLE_PROPERTY, dict(style.__dict__))
     fmt.setFontWeight(QtGui.QFont.Bold if style.bold else QtGui.QFont.Normal)
     fmt.setFontItalic(style.italic)
@@ -363,7 +366,7 @@ class NameStyleHelper(W.QWidget):
     def pick_color(self):
         self.color_requested.emit()
         dialog = TextColorDialog(self.colors, self)
-        if dialog.exec() == W.QDialog.Accepted:
+        if exec_dialog(dialog) == W.QDialog.Accepted:
             self.change_style(color=dialog.choice)
 
     def edited(self):

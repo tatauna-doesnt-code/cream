@@ -1,17 +1,19 @@
-"""Painter 12.1 adapter. Every function in this module runs on the UI thread."""
+"""Version-aware Painter adapter. Every function runs on the UI thread."""
 import copy
 from pathlib import Path
 
 import substance_painter as sp
-import substance_painter.colormanagement
 import substance_painter.export
-import substance_painter.layerstack
 import substance_painter.project
-import substance_painter.source
 import substance_painter.textureset
 
 from .core import dimensions
-from . import tm_text
+from . import tm_text, compatibility
+
+if compatibility.current().customization:
+    import substance_painter.colormanagement
+    import substance_painter.layerstack
+    import substance_painter.source
 
 
 def project_path():
@@ -36,14 +38,17 @@ def nodes():
                 if node.has_mask():
                     yield from walk(node.mask_effects(), key + ["mask"])
     for texture_set in sp.textureset.all_texture_sets():
-        if texture_set.name == "Glass":
+        if compatibility.texture_set_name(texture_set) == "Glass":
             continue
         for stack in texture_set.all_stacks():
-            yield from walk(sp.layerstack.get_root_layer_nodes(stack), [str(texture_set.name), stack.name()])
+            yield from walk(sp.layerstack.get_root_layer_nodes(stack), [compatibility.texture_set_name(texture_set), stack.name()])
 
 
-def snapshot():
+def snapshot(customize=True):
     result = {"project": project_path(), "targets": []}
+    if not customize or not compatibility.current().customization:
+        result['mode'] = 'export_only'
+        return result
     for node, location in nodes():
         name = node.get_name()
         if name not in ("PLAYER_NAME", "PLAYER_COLOR1", "PLAYER_COLOR2", "PLAYER_COLOR3"):
@@ -72,8 +77,6 @@ def snapshot():
             entry.update(kind="color", index=int(name[-1]) - 1, value=list(color.value_raw),
                          space={"enum": space.name} if isinstance(space, sp.colormanagement.GenericColorSpace) else {"string": space})
         result["targets"].append(entry)
-    if not any(t["kind"] == "font" for t in result["targets"]):
-        raise ValueError("No PLAYER_NAME using a Font was found in masks outside Glass.")
     return result
 
 
@@ -116,6 +119,12 @@ def filename_color_defaults(saved):
 
 
 def apply(saved, row=None):
+    if not saved['targets']:
+        if project_path().casefold() != saved['project'].casefold():
+            raise ValueError('The open project changed during export.')
+        return
+    if not compatibility.current().customization:
+        raise ValueError('Restoring or applying customization requires Painter 10.0.0 or later.')
     resolved = resolve_targets(saved)  # Validate the whole structure before the first edit.
     with sp.layerstack.ScopedModification("CREAM: restore" if row is None else "CREAM: " + row["name"]):
         for target, source in resolved:
@@ -134,6 +143,15 @@ def apply(saved, row=None):
 
 
 def preset_maps():
+    if not hasattr(sp.export, 'list_resource_export_presets'):
+        # Painter 9 can use an installed preset by URL, but cannot introspect it.
+        # Preserve its actual channel packing; do not guess the user's map inputs.
+        import substance_painter.resource as resource
+        matches = [r for r in resource.search('TM2020')
+                   if r.identifier().name == 'TM2020' and r.type() == resource.Type.EXPORT]
+        if len(matches) != 1:
+            raise ValueError('Exactly one export preset named TM2020 is required in the Painter libraries.')
+        return {'legacy_preset': matches[0].identifier().url()}
     matches = [p for p in sp.export.list_resource_export_presets() if p.resource_id.name == "TM2020"]
     if len(matches) != 1:
         raise ValueError("Exactly one export preset named TM2020 is required in the Painter libraries.")
@@ -142,10 +160,18 @@ def preset_maps():
 
 def export_config(maps, texture_set, suffix, size, directory):
     template = "$textureSet_" + suffix
-    matched = [m for m in maps if m["fileName"] == template]
-    if len(matched) != 1:
+    legacy = isinstance(maps, dict) and 'legacy_preset' in maps
+    # The old preset may contain DirectX normals. Override that one map with
+    # an explicit OpenGL virtual map; all other maps retain the installed preset.
+    if legacy and suffix == 'N':
+        maps = [{'fileName': template, 'channels': [
+            {'destChannel': c, 'srcChannel': c, 'srcMapType': 'virtualMap',
+             'srcMapName': 'Normal_OpenGL'} for c in 'RGB']}]
+        legacy = False
+    matched = [] if legacy else [m for m in maps if m["fileName"] == template]
+    if not legacy and len(matched) != 1:
         raise ValueError(f"The TM2020 preset does not contain exactly one output {template}.")
-    output = copy.deepcopy(matched[0])
+    output = {} if legacy else copy.deepcopy(matched[0])
     output["fileName"] = texture_set + "_" + suffix
     if suffix == "N":
         # Ask Painter for the target convention at export time. Never flip
@@ -165,6 +191,11 @@ def export_config(maps, texture_set, suffix, size, directory):
     params = {"fileFormat": "png", "bitDepth": "8", "dithering": False,
               "paddingAlgorithm": "infinite",
               "sizeLog2": [width.bit_length() - 1, height.bit_length() - 1]}
+    if legacy:
+        return {'exportPath': str(directory), 'exportShaderParams': False,
+                'defaultExportPreset': maps['legacy_preset'],
+                'exportList': [{'rootPath': texture_set, 'filter': {'outputMaps': [template]}}],
+                'exportParameters': [{'parameters': params}]}
     output.setdefault("parameters", {}).update(params)
     return {"exportPath": str(directory), "exportShaderParams": False,
             "defaultExportPreset": "CREAM_single", "exportPresets": [{"name": "CREAM_single", "maps": [output]}],
@@ -172,7 +203,7 @@ def export_config(maps, texture_set, suffix, size, directory):
 
 
 def preflight_exports(maps, selections, directory):
-    actual_sets = {str(s.name): s for s in sp.textureset.all_texture_sets()}
+    actual_sets = {compatibility.texture_set_name(s): s for s in sp.textureset.all_texture_sets()}
     for item in selections:
         name = item["set"]
         if name not in actual_sets:

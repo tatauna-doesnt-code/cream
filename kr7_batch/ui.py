@@ -8,11 +8,11 @@ import tempfile
 import threading
 import traceback
 
-from PySide6 import QtCore, QtGui, QtWidgets as W
+from .qt import QtCore, QtGui, QtWidgets as W, exec_dialog
 import substance_painter as sp
 import substance_painter.ui
 
-from . import core, painter, updater, bootstrap
+from . import core, painter, updater, bootstrap, compatibility
 from .columns import ColumnDialog
 from .name_style import NameStyleHelper
 from .name_cell import PlayerNameCell, PlayerNameDelegate
@@ -59,6 +59,8 @@ class Progress(W.QDialog):
 class Window(W.QDialog):
     def __init__(self, auto_update=True, reload_callback=None):
         super().__init__(sp.ui.get_main_window())
+        self.capabilities = compatibility.current()
+        self._compatibility_warned = False
         self.setWindowTitle("CREAM beta " + VERSION)
         self.resize(1040, 820)
         self.rows = []
@@ -129,6 +131,40 @@ class Window(W.QDialog):
         if auto_update:
             QtCore.QTimer.singleShot(1000, lambda: self.check_updates(interactive=False))
 
+    def show_compatibility_warning(self):
+        if not self._compatibility_warned and self.capabilities.warning:
+            self._compatibility_warned = True
+            W.QMessageBox.warning(self, 'CREAM · Painter compatibility', self.capabilities.warning)
+
+    def customizing(self):
+        return self.capabilities.customization and self.customize_project.isChecked()
+
+    def project_snapshot(self):
+        return painter.snapshot(customize=self.customizing())
+
+    def customization_changed(self, *args):
+        self.filename_defaults = None
+        self.filename_defaults_project = None
+        self.sync_color3_availability()
+        self.refresh_workflow()
+        self.naming_changed()
+
+    def sync_color3_availability(self):
+        # Run once per mode/list change, not on every table itemChanged signal.
+        signals_blocked = self.backers.blockSignals(True)
+        try:
+            for i in range(self.backers.rowCount()):
+                item = self.backers.item(i, 5)
+                if item is not None:
+                    flags = item.flags()
+                    enabled = bool(flags & QtCore.Qt.ItemIsEnabled)
+                    if enabled != self.customizing():
+                        item.setFlags(flags | QtCore.Qt.ItemIsEnabled if self.customizing()
+                                      else flags & ~QtCore.Qt.ItemIsEnabled)
+                    item.setToolTip('Skin color 3 is unused in export-only mode.' if not self.customizing() else '')
+        finally:
+            self.backers.blockSignals(signals_blocked)
+
     def adopt_reload_support(self):
         """Finish a one-time upgrade applied by the pre-1.3 startup loader."""
         import importlib
@@ -168,9 +204,19 @@ class Window(W.QDialog):
                      "Restore the preview before exporting." if preview else "")
         if next_step:
             self.summary.setText(next_step + "  " + self.summary.text())
-        self.export_button.setEnabled(bool(count and maps and configured and not busy and not preview and not self.invalid_names))
-        self.validate_button.setEnabled(loaded and not busy and not preview)
-        self.preview_button.setEnabled(loaded and self.backers.currentRow() >= 0 and not busy and not preview and not self.invalid_names)
+        self.export_button.setEnabled(bool(self.capabilities.export and count and maps and configured and not busy and not preview and not self.invalid_names))
+        self.validate_button.setEnabled(self.capabilities.export and loaded and not busy and not preview)
+        self.preview_button.setEnabled(self.customizing() and loaded and self.backers.currentRow() >= 0 and not busy and not preview and not self.invalid_names)
+        reason = 'Painter 10.0.0 or later is required to change names and colors on the car.'
+        self.customize_project.setEnabled(self.capabilities.customization and not busy and not preview)
+        self.customize_project.setToolTip(reason if not self.capabilities.customization else 'Turn off to export the existing project without changing any layers.')
+        self.preview_button.setToolTip(reason if not self.capabilities.customization else 'Enable car customization to preview a skin in Painter.')
+        for column, label in ((3, 'Color 1' if self.customizing() else 'Text color 1'),
+                              (4, 'Color 2' if self.customizing() else 'Text color 2')):
+            self.backers.horizontalHeaderItem(column).setText(label)
+        self.export_only_notice.setVisible(not self.customizing())
+        self.recover_button.setEnabled(self.capabilities.customization and not busy)
+        self.recover_button.setToolTip(reason if not self.capabilities.customization else 'Restore the saved original layer values after an interrupted preview or batch.')
         self.preview_banner.setVisible(preview and not busy)
         self.load_button.setEnabled(not busy and not preview)
         self.add_button.setEnabled(not busy and not preview)
@@ -179,6 +225,7 @@ class Window(W.QDialog):
         self.resume_button.setEnabled(loaded and not busy and not preview)
         self.inline_restore.setEnabled(preview and not busy)
         locked = {self.export_button: "Export", self.validate_button: "Configuration checking",
+                  self.customize_project: 'Changing export mode',
                   self.add_button: "Adding a skin", self.edit_button: "Editing skin data", self.remove_button: "Removing a skin",
                   self.preview_button: "Applying another preview", self.load_button: "Loading a spreadsheet",
                   self.resume_button: "Resuming a batch"}
@@ -313,7 +360,8 @@ class Window(W.QDialog):
                 "checked": [self.backers.item(i, 0).checkState() == QtCore.Qt.Checked
                             for i in range(self.backers.rowCount())],
                 "selected": self.backers.currentRow(), "log": self.log.toPlainText(),
-                "page": self.tabs.currentIndex(), "tm_styling": self.styling_enabled.isChecked()}
+                "page": self.tabs.currentIndex(), "tm_styling": self.styling_enabled.isChecked(),
+                "customize": self.customizing()}
 
     def restore_reload_state(self, state):
         if not state:
@@ -329,6 +377,7 @@ class Window(W.QDialog):
             for column, value in enumerate(values, 1):
                 self.backers.setItem(i, column, W.QTableWidgetItem(str(value)))
         self.install_name_cells()
+        self.customize_project.setChecked(self.capabilities.customization and state.get('customize', self.customizing()))
         self.styling_enabled.setChecked(bool(state.get("tm_styling", self.styling_enabled.isChecked())))
         self.refresh_destinations()
         if state["selected"] >= 0:
@@ -397,8 +446,8 @@ class Window(W.QDialog):
         if self.saved is not None or self.runner is not None:
             return
         from .manual_entry import SkinDialog
-        dialog = SkinDialog(self)
-        if dialog.exec() != W.QDialog.Accepted:
+        dialog = SkinDialog(self, customize=self.customizing())
+        if exec_dialog(dialog) != W.QDialog.Accepted:
             return
         state = self.capture_reload_state()
         ids = {r['id'] for r in self.rows}
@@ -418,8 +467,8 @@ class Window(W.QDialog):
         if index < 0 or self.saved is not None or self.runner is not None:
             return
         from .manual_entry import SkinDialog
-        dialog = SkinDialog(self, self.rows[index])
-        if dialog.exec() != W.QDialog.Accepted:
+        dialog = SkinDialog(self, self.rows[index], customize=self.customizing())
+        if exec_dialog(dialog) != W.QDialog.Accepted:
             return
         self.edit_player_name(index, dialog.row['name'])
         self.rows[index]['colors'] = dialog.row['colors']
@@ -468,8 +517,8 @@ class Window(W.QDialog):
             path = Path(self.fields["sheet"].text())
             stamp = path.stat().st_mtime_ns
             table = core.read_table(path)
-            dialog = ColumnDialog(table, self.column_profile, self)
-            if dialog.exec() != W.QDialog.Accepted:
+            dialog = ColumnDialog(table, self.column_profile, self, customize=self.customizing())
+            if exec_dialog(dialog) != W.QDialog.Accepted:
                 return
             if path.stat().st_mtime_ns != stamp:
                 raise ValueError("The spreadsheet changed during column selection. Load it again.")
@@ -537,6 +586,7 @@ class Window(W.QDialog):
             cell.changed.connect(lambda value, i=index: self.edit_player_name(i, value))
             cell.reset_requested.connect(lambda i=index: self.reset_player_name(i))
             cell.focused.connect(lambda i=index: self.backers.selectRow(i))
+        self.sync_color3_availability()
         self.sync_name_editing()
         self.sync_name_selection()
 
@@ -608,7 +658,7 @@ class Window(W.QDialog):
                 return self.filename_defaults
             project = painter.project_path()
             if refresh or self.filename_defaults_project != project:
-                self.filename_defaults = painter.filename_color_defaults(self.saved if self.saved is not None else painter.snapshot())
+                self.filename_defaults = painter.filename_color_defaults(self.saved if self.saved is not None else self.project_snapshot())
                 self.filename_defaults_project = project
             return self.filename_defaults
         except (ValueError, RuntimeError):
@@ -657,6 +707,7 @@ class Window(W.QDialog):
 
     def save_settings(self):
         core.atomic_json(DATA / "settings.json", {"fields": {k: v.text() for k, v in self.fields.items()},
+                         "customize": self.customizing(),
                          "draft": self.capture_reload_state() if self.rows and not getattr(self, 'loaded_sheet', None) else None,
                          "column_profile": self.column_profile,
                          "maps": self.texture_sets.settings()})
@@ -667,6 +718,7 @@ class Window(W.QDialog):
             # Before configurable naming every export had this prefix. Preserve it on upgrade.
             self.fields["name_pattern"].setText(settings.get("fields", {}).get("name_pattern", core.DEFAULT_NAME_PATTERN))
             self.column_profile = settings.get("column_profile")
+            self.customize_project.setChecked(self.capabilities.customization and settings.get('customize', True))
             # The visual helper is opt-in for each session, including old saved preferences.
             self.styling_enabled.setChecked(False)
             for key, value in settings.get("fields", {}).items():
@@ -683,7 +735,9 @@ class Window(W.QDialog):
         path = self.recovery_path()
         if self.saved is not None or path.exists():
             raise ValueError("A preview or recovery is pending. Use Restore original before continuing.")
-        saved = painter.snapshot()
+        saved = self.project_snapshot()
+        if not saved['targets']:
+            return saved  # Export-only runs never create project recovery records.
         core.atomic_json(path, saved)  # Must reach disk before editing the project.
         self.saved = saved
         self.sync_name_editing()
@@ -709,10 +763,14 @@ class Window(W.QDialog):
         if pattern != core.LEGACY_NAME_PATTERN:
             signature["zip_name_pattern"] = pattern
         if core.name_color_fields(pattern):
-            signature["filename_color_defaults"] = painter.filename_color_defaults(painter.snapshot())
+            signature["filename_color_defaults"] = painter.filename_color_defaults(self.project_snapshot())
+        if not self.customizing():
+            signature['customization'] = False
         return core.fingerprint(signature)
 
     def check(self):
+        if not self.capabilities.export:
+            raise ValueError(self.capabilities.warning)
         if not painter.ready():
             raise ValueError("Wait for Painter to finish its current operation and open a saved project in painting mode.")
         self.ensure_rows()
@@ -732,13 +790,13 @@ class Window(W.QDialog):
         output.mkdir(parents=True, exist_ok=True)
         with tempfile.TemporaryFile(dir=output):
             pass
-        saved = painter.snapshot()
+        saved = self.project_snapshot()
         self.filename_defaults = painter.filename_color_defaults(saved) if core.name_color_fields(self.fields["name_pattern"].text()) else None
         for row in self.rows:
             core.format_skin_name(self.fields["name_pattern"].text(), row, self.filename_defaults)
         maps = painter.preset_maps()
         painter.preflight_exports(maps, selections, output)
-        for i in range(3):
+        for i in range(3) if self.customizing() else ():
             if any(r["colors"][i] for r in self.rows) and not any(t.get("index") == i for t in saved["targets"]):
                 raise ValueError(f"There is color_{i + 1} in the spreadsheet, but no PLAYER_COLOR{i + 1} in the project.")
         self.refresh_destinations()
@@ -756,6 +814,8 @@ class Window(W.QDialog):
 
     def preview(self):
         try:
+            if not self.customizing():
+                raise ValueError('Car customization is disabled. Export and ZIP filename styling remain available.')
             if not painter.ready():
                 raise ValueError("Wait for Painter to become available.")
             self.ensure_rows()
@@ -763,6 +823,8 @@ class Window(W.QDialog):
             if index < 0:
                 raise ValueError("Select a row to preview.")
             saved = self.capture()
+            if not saved['targets']:
+                raise ValueError('No PLAYER_NAME or PLAYER_COLOR layers were found. You can still export the existing project.')
             try:
                 painter.apply(saved, self.rows[index])
             except Exception:
@@ -777,6 +839,8 @@ class Window(W.QDialog):
 
     def restore(self):
         try:
+            if not self.capabilities.customization:
+                raise ValueError('Restoring layer customization requires Painter 10.0.0 or later. Any existing recovery record has been kept.')
             if not painter.ready():
                 raise ValueError("Wait for Painter to become available before restoring.")
             path = self.recovery_path()
@@ -930,7 +994,8 @@ class Window(W.QDialog):
         finally:
             yield from self.wait_ready()
             painter.apply(saved)
-            self.recovery_path().unlink(missing_ok=True)
+            if saved['targets']:
+                self.recovery_path().unlink(missing_ok=True)
             self.saved = None
             self.sync_name_editing()
             core.atomic_json(self.report_path, self.report)

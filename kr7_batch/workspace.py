@@ -1,5 +1,5 @@
 """Task-focused layout for CREAM; export behavior lives in ui.Window."""
-from PySide6 import QtCore, QtGui, QtWidgets as W
+from .qt import QtCore, QtGui, QtWidgets as W
 
 from . import core
 from .name_cell import PlayerNameDelegate
@@ -54,6 +54,8 @@ def build(window, default_output):
         QTabBar::tab { padding: 10px 18px; background: #222426; border: 1px solid #494c50; border-bottom: none; border-radius: 0; }
         QTabBar::tab:selected { background: #292b2e; border-top: 2px solid #6ca8cf; }
         QLineEdit { min-height: 0; background: #202225; color: #eee; border: 1px solid #55595d; border-radius: 3px; padding: 3px 6px; }
+        QLineEdit:disabled, QComboBox:disabled { color: #85888c; background: #292b2e; }
+        QPushButton:disabled, QCheckBox:disabled { color: #85888c; }
         QWidget#pathRow { background: transparent; border: none; }
         QToolButton { min-height: 24px; }
         QWidget#workspaceCard { background: #292b2e; border: 1px solid #494c50; border-radius: 0; }
@@ -61,13 +63,19 @@ def build(window, default_output):
         QTableWidget { background: #222426; alternate-background-color: #2b2d30;
             color: #eeeeee; border: 1px solid #494c50; selection-background-color: #365568; selection-color: white; }
         QTableWidget::item { color: #eeeeee; }
+        QTableWidget::item:disabled { color: #85888c; }
         QTableWidget::item { border-right: 1px solid #44474a; }
         QTableWidget::item:alternate { background: #2b2d30; }
         QTableWidget::item:selected { background: #365568; color: white; }
+        QTableWidget::item:selected:disabled { color: #85888c; }
         QWidget#previewBanner { background: #263c49; border: 1px solid #537184; border-radius: 4px; }
         QFrame#actionPanel { background: #242629; border: 1px solid #494c50; border-radius: 4px; }
         QWidget#textureSetCard { background: #222426; border: 1px solid #494c50; border-radius: 4px; }
     """)
+    w.compatibility_notice = note(w.capabilities.warning)
+    w.compatibility_notice.setStyleSheet('background: #3a3427; color: #ead9ae; border: 1px solid #6c6046; padding: 10px;')
+    w.compatibility_notice.setVisible(bool(w.capabilities.warning))
+    layout.addWidget(w.compatibility_notice)
     # Preview recovery remains reachable from every page.
     w.preview_banner = W.QWidget()
     w.preview_banner.setObjectName("previewBanner")
@@ -89,6 +97,13 @@ def build(window, default_output):
     w.fields['sheet'] = W.QLineEdit()
     w.skins_page, skins = page(w, "1  Skins", "Choose the skins to export",
         "Check rows to include in the batch. Click a row to preview that skin in Painter.")
+    w.customize_project = W.QCheckBox('Customize names and colors on the car')
+    w.customize_project.setChecked(w.capabilities.customization)
+    w.customize_project.setEnabled(w.capabilities.customization)
+    skins.addWidget(w.customize_project)
+    w.export_only_notice = note('Export-only mode: the car stays unchanged. Names and colors are used for ZIP filenames only. Blank text colors need an explicit value; project color lookup is unavailable in this mode.')
+    skins.addWidget(w.export_only_notice)
+    w.customize_project.toggled.connect(w.customization_changed)
     tools = W.QHBoxLayout()
     w.add_button = button("Add skin…", w.add_skin, True)
     tools.addWidget(w.add_button)
@@ -194,7 +209,8 @@ def build(window, default_output):
     w.log = W.QPlainTextEdit()
     w.log.setReadOnly(True)
     logs.addWidget(w.log, 1)
-    logs.addWidget(button("Restore original / recover project", w.restore))
+    w.recover_button = button("Restore original / recover project", w.restore)
+    logs.addWidget(w.recover_button)
 
     action_panel = W.QFrame()
     action_panel.setObjectName("actionPanel")
