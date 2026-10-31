@@ -97,7 +97,15 @@ with tempfile.TemporaryDirectory() as folder, patch.object(ui, 'DATA', Path(fold
      patch.object(W.QMessageBox, 'warning') as warning:
     sp.project.file_path = lambda: str(Path(folder) / 'test.spp')
     # Enabling registers the action without creating the window or starting updates.
+    python_menu = W.QMenu()
+    enable_action = python_menu.addAction('cream')
+    enable_action.setCheckable(True)
+    unrelated_action = python_menu.addAction('another_plugin')
+    unrelated_action.setCheckable(True)
     plugin.start_plugin()
+    app.processEvents()
+    assert enable_action.text() == 'CREAM'
+    assert unrelated_action.text() == 'another_plugin'
     assert plugin._window is None
     plugin._action.trigger()
     window = plugin._window
@@ -105,12 +113,17 @@ with tempfile.TemporaryDirectory() as folder, patch.object(ui, 'DATA', Path(fold
     app.processEvents()
     window.show_compatibility_warning()
     assert warning.call_count == (1 if version < (10, 1, 2) else 0)
-    assert window.customize_project.isEnabled() == (version >= (10, 0, 0))
-    window.customize_project.setChecked(False)
     assert not window.preview_button.isEnabled()
     if version < (10, 0, 0):
         assert not window.recover_button.isEnabled()
     assert window.compatibility_notice.isHidden() == (version >= (10, 1, 2))
+    assert not hasattr(window, 'customize_project')
+    assert window.fields['name_pattern'].text() == 'skin'
+    assert window.styling_enabled.isChecked()
+    assert all(not button.isEnabled() for button in window.batch_name_buttons)
+    assert window.name_style.editor.toPlainText() == 'skin'
+    assert not window.name_style.editor.currentCharFormat().fontItalic()
+    assert window.texture_sets.groups['Skin'].expand.iconSize().width() == 8
     dialog = SkinDialog(window, customize=False)
     assert dialog.colors[0].isEnabled() and not dialog.colors[2].isEnabled()
     base = Path(folder) / 'base.zip'
@@ -120,12 +133,11 @@ with tempfile.TemporaryDirectory() as folder, patch.object(ui, 'DATA', Path(fold
     window.fields['output'].setText(folder)
     # Empty Batch is the primary workflow, even with customization checked on modern hosts.
     assert not window.rows and window.tabs.currentWidget() is window.textures_page
-    window.customize_project.setChecked(version >= (10, 0, 0))
     section = window.texture_sets.groups['Skin']
     section.table.item(0, 0).setCheckState(ui.QtCore.Qt.Checked)
     section.sizes[0].setCurrentIndex(section.sizes[0].findData(1024))
     window.fields['name_pattern'].setText('$o$F80{name}$z')
-    assert window.name_preview.text() == '$o$F80test$z.zip'
+    assert window.name_preview.text() == '$o$F80{name}$z.zip'
     assert window.export_button.isEnabled() and window.export_button.text() == 'Export current skin'
     assert window.validate_button.isEnabled()
     with patch.object(painter, 'nodes', side_effect=AssertionError('As-is exports must not scan layers')), \
@@ -142,7 +154,7 @@ with tempfile.TemporaryDirectory() as folder, patch.object(ui, 'DATA', Path(fold
         with zipfile.ZipFile(window.report['rows'][0]['output']) as archive:
             assert archive.read('Details_R.dds') == b'unchanged base file'
             assert archive.read('Skin_B.dds')[84:88] == b'DXT1'
-        assert window.name_preview.text() == '$o$F80test$z 2.zip'
+        assert window.name_preview.text() == '$o$F80{name}$z 2.zip'
         assert not list(Path(folder).glob('recover-*.json'))
         assert not list(Path(folder).glob('cream-*'))
         # Cancel the single export after its PNG exists: clean all intermediates, publish nothing.
@@ -159,9 +171,8 @@ with tempfile.TemporaryDirectory() as folder, patch.object(ui, 'DATA', Path(fold
         assert len(list(Path(folder).glob('$o$F80*.zip'))) == 1
         assert not list(Path(folder).glob('cream-*'))
     window.grab().save(str(ROOT / 'dist' / ('single-export-' + '.'.join(map(str, version)) + '.png')))
-    window.customize_project.setChecked(False)
     window.restore_reload_state({'rows': [{'id': '1', 'line': 1, 'name': 'Tester', 'stem': 'Tester',
-                                          'colors': ['#AABBCC', None, None]}],
+                                          'colors': [None, None, None]}],
                                  'loaded_sheet': None, 'checked': [True], 'selected': 0, 'log': '',
                                  'customize': False})
     original = window.capture_reload_state()
@@ -169,19 +180,17 @@ with tempfile.TemporaryDirectory() as folder, patch.object(ui, 'DATA', Path(fold
                                     name='Player' + str(i), stem='Player' + str(i)) for i in range(200)],
                 name_originals=None, checked=[False] * 200)
     window.restore_reload_state(bulk)
-    if version >= (10, 0, 0):
-        window.customize_project.setChecked(True)
-        window.customize_project.setChecked(False)
-    assert all(not window.backers.item(i, 5).flags() & ui.QtCore.Qt.ItemIsEnabled for i in range(200))
+    assert all(bool(window.backers.item(i, 5).flags() & ui.QtCore.Qt.ItemIsEnabled) == (version >= (10, 0, 0)) for i in range(200))
     window.restore_reload_state(original)
+    assert all(button.isEnabled() for button in window.batch_name_buttons)
     section = window.texture_sets.groups['Skin']
     section.table.item(0, 0).setCheckState(ui.QtCore.Qt.Checked)
     section.sizes[0].setCurrentIndex(section.sizes[0].findData(1024))
     window.styling_enabled.setChecked(True)
-    window.fields['name_pattern'].setText('$o{primary}{name}$z')
+    window.fields['name_pattern'].setText('$o$ABC{name}$z')
     assert window.name_preview.text() == '$o$ABCTester$z.zip'
-    assert window.export_button.isEnabled() and not window.preview_button.isEnabled()
-    with patch.object(painter, 'nodes', side_effect=AssertionError('Export-only mode must not touch layers')):
+    assert window.export_button.isEnabled()
+    with patch.object(painter, 'nodes', return_value=[]):
         window.check()
         assert not list(Path(folder).glob('recover-*.json'))
         window.start()

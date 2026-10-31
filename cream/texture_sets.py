@@ -2,6 +2,7 @@
 from .qt import QtCore, QtWidgets as W
 
 from . import core
+from .controls import set_chevron, CenteredCheckDelegate
 
 TEXTURE_SETS = ("Details", "Glass", "Skin", "Wheels")
 LABELS = {"B": "Base color (_B)", "R": "Roughness / Metallic (_R)", "I": "Emissive (_I)",
@@ -46,7 +47,7 @@ class TextureSetSection(W.QWidget):
         self.expand.setCheckable(True)
         self.expand.setAutoRaise(True)
         self.expand.setToolButtonStyle(QtCore.Qt.ToolButtonTextBesideIcon)
-        self.expand.setArrowType(QtCore.Qt.RightArrow)
+        set_chevron(self.expand)
         self.expand.setAccessibleName("Expand " + texture_set + " textures")
         font = self.expand.font()
         font.setBold(True)
@@ -75,6 +76,7 @@ class TextureSetSection(W.QWidget):
         self.table.setHorizontalHeaderLabels(["Export", "Texture", "Resolution"])
         self.table.verticalHeader().hide()
         self.table.setShowGrid(False)
+        self.table.setItemDelegateForColumn(0, CenteredCheckDelegate(self.table))
         self.table.setAlternatingRowColors(True)
         self.table.setEditTriggers(W.QAbstractItemView.NoEditTriggers)
         self.table.setSelectionMode(W.QAbstractItemView.NoSelection)
@@ -117,7 +119,7 @@ class TextureSetSection(W.QWidget):
 
     def set_expanded(self, expanded):
         self.body.setVisible(expanded)
-        self.expand.setArrowType(QtCore.Qt.DownArrow if expanded else QtCore.Qt.RightArrow)
+        set_chevron(self.expand, expanded)
         self.expand.setAccessibleName(("Collapse " if expanded else "Expand ") + self.texture_set + " textures")
 
     def toggle_all(self, *args):

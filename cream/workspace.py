@@ -6,6 +6,7 @@ from .name_cell import PlayerNameDelegate
 from .name_style import NameStyleHelper
 from .texture_sets import TextureSets
 from .version import VERSION
+from .controls import InstantInfo, CenteredCheckDelegate
 
 
 def note(text):
@@ -105,13 +106,8 @@ def build(window, default_output):
     w.fields['sheet'] = W.QLineEdit()
     w.skins_page, skins = page(w, "Batch", "Batch export · optional",
         "Add entries only when you need multiple versions. An empty list exports the current project as-is.")
-    w.customize_project = W.QCheckBox('Customize names and colors on the car')
-    w.customize_project.setChecked(w.capabilities.customization)
-    w.customize_project.setEnabled(w.capabilities.customization)
-    skins.addWidget(w.customize_project)
-    w.export_only_notice = note('Export-only mode: the car stays unchanged. Names and colors are used for ZIP filenames only. Blank text colors need an explicit value; project color lookup is unavailable in this mode.')
+    w.export_only_notice = note('This Painter version supports exporting existing textures and styling ZIP names. Car name/color customization requires Painter 10.0+.')
     skins.addWidget(w.export_only_notice)
-    w.customize_project.toggled.connect(w.customization_changed)
     tools = W.QHBoxLayout()
     w.add_button = button("Add skin…", w.add_skin, True)
     tools.addWidget(w.add_button)
@@ -135,7 +131,7 @@ def build(window, default_output):
     tools.addStretch()
     w.resume_button = button("Resume a previous batch…", w.resume)
     tools.addWidget(w.resume_button)
-    resume_info = W.QLabel()
+    resume_info = InstantInfo()
     resume_info.setPixmap(w.style().standardIcon(W.QStyle.SP_MessageBoxInformation).pixmap(16, 16))
     resume_info.setFixedSize(20, 24)
     resume_info.setAlignment(QtCore.Qt.AlignCenter)
@@ -156,6 +152,7 @@ def build(window, default_output):
     w.backers.setHorizontalHeaderLabels(["Export", "Row / ID", "Player name", "Color 1", "Color 2", "Color 3", "ZIP filename", "Status"])
     w.backers.verticalHeader().hide()
     w.backers.setShowGrid(False)
+    w.backers.setItemDelegateForColumn(0, CenteredCheckDelegate(w.backers))
     w.backers.setAlternatingRowColors(True)
     w.backers.setSelectionBehavior(W.QAbstractItemView.SelectRows)
     w.backers.setSelectionMode(W.QAbstractItemView.SingleSelection)
@@ -197,15 +194,21 @@ def build(window, default_output):
     form = W.QFormLayout()
     form.addRow("Filename pattern", w.fields["name_pattern"])
     naming.addLayout(form)
+    w.pattern_label = form.labelForField(w.fields["name_pattern"])
+    w.batch_name_buttons = []
     tokens = W.QHBoxLayout()
     tokens.addWidget(note("Insert:"))
     for token, label in [("name", "ZIP name"), ("player", "Player"), ("id", "ID"), ("row", "Row")]:
         control = button(label, lambda checked=False, t=token: w.fields["name_pattern"].insert("{" + t + "}"))
         control.setToolTip("Insert {" + token + "} at the cursor")
+        control.setAttribute(QtCore.Qt.WA_AlwaysShowToolTips)
+        control.setToolTip('For batch export only. Add entries in Batch to use filename variables.')
+        w.batch_name_buttons.append(control)
         tokens.addWidget(control)
     tokens.addStretch()
     naming.addLayout(tokens)
-    naming.addWidget(note("{name} uses the project filename for a single export, or each batch entry’s ZIP name / player name. Duplicate names receive 2, 3…"))
+    w.batch_name_help = note("Variables use each batch entry’s data. Duplicate names receive 2, 3…")
+    naming.addWidget(w.batch_name_help)
     w.naming_context = note("")
     naming.addWidget(w.naming_context)
     w.name_preview = note("")

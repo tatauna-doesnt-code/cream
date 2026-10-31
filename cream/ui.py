@@ -87,6 +87,8 @@ class Window(W.QDialog):
         from .workspace import build
         layout = build(self, DEFAULT_OUTPUT)
         self.load_settings()
+        self.fields["name_pattern"].setText("skin")
+        self.styling_enabled.setChecked(True)
         self.fields["name_pattern"].textChanged.connect(self.naming_changed)
         self.fields["output"].textChanged.connect(self.naming_changed)
         self.backers.currentCellChanged.connect(lambda *args: self.naming_changed())
@@ -137,7 +139,11 @@ class Window(W.QDialog):
             W.QMessageBox.warning(self, 'CREAM · Painter compatibility', self.capabilities.warning)
 
     def customizing(self):
-        return self.capabilities.customization and self.customize_project.isChecked()
+        return self.capabilities.customization and bool(self.rows)
+
+    def export_name_pattern(self):
+        text = self.fields['name_pattern'].text()
+        return text if self.rows else text.replace('{', '{{').replace('}', '}}')
 
     def project_snapshot(self):
         return painter.snapshot(customize=bool(self.rows) and self.customizing())
@@ -212,12 +218,18 @@ class Window(W.QDialog):
             f"Batch mode · {count} of {len(self.rows)} entries selected. Clear the batch to export the current project as-is."
             if loaded else "Current project · Export the skin as it is in Painter. Batch is optional.")
         self.textures_heading.setText('Choose textures for the batch' if loaded else 'Export your current skin')
+        for control in self.batch_name_buttons:
+            control.setEnabled(loaded)
+        self.batch_name_help.setVisible(loaded)
+        self.name_style.allow_tokens = loaded
+        self.fields['name_pattern'].setVisible(loaded or not self.styling_enabled.isChecked())
+        self.pattern_label.setVisible(loaded or not self.styling_enabled.isChecked())
         self.clear_batch_button.setEnabled(loaded and not busy and not preview)
         self.select_all_button.setEnabled(loaded and not busy and not preview)
         self.clear_selection_button.setEnabled(loaded and not busy and not preview)
         self.naming_context.setText(
             'Filename preview · highlighted batch entry' if loaded else
-            'Filename preview · current project. {name} uses the project filename; type any other name above to replace it.')
+            'Filename preview · current project')
         self.summary.setText(f"{count} skins selected  ·  {maps} textures per skin  ·  {count * maps} texture exports")
         if not loaded:
             self.summary.setText(f"Current project  ·  {maps} textures  ·  1 ZIP")
@@ -235,8 +247,6 @@ class Window(W.QDialog):
         self.validate_button.setEnabled(self.capabilities.export and not busy and not preview)
         self.preview_button.setEnabled(self.customizing() and loaded and self.backers.currentRow() >= 0 and not busy and not preview and not self.invalid_names)
         reason = 'Painter 10.0.0 or later is required to change names and colors on the car.'
-        self.customize_project.setEnabled(self.capabilities.customization and not busy and not preview)
-        self.customize_project.setToolTip(reason if not self.capabilities.customization else 'Turn off to export the existing project without changing any layers.')
         self.preview_button.setToolTip(reason if not self.capabilities.customization else 'Enable car customization to preview a skin in Painter.')
         for column, label in ((3, 'Color 1' if self.customizing() else 'Text color 1'),
                               (4, 'Color 2' if self.customizing() else 'Text color 2')):
@@ -252,7 +262,6 @@ class Window(W.QDialog):
         self.resume_button.setEnabled(loaded and not busy and not preview)
         self.inline_restore.setEnabled(preview and not busy)
         locked = {self.export_button: "Export", self.validate_button: "Configuration checking",
-                  self.customize_project: 'Changing export mode',
                   self.clear_batch_button: "Clearing the batch", self.select_all_button: "Selecting batch entries",
                   self.clear_selection_button: "Changing the batch selection", self.add_button: "Adding a skin", self.edit_button: "Editing skin data", self.remove_button: "Removing a skin",
                   self.preview_button: "Applying another preview", self.load_button: "Loading a spreadsheet",
@@ -407,7 +416,6 @@ class Window(W.QDialog):
             for column, value in enumerate(values, 1):
                 self.backers.setItem(i, column, W.QTableWidgetItem(str(value)))
         self.install_name_cells()
-        self.customize_project.setChecked(self.capabilities.customization and state.get('customize', self.customizing()))
         self.styling_enabled.setChecked(bool(state.get("tm_styling", self.styling_enabled.isChecked())))
         if state["selected"] >= 0:
             self.backers.selectRow(state["selected"])
@@ -456,10 +464,18 @@ class Window(W.QDialog):
         if self.progress and not self.cancel.is_set():
             self.progress.label.setText(message)
 
-    def error(self, exc):
+    def error(self, exc, offer_help=False):
         self.say(str(exc))
         self.log.appendPlainText(traceback.format_exc())
-        W.QMessageBox.warning(self, "CREAM", str(exc))
+        if offer_help:
+            dialog = W.QMessageBox(W.QMessageBox.Warning, 'CREAM', str(exc), parent=self)
+            help_button = dialog.addButton('Open Help', W.QMessageBox.HelpRole)
+            dialog.addButton(W.QMessageBox.Ok)
+            exec_dialog(dialog)
+            if dialog.clickedButton() is help_button:
+                self.tabs.setCurrentWidget(self.help_page)
+        else:
+            W.QMessageBox.warning(self, "CREAM", str(exc))
 
     @staticmethod
     def check_item(checked):
@@ -476,7 +492,7 @@ class Window(W.QDialog):
         if self.saved is not None or self.runner is not None:
             return
         from .manual_entry import SkinDialog
-        dialog = SkinDialog(self, customize=self.customizing())
+        dialog = SkinDialog(self, customize=self.capabilities.customization)
         if exec_dialog(dialog) != W.QDialog.Accepted:
             return
         state = self.capture_reload_state()
@@ -497,7 +513,7 @@ class Window(W.QDialog):
         if index < 0 or self.saved is not None or self.runner is not None:
             return
         from .manual_entry import SkinDialog
-        dialog = SkinDialog(self, self.rows[index], customize=self.customizing())
+        dialog = SkinDialog(self, self.rows[index], customize=self.capabilities.customization)
         if exec_dialog(dialog) != W.QDialog.Accepted:
             return
         self.edit_player_name(index, dialog.row['name'])
@@ -545,7 +561,7 @@ class Window(W.QDialog):
         try:
             state = json.loads((DATA / 'settings.json').read_text(encoding='utf-8')).get('draft')
             if state:
-                state['tm_styling'] = False
+                state['tm_styling'] = True
                 self.restore_reload_state(state)
                 self.tabs.setCurrentWidget(self.textures_page)
         except (OSError, ValueError, KeyError, TypeError):
@@ -562,7 +578,7 @@ class Window(W.QDialog):
             path = Path(self.fields["sheet"].text())
             stamp = path.stat().st_mtime_ns
             table = core.read_table(path)
-            dialog = ColumnDialog(table, self.column_profile, self, customize=self.customizing())
+            dialog = ColumnDialog(table, self.column_profile, self, customize=self.capabilities.customization)
             if exec_dialog(dialog) != W.QDialog.Accepted:
                 return
             if path.stat().st_mtime_ns != stamp:
@@ -685,7 +701,7 @@ class Window(W.QDialog):
             self.edit_player_name(index, value)
 
     def refresh_destinations(self):
-        pattern = core.validate_name_pattern(self.fields["name_pattern"].text())
+        pattern = core.validate_name_pattern(self.export_name_pattern())
         defaults = self.get_filename_defaults() if core.name_color_fields(pattern) else None
         occupied = set()
         folder = Path(self.fields["output"].text())
@@ -726,8 +742,9 @@ class Window(W.QDialog):
 
     def naming_changed(self):
         self.filename_error = None
-        pattern = self.fields["name_pattern"].text()
-        self.name_style.set_source(pattern)
+        pattern = self.export_name_pattern()
+        self.name_style.allow_tokens = bool(self.rows)
+        self.name_style.set_source(self.fields['name_pattern'].text())
         selected = max(0, self.backers.currentRow())
         if selected in self.invalid_names:
             self.name_preview.setText(self.invalid_names[selected])
@@ -770,9 +787,8 @@ class Window(W.QDialog):
             # Before configurable naming every export had this prefix. Preserve it on upgrade.
             self.fields["name_pattern"].setText(settings.get("fields", {}).get("name_pattern", core.DEFAULT_NAME_PATTERN))
             self.column_profile = settings.get("column_profile")
-            self.customize_project.setChecked(self.capabilities.customization and settings.get('customize', True))
             # The visual helper is opt-in for each session, including old saved preferences.
-            self.styling_enabled.setChecked(False)
+            self.styling_enabled.setChecked(True)
             for key, value in settings.get("fields", {}).items():
                 if key in self.fields:
                     self.fields[key].setText(value)
@@ -811,7 +827,7 @@ class Window(W.QDialog):
                                  "maps": self.selections(), "preset": painter.preset_maps(), "normal_invert": False,
                                  "dds_headers": "BC4U_BC5U",
                                  "normal_export": "Normal_OpenGL"}
-        pattern = self.fields["name_pattern"].text()
+        pattern = self.export_name_pattern()
         signature["zip_name_pattern"] = pattern
         if core.name_color_fields(pattern):
             signature["filename_color_defaults"] = painter.filename_color_defaults(self.project_snapshot())
@@ -826,7 +842,7 @@ class Window(W.QDialog):
             raise ValueError("Wait for Painter to finish its current operation and open a saved project in painting mode.")
         if self.rows:
             self.ensure_rows()
-        core.validate_name_pattern(self.fields["name_pattern"].text())
+        core.validate_name_pattern(self.export_name_pattern())
         if self.saved or self.recovery_path().exists():
             raise ValueError("Restore original before validating or starting a new batch.")
         selections = self.selections()
@@ -843,9 +859,9 @@ class Window(W.QDialog):
         with tempfile.TemporaryFile(dir=output):
             pass
         saved = self.project_snapshot()
-        self.filename_defaults = painter.filename_color_defaults(saved) if core.name_color_fields(self.fields["name_pattern"].text()) else None
+        self.filename_defaults = painter.filename_color_defaults(saved) if core.name_color_fields(self.export_name_pattern()) else None
         for row in self.rows or [self.current_project_row()]:
-            core.format_skin_name(self.fields["name_pattern"].text(), row, self.filename_defaults)
+            core.format_skin_name(self.export_name_pattern(), row, self.filename_defaults)
         maps = painter.preset_maps()
         painter.preflight_exports(maps, selections, output)
         for i in range(3) if self.rows and self.customizing() else ():
@@ -862,7 +878,7 @@ class Window(W.QDialog):
                 self.say("Found: " + " / ".join(map(str, target["location"])))
             self.say(f"Configuration valid: {len(saved['targets'])} targets; {len(self.selections())} textures per skin. Run a test export first.")
         except Exception as exc:
-            self.error(exc)
+            self.error(exc, offer_help=True)
 
     def preview(self):
         try:
@@ -952,7 +968,7 @@ class Window(W.QDialog):
             self.progress = Progress(self, self.cancel)
             self.progress.bar.setRange(0, len(indices))
             self.progress.show()
-            self.runner = self.run_batch(indices, saved, maps, self.selections(), self.fields["name_pattern"].text())
+            self.runner = self.run_batch(indices, saved, maps, self.selections(), self.export_name_pattern())
             self.timer.start()
             self.refresh_workflow()
         except Exception as exc:
@@ -982,7 +998,7 @@ class Window(W.QDialog):
         return future.result()
 
     def run_batch(self, indices, saved, maps, selections, name_pattern=None):
-        name_pattern = self.fields["name_pattern"].text() if name_pattern is None else name_pattern
+        name_pattern = self.export_name_pattern() if name_pattern is None else name_pattern
         base = Path(self.fields["base"].text())
         output = Path(self.fields["output"].text())
         converter = CONVERTER

@@ -59,16 +59,16 @@ def add_help(window):
     and your output folder. The base ZIP's files must be at its root.</li>
     <li>In <b>1 Textures</b>, select the maps to replace and their resolutions.
     Everything else is copied from the base ZIP.</li>
-    <li>In <b>2 Skin ZIPfile name</b>, type the name you want, or keep <code>{name}</code>
-    to use the project filename. Enable the optional Trackmania styling helper to style it.</li>
+    <li>In <b>2 Skin ZIPfile name</b>, edit the default name <code>skin</code>. The styling helper is enabled by default,
+    with no formatting applied. Filename variables are available only for batch exports.</li>
     <li>Click <b>Export current skin</b>. CREAM checks the configuration, converts the textures
     to DDS and builds the ZIP. No batch entry or special layer names are needed.</li></ol>
     <h3>Optional: export a batch</h3>
     <p>In <b>Batch</b>, add entries manually or import CSV / XLSX. Once the list contains entries,
     only checked entries are exported. <b>Clear selection</b> exports nothing; <b>Clear batch</b>
     removes the list and returns to exporting the current project. Existing ZIPs are never overwritten.</p>
-    <p>On Painter 10.0+, enable <b>Customize names and colors on the car</b> to personalize each entry.
-    Turn it off to create named copies without changing the car. Painter 9.x always uses this export-only mode.</p>
+    <p>On Painter 10.0+, batch entries automatically personalize supported name/color targets.
+    Painter 9.x exports the existing textures and uses entry data for ZIP filenames only.</p>
     <ul><li><b>Names:</b> use Font resources in mask Fill effects named <code>PLAYER_NAME</code>.
     CREAM changes Text only. Set font, size, alignment and placement in Painter.</li>
     <li><b>Colors:</b> use uniform Base Color fill layers named <code>PLAYER_COLOR1</code>,
@@ -87,7 +87,7 @@ def add_help(window):
     faq_heading = W.QLabel('Frequently asked questions')
     faq_heading.setStyleSheet('font-size: 17px; font-weight: 600; padding-top: 16px;')
     layout.addWidget(faq_heading)
-    entries = [('Do I need to add a batch entry to export?', '<p>No. Leave Batch empty to export the current project as-is. The default filename is the project filename, and the styling helper works without entries. Clear batch returns to this workflow; clearing the selection only deselects existing entries.</p>'),
+    entries = [('Do I need to add a batch entry to export?', '<p>No. Leave Batch empty to export the current project as-is. The default filename is plain skin, and the styling helper works without entries. Clear batch returns to this workflow; clearing the selection only deselects existing entries.</p>'),
         ('What does CREAM mean?', '<p><b>Color Replacement &amp; Export Automation Manager.</b> CREAM automates player names, skin colors, texture exports, DDS conversion and final ZIP packaging.</p>'),
         ('Can I enter data without a spreadsheet?', '<p>Yes. In <b>Batch</b>, click <b>Add skin</b>, enter a name and up to three colors, then Save. Use <b>Edit skin</b> to change a highlighted entry or <b>Remove</b> to delete it. Blank colors keep the project original. Manual lists are saved locally. Import CSV / XLSX appends spreadsheet rows without replacing the current list.</p>')]
     for question, answer in entries + FAQ:
@@ -114,10 +114,10 @@ def add_help(window):
     layout.addStretch()
     scroll.setWidget(content)
     window.help_page = scroll
-    index = window.tabs.addTab(scroll, "Help")
+    index = window.tabs.addTab(scroll, "  Help")
     window.tabs.tabBar().setTabVisible(index, False)
     window.help_link = W.QToolButton()
-    window.help_link.setText("Help")
+    window.help_link.setText("  Help")
     window.help_link.setIcon(window.style().standardIcon(W.QStyle.SP_MessageBoxQuestion))
     window.help_link.setToolButtonStyle(QtCore.Qt.ToolButtonTextBesideIcon)
     window.help_link.setCheckable(True)

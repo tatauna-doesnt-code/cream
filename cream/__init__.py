@@ -30,8 +30,24 @@ def start_plugin(apply_update=True, show=False):
         _action = QAction("CREAM — Skin Exporter", ui.get_main_window())
         _action.triggered.connect(show_window)
         ui.add_action(ui.ApplicationMenu.Window, _action)
+    # Painter labels its enable/disable action from the Python package name.
+    # Change only our action's presentation; keep its original callback/settings key.
+    from .qt import QtCore
+    QtCore.QTimer.singleShot(0, _label_plugin_action)
     if show:
         show_window()
+
+
+def _label_plugin_action():
+    from .qt import QtWidgets
+    app = QtWidgets.QApplication.instance()
+    if app is None:
+        return
+    for widget in app.allWidgets():
+        if isinstance(widget, QtWidgets.QMenu):
+            for action in widget.actions():
+                if action.isCheckable() and action.text() == __name__:
+                    action.setText('CREAM')
 
 
 def show_window():
