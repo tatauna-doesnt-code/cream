@@ -1,5 +1,13 @@
 # Changes
 
+## 1.11.1 beta
+
+- Infer customization from batch entries; remove the manual customization toggle.
+- Default to an unstyled literal `skin` with the WYSIWYG editor enabled. Restrict filename variables and player text-color tokens to batches.
+- Center export checkboxes and the in-game preview, shrink accordion chevrons, align the text toolbar and standardize square icon controls.
+- Show batch-resume help instantly, add an Open Help action to configuration errors, and improve Help-tab spacing.
+- Display CREAM in the Python menu while preserving its lowercase package identity.
+
 ## 1.11.0 beta
 
 - Rename the Python package to `cream`, installer to `Install.cmd` / `Install.ps1`, and local data directory to `CREAM`. Update development scripts, tests and manifests.

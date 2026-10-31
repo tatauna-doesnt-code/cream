@@ -54,6 +54,21 @@ class StyledLine(W.QTextEdit):
         self.setFixedHeight(56)
         self.setStyleSheet("QTextEdit { background: #242424; color: #eeeeee; border: 1px solid #666; padding: 4px; }")
 
+    def center_preview(self):
+        if not self.isReadOnly() or getattr(self, '_centering', False):
+            return
+        self._centering = True
+        try:
+            height = self.document().size().height()
+            available = self.viewport().height() + self.viewportMargins().top()
+            self.setViewportMargins(0, max(0, int((available - height) / 2)), 0, 0)
+        finally:
+            self._centering = False
+
+    def resizeEvent(self, event):
+        super().resizeEvent(event)
+        self.center_preview()
+
     def keyPressEvent(self, event):
         if event.key() in (QtCore.Qt.Key_Return, QtCore.Qt.Key_Enter):
             return
@@ -120,7 +135,7 @@ def document_runs(document):
 
 
 class TextColorDialog(W.QDialog):
-    def __init__(self, colors, parent=None):
+    def __init__(self, colors, parent=None, allow_tokens=True):
         super().__init__(parent)
         self.setWindowTitle("Trackmania text color")
         self.choice = None
@@ -159,6 +174,10 @@ class TextColorDialog(W.QDialog):
                 swatch.fill(QtGui.QColor(tm_text.expand_color(code)))
                 button.setIcon(QtGui.QIcon(swatch))
             button.setToolTip("Uses color " + ("1" if key == "primary" else "2") + " for each backer, rounded to Trackmania's 3-digit palette.")
+            button.setEnabled(allow_tokens)
+            if not allow_tokens:
+                button.setToolTip('For batch export only. Add entries in Batch to use player colors.')
+                button.setAttribute(QtCore.Qt.WA_AlwaysShowToolTips)
             button.clicked.connect(lambda checked=False, value=key: self.choose(value))
             layout.addWidget(button)
         default = W.QPushButton("Use default text color ($g)")
@@ -210,6 +229,7 @@ class NameStyleHelper(W.QWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.source = None
+        self.allow_tokens = True
         self.colors = {}
         self.syncing = False
         layout = W.QVBoxLayout(self)
@@ -217,7 +237,7 @@ class NameStyleHelper(W.QWidget):
         tools = W.QHBoxLayout()
         self.toggles = {}
         for title, key, code in (("B", "bold", "$o"), ("I", "italic", "$i"),
-                                 ("ABC", "uppercase", "$t"), ("Shadow", "shadow", "$s")):
+                                 ("Aa", "uppercase", "$t"), ("Shadow", "shadow", "$s")):
             button = W.QToolButton()
             button.setText(title)
             font = button.font()
@@ -228,18 +248,22 @@ class NameStyleHelper(W.QWidget):
             button.setToolTip(key.capitalize() + " (" + code + ")")
             button.setFocusPolicy(QtCore.Qt.NoFocus)
             button.clicked.connect(lambda checked=False, field=key: self.change_style(**{field: checked}))
+            button.setFixedHeight(32)
+            if key in ("bold", "italic"):
+                button.setFixedWidth(32)
             tools.addWidget(button)
             self.toggles[key] = button
         self.width_combo = W.QComboBox()
         for label, value in (("Normal ($m)", "normal"), ("Narrow ($n)", "narrow"), ("Wide ($w)", "wide")):
             self.width_combo.addItem(label, value)
         self.width_combo.activated.connect(lambda: self.change_style(width=self.width_combo.currentData()))
-        tools.addWidget(self.width_combo)
+        self.width_combo.setFixedHeight(32)
+        tools.addWidget(self.width_combo, 0, QtCore.Qt.AlignVCenter)
         color = W.QPushButton("Text color…")
         color.setFocusPolicy(QtCore.Qt.NoFocus)
         color.clicked.connect(self.pick_color)
         tools.addWidget(color)
-        reset = W.QPushButton("Reset style ($z)")
+        reset = W.QPushButton("Reset style")
         reset.setFocusPolicy(QtCore.Qt.NoFocus)
         reset.clicked.connect(lambda: self.change_style(reset=True))
         tools.addWidget(reset)
@@ -247,6 +271,7 @@ class NameStyleHelper(W.QWidget):
         dollar.setToolTip("Insert a literal dollar ($$ in the filename)")
         dollar.setFocusPolicy(QtCore.Qt.NoFocus)
         dollar.clicked.connect(lambda: self.editor.insertPlainText("$"))
+        dollar.setFixedSize(32, 32)
         tools.addWidget(dollar)
         tools.addStretch()
         layout.addLayout(tools)
@@ -283,7 +308,7 @@ class NameStyleHelper(W.QWidget):
         cursor = QtGui.QTextCursor(widget.document())
         cursor.select(QtGui.QTextCursor.Document)
         cursor.removeSelectedText()
-        for text, style in tm_text.parse(source, template=widget is self.editor, final=True):
+        for text, style in tm_text.parse(source, template=widget is self.editor and self.allow_tokens, final=True):
             if text:
                 fmt = text_format(style, self.colors)
                 if widget is self.preview:
@@ -292,6 +317,12 @@ class NameStyleHelper(W.QWidget):
         if widget is self.editor:
             widget.setTextCursor(cursor)
             widget.setCurrentCharFormat(text_format(style, self.colors))
+        if widget is self.preview:
+            cursor.select(QtGui.QTextCursor.Document)
+            block = QtGui.QTextBlockFormat()
+            block.setAlignment(QtCore.Qt.AlignHCenter)
+            cursor.mergeBlockFormat(block)
+            widget.center_preview()
         widget.document().clearUndoRedoStacks()
         del blocker
 
@@ -365,7 +396,7 @@ class NameStyleHelper(W.QWidget):
 
     def pick_color(self):
         self.color_requested.emit()
-        dialog = TextColorDialog(self.colors, self)
+        dialog = TextColorDialog(self.colors, self, allow_tokens=self.allow_tokens)
         if exec_dialog(dialog) == W.QDialog.Accepted:
             self.change_style(color=dialog.choice)
 

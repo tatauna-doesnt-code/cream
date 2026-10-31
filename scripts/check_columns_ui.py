@@ -62,8 +62,9 @@ with tempfile.TemporaryDirectory() as folder, patch.object(ui, "DATA", Path(fold
     path.write_text("Nickname;Color;Color\nJoseph;#AABBCC;#DDEEFF\n", encoding="utf-8")
     window = ui.Window(auto_update=False)
     assert 'converter' not in window.fields
-    assert window.fields["name_pattern"].text() == "{name}"
-    assert not window.styling_enabled.isChecked()
+    assert window.fields["name_pattern"].text() == "skin"
+    assert window.styling_enabled.isChecked()
+    window.fields["name_pattern"].setText("{name}")
     window.fields["sheet"].setText(str(path))
     window.fields["output"].setText(str(Path(folder) / 'skins'))
     original_sheet = path.read_bytes()
@@ -139,7 +140,7 @@ with tempfile.TemporaryDirectory() as folder, patch.object(ui, "DATA", Path(fold
     assert json.loads((Path(folder) / "settings.json").read_text())["column_profile"] == profile
     second = ui.Window(auto_update=False)
     assert second.column_profile == profile
-    assert second.fields["name_pattern"].text() == "Community - {name}"
+    assert second.fields["name_pattern"].text() == "skin"
     assert second.texture_sets.settings() == window.texture_sets.settings()
     with patch.object(ColumnDialog, "exec", return_value=W.QDialog.Rejected):
         window.load_sheet()
@@ -156,8 +157,8 @@ with tempfile.TemporaryDirectory() as folder, patch.object(ui, "DATA", Path(fold
     settings['tm_styling'] = True
     (Path(folder) / "settings.json").write_text(json.dumps(settings))
     legacy = ui.Window(auto_update=False)
-    assert legacy.fields["name_pattern"].text() == "{name}"
-    assert not legacy.styling_enabled.isChecked()
+    assert legacy.fields["name_pattern"].text() == "skin"
+    assert legacy.styling_enabled.isChecked()
     assert 'converter' not in legacy.fields and ui.CONVERTER == Path(ui.__file__).parent / 'bin/texconv.exe'
     for item in (window, second, legacy):
         item.stop_updater()

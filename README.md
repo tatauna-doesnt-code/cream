@@ -8,7 +8,7 @@ CREAM exports your Substance 3D Painter project into a ready-to-use **Trackmania
 
 On Painter 10.0 and newer, you can also personalize names and colors on the car and export a whole batch from one project. Enter the data directly, or import a spreadsheet when the list gets longer.
 
-**Beta 1.11.0 · Windows · Painter 9.0.0+**
+**Beta 1.11.1 · Windows · Painter 9.0.0+**
 
 [Download](https://github.com/tatauna-doesnt-code/cream/releases) · [Report a bug](https://github.com/tatauna-doesnt-code/cream/issues) · [Changelog](CHANGELOG.md) · [Contributing](CONTRIBUTING.md)
 
@@ -75,7 +75,7 @@ The installer identifies previous CREAM installations by their repository identi
 1. Open a saved Painter project and choose a working Trackmania skin ZIP as the base.
 2. In **Settings**, select the base ZIP and output folder. For in-game uploads, use **CarSport directly**; uploads from subfolders can fail. The base ZIP's files must be at its root.
 3. In **1 Textures**, choose maps and resolutions. Files you don't select remain from the base ZIP.
-4. In **2 Skin ZIPfile name**, type your filename, or keep `{name}` to use the project filename. Optionally enable **Use Trackmania text styling**.
+4. In **2 Skin ZIPfile name**, edit the plain default name `skin` in the styling editor. Trackmania styling is enabled by default; no style is applied until you choose one.
 5. Click **Export current skin**. CREAM checks the configuration, exports the textures, converts to DDS and packages the ZIP.
 
 **You don't need a batch entry.** Leave Batch empty to export the open project exactly as it is, without changing names or colors on the car. No specially named layers are required.
@@ -84,7 +84,7 @@ Existing output ZIPs are preserved. Duplicate names receive numeric suffixes.
 
 ## Customizing the car
 
-**Requires Painter 10.0.0+.** Enable **Customize names and colors on the car** in the Batch tab.
+**Requires Painter 10.0.0+.** Adding batch entries automatically enables customization. With no entries, CREAM exports the project as-is.
 
 - **Names:** use Font resources in mask Fill effects named `PLAYER_NAME`. CREAM changes only Text. Set the font, size, placement and alignment in Painter.
 - **Colors:** use Fill layers named `PLAYER_COLOR1`, `PLAYER_COLOR2` and optionally `PLAYER_COLOR3`. Base Color must be an independent uniform color. Only that channel changes. Existing anchor points can reuse those colors elsewhere.
@@ -119,7 +119,7 @@ Manual and mixed lists are saved locally. Spreadsheet-only lists must be importe
 
 ## ZIP filenames and TM styling
 
-The default pattern is `{name}`. For example, `Event - {name}` adds a shared prefix.
+Single exports use a literal filename, initially `skin`. Variables and per-player text colors are available only when Batch contains entries. For example, `Event - {name}` adds a shared prefix.
 
 | Token | Value |
 | --- | --- |
@@ -130,7 +130,7 @@ The default pattern is `{name}`. For example, `Event - {name}` adds a shared pre
 
 The editor supports bold, italic, uppercase, shadow, normal/narrow/wide text and **three-digit** colors, including each entry's primary/secondary color. Montserrat previews approximate game rendering.
 
-TM styling is **off by default** each new session. Turning the helper off hides the editor; it doesn't remove codes already in the pattern.
+TM styling is **on by default** each new session. Turning the helper off hides the editor; it doesn't remove codes already in the pattern.
 
 ## Texture formats
 
