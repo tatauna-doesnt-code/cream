@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import csv
+from contextlib import nullcontext
 import hashlib
 import io
 import json
@@ -277,6 +278,11 @@ def dimensions(texture_set, size):
 
 
 def inspect_base(path):
+    path = Path(path)
+    if path.is_dir():
+        raise ValueError('The optional base skin ZIP points to a folder. Choose a ZIP file in Batch, or clear the field.')
+    if not path.is_file():
+        raise ValueError('The optional base skin ZIP was not found. Choose an existing ZIP in Batch, or clear the field.')
     with zipfile.ZipFile(path) as archive:
         names = []
         for item in archive.infolist():
@@ -385,8 +391,8 @@ def build_zip(base, replacements, destination, cancel):
     if len(replacement_names) != len(replacements):
         raise ValueError("Duplicate output textures.")
     try:
-        with zipfile.ZipFile(base) as original, zipfile.ZipFile(temporary, "w", zipfile.ZIP_DEFLATED, compresslevel=1) as target:
-            for entry in original.infolist():
+        with (zipfile.ZipFile(base) if base is not None else nullcontext(None)) as original, zipfile.ZipFile(temporary, "w", zipfile.ZIP_DEFLATED, compresslevel=1) as target:
+            for entry in (original.infolist() if original is not None else ()):
                 check_cancel(cancel)
                 if entry.is_dir() or entry.filename.casefold() in replacement_names:
                     continue

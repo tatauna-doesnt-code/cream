@@ -1,4 +1,4 @@
-VERSION = "1.11.1"
+VERSION = "1.11.2"
 # The installed loader still verifies actual file changes before allowing a CREAM-only reload.
 UPDATE_RESTART = "cream"
 REPOSITORY = "tatauna-doesnt-code/cream"

@@ -129,7 +129,7 @@ with tempfile.TemporaryDirectory() as folder, patch.object(ui, 'DATA', Path(fold
     base = Path(folder) / 'base.zip'
     with zipfile.ZipFile(base, 'w') as archive:
         archive.writestr('Details_R.dds', b'unchanged base file')
-    window.fields['base'].setText(str(base))
+    window.fields['base'].clear()
     window.fields['output'].setText(folder)
     # Empty Batch is the primary workflow, even with customization checked on modern hosts.
     assert not window.rows and window.tabs.currentWidget() is window.textures_page
@@ -152,7 +152,7 @@ with tempfile.TemporaryDirectory() as folder, patch.object(ui, 'DATA', Path(fold
         assert window.report['mode'] == 'current_project'
         assert not window.rows and window.backers.rowCount() == 0
         with zipfile.ZipFile(window.report['rows'][0]['output']) as archive:
-            assert archive.read('Details_R.dds') == b'unchanged base file'
+            assert 'Details_R.dds' not in archive.namelist()
             assert archive.read('Skin_B.dds')[84:88] == b'DXT1'
         assert window.name_preview.text() == '$o$F80{name}$z 2.zip'
         assert not list(Path(folder).glob('recover-*.json'))
@@ -171,6 +171,7 @@ with tempfile.TemporaryDirectory() as folder, patch.object(ui, 'DATA', Path(fold
         assert len(list(Path(folder).glob('$o$F80*.zip'))) == 1
         assert not list(Path(folder).glob('cream-*'))
     window.grab().save(str(ROOT / 'dist' / ('single-export-' + '.'.join(map(str, version)) + '.png')))
+    window.fields['base'].setText(str(base))
     window.restore_reload_state({'rows': [{'id': '1', 'line': 1, 'name': 'Tester', 'stem': 'Tester',
                                           'colors': [None, None, None]}],
                                  'loaded_sheet': None, 'checked': [True], 'selected': 0, 'log': '',

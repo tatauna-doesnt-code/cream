@@ -1,5 +1,11 @@
 # Changes
 
+## 1.11.2 beta
+
+- Make the base ZIP optional for current-project and batch exports. Without one, package only the selected textures.
+- Move the optional base ZIP picker to Batch, with a clear control and explanation. Invalid explicit selections show an actionable error.
+- Allow validation, report signatures and export startup without a base ZIP.
+
 ## 1.11.1 beta
 
 - Infer customization from batch entries; remove the manual customization toggle.

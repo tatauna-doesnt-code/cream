@@ -108,6 +108,12 @@ def build(window, default_output):
         "Add entries only when you need multiple versions. An empty list exports the current project as-is.")
     w.export_only_notice = note('This Painter version supports exporting existing textures and styling ZIP names. Car name/color customization requires Painter 10.0+.')
     skins.addWidget(w.export_only_notice)
+    base_form = W.QFormLayout()
+    w.field(base_form, 'base', 'Base skin ZIP (optional)', '', 'Skin (*.zip)')
+    w.fields['base'].setClearButtonEnabled(True)
+    w.fields['base'].setPlaceholderText('None · build ZIPs from selected textures only')
+    skins.addLayout(base_form)
+    skins.addWidget(note('Optional for all exports: reuse unselected files from this ZIP. Leave empty to include only exported textures.'))
     tools = W.QHBoxLayout()
     w.add_button = button("Add skin…", w.add_skin, True)
     tools.addWidget(w.add_button)
@@ -177,7 +183,7 @@ def build(window, default_output):
     skins.addLayout(preview)
 
     w.textures_page, textures = page(w, "1  Textures", "Export your current skin",
-        "Check a set to include all its textures, or expand it to choose individual maps. Everything else stays as it is in the base ZIP.")
+        "Check a set to include all its textures, or expand it to choose individual maps. Without a base ZIP, the output contains only selected textures. An optional base ZIP in Batch preserves its other files.")
     w.textures_heading = textures.itemAt(0).widget()
     w.texture_sets = TextureSets()
     textures.addWidget(w.texture_sets, 1)
@@ -244,7 +250,7 @@ def build(window, default_output):
     w.summary = note("")
     action_layout.addWidget(w.summary)
     actions = W.QHBoxLayout()
-    w.status = note("Choose your base ZIP and output folder in Settings, then select textures to export.")
+    w.status = note("Choose your output folder in Settings, then select textures to export.")
     w.status.setMaximumHeight(48)
     actions.addWidget(w.status, 1)
     w.validate_button = button("Check configuration", w.validate)
@@ -256,13 +262,11 @@ def build(window, default_output):
     layout.addWidget(action_panel)
 
     w.settings_page, settings = page(w, "Settings", "Files and updates",
-        "Choose the base skin and where exported ZIPs should be saved.")
+        "Choose where exported ZIPs should be saved.")
     w.setup_page = w.settings_page
     files = W.QFormLayout()
     files.setVerticalSpacing(12)
     settings.addLayout(files)
-    w.field(files, 'base', 'Base skin ZIP', '', 'Skin (*.zip)')
-    files.addRow('', note('A working skin ZIP. Only selected textures are replaced.'))
     w.field(files, 'output', 'Save ZIPs to', default_output, None)
     files.addRow('', note('Use CarSport directly for in-game uploads; subfolders can fail.'))
     w.setup_hint = note('Add skins, choose textures and export. Settings apply to every selected skin.')
