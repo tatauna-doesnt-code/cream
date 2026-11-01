@@ -8,14 +8,14 @@ CREAM exports your Substance 3D Painter project into a ready-to-use **Trackmania
 
 On Painter 10.0 and newer, you can also personalize names and colors on the car and export a whole batch from one project. Enter the data directly, or import a spreadsheet when the list gets longer.
 
-**Beta 1.11.1 · Windows · Painter 9.0.0+**
+**Beta 1.11.2 · Windows · Painter 9.0.0+**
 
 [Download](https://github.com/tatauna-doesnt-code/cream/releases) · [Report a bug](https://github.com/tatauna-doesnt-code/cream/issues) · [Changelog](CHANGELOG.md) · [Contributing](CONTRIBUTING.md)
 
 ## Features
 
 - Select maps from **Details, Glass, Skin and Wheels**, with resolution controls per set and per texture.
-- Convert to the DDS formats Trackmania expects, then replace those textures in a copy of your base skin ZIP.
+- Convert to the DDS formats Trackmania expects, package the selected textures into a ZIP. Optionally reuse a base ZIP to preserve its other files.
 - Name ZIPs with configurable patterns and an optional **Trackmania WYSIWYG editor**: bold, italic, uppercase, shadow, widths and three-digit text colors.
 - On compatible versions, change player-name font fills and up to three Base Colors. Font layout and other layer channels stay as you set them in Painter.
 - Export batches with safe cancellation, reports, resume and original-value recovery.
@@ -72,9 +72,9 @@ The installer identifies previous CREAM installations by their repository identi
 
 ## First export
 
-1. Open a saved Painter project and choose a working Trackmania skin ZIP as the base.
-2. In **Settings**, select the base ZIP and output folder. For in-game uploads, use **CarSport directly**; uploads from subfolders can fail. The base ZIP's files must be at its root.
-3. In **1 Textures**, choose maps and resolutions. Files you don't select remain from the base ZIP.
+1. Open a saved Painter project and prepare the textures you want to export.
+2. In **Settings**, select the output folder. A base ZIP is optional and can be selected in **Batch**. For in-game uploads, use **CarSport directly**; uploads from subfolders can fail. The base ZIP's files must be at its root.
+3. In **1 Textures**, choose maps and resolutions. Without a base ZIP, only selected textures are included. With a base ZIP, unselected files are preserved.
 4. In **2 Skin ZIPfile name**, edit the plain default name `skin` in the styling editor. Trackmania styling is enabled by default; no style is applied until you choose one.
 5. Click **Export current skin**. CREAM checks the configuration, exports the textures, converts to DDS and packages the ZIP.
 

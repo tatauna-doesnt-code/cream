@@ -234,8 +234,8 @@ class Window(W.QDialog):
         if not loaded:
             self.summary.setText(f"Current project  ·  {maps} textures  ·  1 ZIP")
         self.export_button.setText((f"Export {count} skin" + ("s" if count != 1 else "")) if loaded else "Export current skin")
-        configured = bool(self.fields["base"].text().strip() and self.fields["output"].text().strip())
-        next_step = ("Choose a base ZIP and output folder in Settings." if not configured else
+        configured = bool(self.fields["output"].text().strip())
+        next_step = ("Choose an output folder in Settings." if not configured else
                      "Select skins to export." if not count else
                      "Choose textures in step 1." if not maps else
                      "Check the skin ZIPfile name." if getattr(self, 'filename_error', None) else
@@ -820,10 +820,14 @@ class Window(W.QDialog):
         if getattr(self, 'loaded_sheet', None) is not None and (sheet, Path(sheet).stat().st_mtime_ns) != self.loaded_sheet:
             raise ValueError("The spreadsheet changed. Click Load spreadsheet again.")
 
+    def base_zip(self):
+        value = self.fields['base'].text().strip()
+        return Path(value) if value else None
+
     def config_signature(self):
-        base = Path(self.fields["base"].text())
-        signature = {"project": painter.project_path(), "base": str(base.resolve()),
-                                 "base_size": base.stat().st_size, "base_mtime": base.stat().st_mtime_ns,
+        base = self.base_zip()
+        signature = {"project": painter.project_path(), "base": str(base.resolve()) if base is not None else None,
+                                 "base_size": base.stat().st_size if base is not None else None, "base_mtime": base.stat().st_mtime_ns if base is not None else None,
                                  "maps": self.selections(), "preset": painter.preset_maps(), "normal_invert": False,
                                  "dds_headers": "BC4U_BC5U",
                                  "normal_export": "Normal_OpenGL"}
@@ -848,8 +852,9 @@ class Window(W.QDialog):
         selections = self.selections()
         if not selections:
             raise ValueError("Select at least one texture in the Textures tab.")
-        base = Path(self.fields["base"].text())
-        core.inspect_base(base)
+        base = self.base_zip()
+        if base is not None:
+            core.inspect_base(base)
         if not CONVERTER.is_file():
             raise ValueError("The bundled DDS converter is missing. Reinstall or update CREAM.")
         output = Path(self.fields["output"].text())
@@ -999,7 +1004,7 @@ class Window(W.QDialog):
 
     def run_batch(self, indices, saved, maps, selections, name_pattern=None):
         name_pattern = self.export_name_pattern() if name_pattern is None else name_pattern
-        base = Path(self.fields["base"].text())
+        base = self.base_zip()
         output = Path(self.fields["output"].text())
         converter = CONVERTER
         try:
