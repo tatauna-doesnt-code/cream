@@ -1,5 +1,10 @@
 # Changes
 
+## 1.12.2 beta
+
+- Read texture-set name properties without invoking Painter's deprecated callable compatibility wrapper. Keep the method fallback for older Painter versions.
+- Prevent the one-second project refresh from flooding Painter's log with one warning per texture set.
+
 ## 1.12.1 beta
 
 - Align compact set headers to the left and integrate each texture table with its accordion card. Use square, centered checkbox cells and aligned 32px controls.

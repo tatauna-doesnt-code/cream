@@ -54,6 +54,23 @@ class CompatibilityTests(unittest.TestCase):
         self.assertEqual(texture_set_name(types.SimpleNamespace(name=lambda: 'Skin')), 'Skin')
         self.assertEqual(texture_set_name(types.SimpleNamespace(name='Skin')), 'Skin')
 
+    def test_callable_property_values_never_invoke_deprecated_method_shim(self):
+        class CallableName(str):
+            def __call__(self):
+                raise AssertionError('Deprecated name() shim was invoked')
+        self.assertEqual(texture_set_name(types.SimpleNamespace(name=CallableName('Skin'))), 'Skin')
+        class PropertyValue:
+            def __str__(self):
+                return 'Wheels'
+            def __call__(self):
+                raise AssertionError('Deprecated property wrapper was invoked')
+        class TextureSet:
+            @property
+            def name(self):
+                return PropertyValue()
+        for _ in range(20):
+            self.assertEqual(texture_set_name(TextureSet()), 'Wheels')
+
     def test_binding_selection_never_imports_another_qt_major(self):
         for version, binding, action_module in [((8, 1, 2), 'PySide2', 'QtWidgets'), ((9, 0, 0), 'PySide2', 'QtWidgets'),
                                                 ((10, 0, 0), 'PySide2', 'QtWidgets'),
