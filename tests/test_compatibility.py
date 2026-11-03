@@ -6,15 +6,34 @@ import types
 import unittest
 from unittest.mock import patch
 
-from cream.compatibility import Capabilities, texture_set_name
+from cream.compatibility import Capabilities, texture_set_name, current
 
 ROOT = Path(__file__).resolve().parents[1]
 
 
 class CompatibilityTests(unittest.TestCase):
+    def test_pre_83_uses_host_version_and_unknown_versions_fail_closed(self):
+        sp = types.ModuleType('substance_painter')
+        sp.__path__ = []
+        qt = types.ModuleType('PySide2')
+        qt.__path__ = []
+        qtcore = types.ModuleType('PySide2.QtCore')
+        for version, expected in [('8.1.2 (Build 1)', (8, 1, 2)), ('Painter 8.1.1', (8, 1, 1))]:
+            qtcore.QCoreApplication = types.SimpleNamespace(applicationVersion=lambda v=version: v)
+            with patch.dict(sys.modules, {'substance_painter': sp, 'substance_painter.application': None,
+                                         'PySide2': qt, 'PySide2.QtCore': qtcore}):
+                self.assertEqual(current().version, expected)
+        qtcore.QCoreApplication = types.SimpleNamespace(applicationVersion=lambda: '')
+        with patch.dict(sys.modules, {'substance_painter': sp, 'substance_painter.application': None,
+                                     'PySide2': qt, 'PySide2.QtCore': qtcore}):
+            with self.assertRaisesRegex(RuntimeError, 'could not identify'):
+                current()
+
     def test_version_boundaries_and_warnings(self):
         for version, export, customization, qt6, warn in [
-            ((8, 3, 1), False, False, False, True),
+            ((8, 1, 1), False, False, False, True),
+            ((8, 1, 2), True, False, False, True),
+            ((8, 3, 1), True, False, False, True),
             ((9, 0, 0), True, False, False, True),
             ((9, 1, 2), True, False, False, True),
             ((10, 0, 0), True, True, False, True),
@@ -36,7 +55,7 @@ class CompatibilityTests(unittest.TestCase):
         self.assertEqual(texture_set_name(types.SimpleNamespace(name='Skin')), 'Skin')
 
     def test_binding_selection_never_imports_another_qt_major(self):
-        for version, binding, action_module in [((9, 0, 0), 'PySide2', 'QtWidgets'),
+        for version, binding, action_module in [((8, 1, 2), 'PySide2', 'QtWidgets'), ((9, 0, 0), 'PySide2', 'QtWidgets'),
                                                 ((10, 0, 0), 'PySide2', 'QtWidgets'),
                                                 ((10, 1, 0), 'PySide6', 'QtGui')]:
             fake = types.ModuleType(binding)

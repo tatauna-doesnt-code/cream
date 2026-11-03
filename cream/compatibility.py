@@ -1,5 +1,6 @@
 """Painter capabilities, kept independent of Qt for startup and testing."""
 from dataclasses import dataclass
+import re
 
 
 @dataclass(frozen=True)
@@ -12,7 +13,7 @@ class Capabilities:
 
     @property
     def export(self):
-        return self.version >= (9, 0, 0)
+        return self.version >= (8, 1, 2)
 
     @property
     def customization(self):
@@ -25,13 +26,15 @@ class Capabilities:
     @property
     def warning(self):
         if not self.export:
-            return ('CREAM requires Painter 9.0.0 or later. Export and skin customization '
+            return ('CREAM requires Painter 8.1.2 or later. Export and skin customization '
                     'are disabled on this version.')
         if not self.customization:
             return ('Export-only mode: Painter ' + self.version_text + ' does not provide the layer-editing API. '
                     'Changing text on the car, changing skin colors, Painter previews and restoring '
                     'customization are disabled. Names and colors can still style ZIP filenames. '
                     'Texture export, DDS conversion and ZIP packaging remain available. '
+                    'This older API can list saved library templates only; save a compatible template to a library if it is missing. '
+                    'CREAM temporarily exports the full template for each selected output/resolution. '
                     'Use Painter 10.1.2 or later for the full, more stable experience.')
         if self.version < (10, 1, 2):
             return ('Painter ' + self.version_text + ' supports customization, but older builds have '
@@ -41,8 +44,18 @@ class Capabilities:
 
 
 def current():
-    import substance_painter.application as application
-    return Capabilities(tuple(application.version_info()[:3]))
+    try:
+        import substance_painter.application as application
+    except ImportError:
+        application = None
+    if application is not None and hasattr(application, 'version_info'):
+        return Capabilities(tuple(application.version_info()[:3]))
+    # The application module appeared in Painter 8.3. Qt belongs to the host on older builds.
+    from PySide2.QtCore import QCoreApplication
+    match = re.search(r'(\d+)\.(\d+)\.(\d+)', QCoreApplication.applicationVersion())
+    if not match:
+        raise RuntimeError('CREAM could not identify the Painter version. Painter 8.1.2+ is required; check Help > About. No export or customization was started.')
+    return Capabilities(tuple(map(int, match.groups())))
 
 
 def texture_set_name(texture_set):

@@ -203,6 +203,9 @@ def export_config(maps, texture_set, suffix, size, directory):
 
 
 def preflight_exports(maps, selections, directory):
+    if isinstance(maps, dict) and 'template' in maps:
+        from .template_export import preflight
+        return preflight(maps, selections, directory)
     actual_sets = {compatibility.texture_set_name(s): s for s in sp.textureset.all_texture_sets()}
     for item in selections:
         name = item["set"]
@@ -218,6 +221,9 @@ def preflight_exports(maps, selections, directory):
 
 
 def export_one(maps, selection, directory):
+    if isinstance(maps, dict) and 'template' in maps:
+        from .template_export import export_one as export_template
+        return export_template(maps, selection, directory)
     config = export_config(maps, selection["set"], selection["map"], selection["size"], directory)
     result = sp.export.export_project_textures(config)
     if result.status != sp.export.ExportStatus.Success:

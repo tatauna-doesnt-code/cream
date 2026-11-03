@@ -52,10 +52,6 @@ function Install-Cream {
             $relative = $file.FullName.Substring($source.Length).TrimStart('\', '/')
             if ((Get-CreamFileHash -LiteralPath $file.FullName).Hash -ne (Get-CreamFileHash -LiteralPath (Join-Path $stage $relative)).Hash) { throw 'The installation copy failed verification.' }
         }
-        $presets = Join-Path $adobe 'assets\export-presets'
-        New-Item -ItemType Directory -Path $presets -Force | Out-Null
-        $preset = Join-Path $presets 'TM2020.spexp'
-        if (-not (Test-Path -LiteralPath $preset)) { Copy-Item -LiteralPath (Join-Path $SourceRoot 'preset\TM2020.spexp') -Destination $preset }
         foreach ($candidate in $previous) {
             $old = [IO.Path]::GetFullPath($candidate.FullName)
             $backup = Join-Path $backups ('cream-' + [guid]::NewGuid().ToString('N'))

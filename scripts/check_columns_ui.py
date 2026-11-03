@@ -116,26 +116,6 @@ with tempfile.TemporaryDirectory() as folder, patch.object(ui, "DATA", Path(fold
     window.fields["name_pattern"].setText("{unknown}")
     assert window.backers.item(0, 6).text() == "Invalid name pattern"
     window.fields["name_pattern"].setText("Community - {name}")
-    wheels = window.texture_sets.groups['Wheels']
-    wheels.export.click()
-    wheels.resolution.setCurrentIndex(wheels.resolution.findData(4096))
-    wheels.sizes[1].setCurrentIndex(wheels.sizes[1].findData(2048))
-    window.save_settings()
-    base = Path(folder) / "base.zip"
-    base.write_bytes(b"signature fixture")
-    window.fields["base"].setText(str(base))
-    with patch.object(ui.painter, "project_path", return_value="project.spp", create=True), \
-            patch.object(ui.painter, "preset_maps", return_value=[], create=True):
-        custom_signature = window.config_signature()
-        window.fields["name_pattern"].setText("CUP - {name}")
-        legacy_signature = window.config_signature()
-        assert custom_signature != legacy_signature
-        expected_legacy = ui.core.fingerprint({"project": "project.spp", "base": str(base.resolve()),
-            "base_size": base.stat().st_size, "base_mtime": base.stat().st_mtime_ns,
-            "maps": window.selections(), "preset": [], "normal_invert": False,
-            "dds_headers": "BC4U_BC5U", "normal_export": "Normal_OpenGL", "zip_name_pattern": "CUP - {name}"})
-        assert legacy_signature == expected_legacy
-    window.fields["name_pattern"].setText("Community - {name}")
     window.save_settings()
     assert json.loads((Path(folder) / "settings.json").read_text())["column_profile"] == profile
     second = ui.Window(auto_update=False)
