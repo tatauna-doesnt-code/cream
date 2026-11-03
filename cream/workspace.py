@@ -7,7 +7,7 @@ from .name_style import NameStyleHelper
 from .texture_sets import TextureSets
 from .export_textures import ExportTextures
 from .version import VERSION
-from .controls import InstantInfo, CenteredCheckDelegate
+from .controls import InstantInfo, CenteredCheckDelegate, WorkflowTabBar
 
 
 def note(text):
@@ -99,6 +99,7 @@ def build(window, default_output):
     w.preview_banner.hide()
 
     w.tabs = W.QTabWidget()
+    w.tabs.setTabBar(WorkflowTabBar(w.tabs))
     w.tabs.setDocumentMode(True)
     w.tabs.tabBar().setDrawBase(False)
     layout.addWidget(w.tabs, 1)
