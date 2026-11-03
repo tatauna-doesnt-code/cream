@@ -20,6 +20,20 @@ if version >= (10, 1, 0):
     from PySide6 import QtCore, QtGui, QtWidgets as W
 else:
     from PySide2 import QtCore, QtGui, QtWidgets as W
+
+class QtTest:
+    class QTest:
+        @staticmethod
+        def mouseClick(widget, button, modifiers, position):
+            for kind in (QtCore.QEvent.MouseButtonPress, QtCore.QEvent.MouseButtonRelease):
+                event = QtGui.QMouseEvent(kind, QtCore.QPointF(position), button,
+                    button if kind == QtCore.QEvent.MouseButtonPress else QtCore.Qt.NoButton, modifiers)
+                W.QApplication.sendEvent(widget, event)
+
+        @staticmethod
+        def keyClick(widget, key):
+            for kind in (QtCore.QEvent.KeyPress, QtCore.QEvent.KeyRelease):
+                W.QApplication.sendEvent(widget, QtGui.QKeyEvent(kind, key, QtCore.Qt.NoModifier))
 app = W.QApplication.instance() or W.QApplication([])
 app.setApplicationVersion('.'.join(map(str, version)))
 app.setStyle('Fusion')
@@ -104,6 +118,10 @@ with tempfile.TemporaryDirectory() as folder, patch.object(ui,'DATA',Path(folder
     assert 'Wheels' not in texture.groups
     assert not texture.problem
     assert texture.selected_template()['name']=='TM2020'
+    tab_index = window.tabs.indexOf(window.textures_page)
+    assert window.tabs.tabText(tab_index) == '1 TEXTURES'
+    assert window.tabs.tabBar().tabButton(tab_index, W.QTabBar.LeftSide) is None
+    plain_tab_width = window.tabs.tabBar().tabRect(tab_index).width()
     assert window.capabilities.customization==(version >= (10,0,0))
     window.fields['output'].setText(folder)
     group=texture.groups['Body']
@@ -121,13 +139,18 @@ with tempfile.TemporaryDirectory() as folder, patch.object(ui,'DATA',Path(folder
         assert warning.call_count==1
     assert suffix.input.font().bold() and suffix.input.font().italic()
     assert suffix.reset.isEnabled()
-    assert '*' in texture.tab_label.text() and texture.tab_label.font().italic()
+    assert '*' in window.tabs.tabText(window.tabs.indexOf(window.textures_page)) and window.tabs.tabBar().modified_index == window.tabs.indexOf(window.textures_page)
     assert not compression.alert.toolTip()
     compression.input.setCurrentText('BC1');compression.edited()
-    assert compression.alert.toolTip() and not texture.tab_warning.isHidden()
-    point = QtCore.QPointF(1, 1)
-    texture.tab_warning.enterEvent(QtGui.QEnterEvent(point, point, point))
-    assert W.QToolTip.text() == texture.tab_warning.toolTip()
+    assert compression.alert.toolTip() and not window.tabs.tabIcon(window.tabs.indexOf(window.textures_page)).isNull()
+    app.processEvents()
+    warning_tab_width = window.tabs.tabBar().tabRect(tab_index).width()
+    assert warning_tab_width > plain_tab_width
+    bar = window.tabs.tabBar()
+    point = QtCore.QPointF(bar.tabRect(window.tabs.indexOf(window.textures_page)).center())
+    event = QtGui.QMouseEvent(QtCore.QEvent.MouseMove, point, QtCore.Qt.NoButton, QtCore.Qt.NoButton, QtCore.Qt.NoModifier)
+    bar.mouseMoveEvent(event)
+    assert W.QToolTip.text() == window.tabs.tabToolTip(window.tabs.indexOf(window.textures_page))
     W.QToolTip.hideText()
     compression.input.setCurrentText('BC4');compression.edited()
     group.table.item(0,0).setCheckState(QtCore.Qt.Checked)
@@ -169,7 +192,9 @@ with tempfile.TemporaryDirectory() as folder, patch.object(ui,'DATA',Path(folder
     # Baseline and manual overrides both reset; size alone does not change the override marker.
     texture.groups['Body'].suffixes[0].reset.click()
     texture.groups['Body'].compressions[0].reset.click()
-    assert '*' not in texture.tab_label.text()
+    assert '*' not in window.tabs.tabText(window.tabs.indexOf(window.textures_page))
+    app.processEvents()
+    assert window.tabs.tabBar().tabRect(tab_index).width() < warning_tab_width
     # Explicit duplicate destinations are blocked, never overwritten in the replacements dict.
     group=texture.groups['Body']
     group.table.item(1,0).setCheckState(QtCore.Qt.Checked)
@@ -180,10 +205,29 @@ with tempfile.TemporaryDirectory() as folder, patch.object(ui,'DATA',Path(folder
     group.suffixes[1].reset.click()
     group.table.item(1,0).setCheckState(QtCore.Qt.Unchecked)
     # Batch with unchanged model and arbitrary project set names.
-    window.restore_reload_state({'rows':[{'id':'1','line':1,'name':'Player','stem':'Player','colors':[None,None,None]}],
-                                 'loaded_sheet':None,'checked':[True],'selected':0,'log':''})
+    window.restore_reload_state({'rows':[{'id':'1','line':1,'name':'Player','stem':'Player','colors':[None,None,None]}, {'id':'2','line':2,'name':'Second','stem':'Second','colors':[None,None,None]}],
+                                 'loaded_sheet':None,'checked':[True,True],'selected':0,'log':''})
+    window.check_rows(False)
+    assert window.export_button.text() == 'Export 0 skins' and not window.export_button.isEnabled()
+    window.tabs.setCurrentWidget(window.skins_page)
+    app.processEvents()
+    rect = window.backers.visualItemRect(window.backers.item(0, 0))
+    QtTest.QTest.mouseClick(window.backers.viewport(), QtCore.Qt.LeftButton, QtCore.Qt.NoModifier, rect.center())
+    assert window.backers.item(0, 0).checkState() == QtCore.Qt.Checked
+    assert window.export_button.text() == 'Export 1 skin' and window.export_button.isEnabled()
+    assert window.capture_reload_state()['checked'] == [True, False]
+    # Space toggles use the same integer check-state path as mouse clicks.
+    window.backers.setCurrentCell(0, 0)
+    QtTest.QTest.keyClick(window.backers, QtCore.Qt.Key_Space)
+    assert window.backers.item(0, 0).checkState() == QtCore.Qt.Unchecked
+    QtTest.QTest.keyClick(window.backers, QtCore.Qt.Key_Space)
+    assert window.export_button.isEnabled() and window.export_button.text() == 'Export 1 skin'
+    rect = window.backers.visualItemRect(window.backers.item(1, 0))
+    QtTest.QTest.mouseClick(window.backers.viewport(), QtCore.Qt.LeftButton, QtCore.Qt.NoModifier, rect.center())
+    assert window.export_button.isEnabled() and window.export_button.text() == 'Export 2 skins'
     window.start();finish()
-    assert window.report['mode']=='batch'
+    assert len(window.report['rows']) == 2
+    assert window.report['mode']=='batch'  
     # Preserve the template's normal convention instead of applying hidden inversion.
     if version >= (10,0,0):
         selection=dict(group.records[2],set='Body',map=group.records[2]['id'],size=1024)
@@ -194,6 +238,13 @@ with tempfile.TemporaryDirectory() as folder, patch.object(ui,'DATA',Path(folder
     group.set_expanded(True)
     group.suffixes[0].set_value('CoatR')
     app.processEvents()
+    assert group.table.columnWidth(0) == group.table.rowHeight(0) == 40
+    assert group.expand.geometry().left() < 60
+    assert group.summary.geometry().left() < group.resolution.geometry().left()
+    inputs = [group.suffixes[0].input, group.suffixes[0].reset, group.compressions[0].input, group.compressions[0].reset, group.sizes[0]]
+    tops = [widget.mapTo(group.table.viewport(), QtCore.QPoint(0, 0)).y() for widget in inputs]
+    assert max(tops) - min(tops) <= 1, tops
+    assert all(widget.height() == 32 for widget in inputs)
     window.grab().save(str(ROOT/'dist'/('template-overrides-'+'.'.join(map(str,version))+'.png')))
     # Missing default is a visible, recoverable state; any installed template can be selected.
     catalog[:]=[catalog[1]]
@@ -201,7 +252,7 @@ with tempfile.TemporaryDirectory() as folder, patch.object(ui,'DATA',Path(folder
     texture.pending=None
     texture.loaded_url=None
     texture.reload(force=True)
-    assert texture.problem and not texture.tab_warning.isHidden()
+    assert texture.problem and not window.tabs.tabIcon(window.tabs.indexOf(window.textures_page)).isNull()
     assert not window.export_button.isEnabled()
     texture.template.setCurrentIndex(1);texture.load_outputs()
     assert not texture.problem and set(texture.groups)==set(sets)

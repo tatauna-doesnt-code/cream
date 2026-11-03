@@ -1,5 +1,11 @@
 # Changes
 
+## 1.12.1 beta
+
+- Align compact set headers to the left and integrate each texture table with its accordion card. Use square, centered checkbox cells and aligned 32px controls.
+- Restore native centered TEXTURES tab rendering and size it dynamically for warnings and overrides.
+- Fix Qt6 checkbox edits storing enum objects instead of integer check states, which could leave the export count at zero after manual selection.
+
 ## 1.12.0 beta
 
 - Discover actual project texture sets and let users choose an installed export template, defaulting to one unambiguous TM2020 match.
