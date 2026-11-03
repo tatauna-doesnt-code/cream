@@ -8,7 +8,7 @@ CREAM exports your Substance 3D Painter project into a ready-to-use **Trackmania
 
 On Painter 10.0 and newer, you can also personalize names and colors on the car and export a whole batch from one project. Enter the data directly, or import a spreadsheet when the list gets longer.
 
-**Beta 1.12.2 · Windows · Painter 8.1.2+**
+**Beta 1.12.3 · Windows · Painter 8.1.2+**
 
 [Download](https://github.com/tatauna-doesnt-code/cream/releases) · [Report a bug](https://github.com/tatauna-doesnt-code/cream/issues) · [Changelog](CHANGELOG.md) · [Contributing](CONTRIBUTING.md)
 

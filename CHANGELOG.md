@@ -1,5 +1,9 @@
 # Changes
 
+## 1.12.3 beta
+
+- Keep discovering export templates on older Painter versions when an unrelated library resource has a type their Python SDK does not recognize, such as `vectorial`.
+
 ## 1.12.2 beta
 
 - Read texture-set name properties without invoking Painter's deprecated callable compatibility wrapper. Keep the method fallback for older Painter versions.

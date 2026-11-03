@@ -15,7 +15,13 @@ def templates():
     else:
         import substance_painter.resource
         for resource in sp.resource.search(''):
-            if resource.type() == sp.resource.Type.EXPORT:
+            # Older SDK enums can lag behind installed library resource types
+            # (for example 'vectorial'). One unrelated asset must not abort discovery.
+            try:
+                resource_type = resource.type()
+            except ValueError:
+                continue
+            if resource_type == sp.resource.Type.EXPORT:
                 identifier = resource.identifier()
                 found.append({'name': identifier.name, 'url': identifier.url(), 'kind': 'legacy'})
     return sorted({item['url']: item for item in found}.values(), key=lambda item: (item['name'].casefold(), item['url']))
