@@ -33,6 +33,8 @@ class Capabilities:
                     'Changing text on the car, changing skin colors, Painter previews and restoring '
                     'customization are disabled. Names and colors can still style ZIP filenames. '
                     'Texture export, DDS conversion and ZIP packaging remain available. '
+                    'This older API can list saved library templates only; save a compatible template to a library if it is missing. '
+                    'CREAM temporarily exports the full template for each selected output/resolution. '
                     'Use Painter 10.1.2 or later for the full, more stable experience.')
         if self.version < (10, 1, 2):
             return ('Painter ' + self.version_text + ' supports customization, but older builds have '
