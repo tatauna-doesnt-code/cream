@@ -59,9 +59,12 @@ sp.ui.delete_ui_element = lambda obj: obj.deleteLater()
 sp.project.is_open = lambda: True
 sp.project.is_busy = lambda: False
 sp.project.is_in_edition_state = lambda: True
+class PropertyName(str):
+    def __call__(self):
+        raise AssertionError('Deprecated name() compatibility wrapper must not be called')
 sets = ['Body','Tyres']
 stack = types.SimpleNamespace(name=lambda: '')
-sp.textureset.all_texture_sets = lambda: [types.SimpleNamespace(name=name if version >= (11,0,0) else lambda n=name:n,
+sp.textureset.all_texture_sets = lambda: [types.SimpleNamespace(name=PropertyName(name) if version >= (11,0,0) else lambda n=name:n,
                                                               all_stacks=lambda:[stack]) for name in sets]
 if version >= (10,0,0): sp.layerstack.get_root_layer_nodes = lambda s: []
 maps = [{'fileName':'$textureSet_B','channels':[{'destChannel':'R','srcChannel':'G','srcMapType':'documentMap','srcMapName':'baseColor'}]},

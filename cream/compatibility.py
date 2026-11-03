@@ -1,6 +1,7 @@
 """Painter capabilities, kept independent of Qt for startup and testing."""
 from dataclasses import dataclass
 import re
+import inspect
 
 
 @dataclass(frozen=True)
@@ -61,4 +62,9 @@ def current():
 def texture_set_name(texture_set):
     """name() became the name property in Painter 11.0."""
     name = texture_set.name
+    # Painter's compatibility property can return a callable value. Calling it
+    # invokes the deprecated method shim, so test for a property/string first.
+    descriptor = inspect.getattr_static(type(texture_set), 'name', None)
+    if isinstance(descriptor, property) or isinstance(name, str):
+        return str(name)
     return str(name() if callable(name) else name)
