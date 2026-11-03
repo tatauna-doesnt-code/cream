@@ -87,6 +87,7 @@ class Window(W.QDialog):
         from .workspace import build
         layout = build(self, DEFAULT_OUTPUT)
         self.load_settings()
+        self.texture_sets.reload()
         self.fields["name_pattern"].setText("skin")
         self.styling_enabled.setChecked(True)
         self.fields["name_pattern"].textChanged.connect(self.naming_changed)
@@ -119,8 +120,7 @@ class Window(W.QDialog):
         self.update_button.clicked.connect(self.update_clicked)
         self.backers.itemChanged.connect(self.refresh_workflow)
         self.backers.currentCellChanged.connect(self.refresh_workflow)
-        for section in self.texture_sets.groups.values():
-            section.changed.connect(self.refresh_workflow)
+        self.texture_sets.changed.connect(self.refresh_workflow)
         for field in self.fields.values():
             field.textChanged.connect(self.refresh_workflow)
         self.refresh_workflow()
@@ -243,7 +243,7 @@ class Window(W.QDialog):
                      "Restore the preview before exporting." if preview else "")
         if next_step:
             self.summary.setText(next_step + "  " + self.summary.text())
-        self.export_button.setEnabled(bool(self.capabilities.export and count and maps and configured and not busy and not preview and not self.invalid_names and not getattr(self, 'filename_error', None)))
+        self.export_button.setEnabled(bool(self.capabilities.export and not self.texture_sets.problem and count and maps and configured and not busy and not preview and not self.invalid_names and not getattr(self, 'filename_error', None)))
         self.validate_button.setEnabled(self.capabilities.export and not busy and not preview)
         self.preview_button.setEnabled(self.customizing() and loaded and self.backers.currentRow() >= 0 and not busy and not preview and not self.invalid_names)
         reason = 'Painter 10.0.0 or later is required to change names and colors on the car.'
@@ -386,6 +386,7 @@ class Window(W.QDialog):
 
     def stop_background_tasks(self):
         self.preview_help.update({}, False)
+        self.texture_sets.timer.stop()
         self.timer.stop()
         self.stop_updater()
         self.update_pool.shutdown(wait=True, cancel_futures=True)
@@ -398,13 +399,18 @@ class Window(W.QDialog):
                             for i in range(self.backers.rowCount())],
                 "selected": self.backers.currentRow(), "log": self.log.toPlainText(),
                 "page": self.tabs.currentIndex(), "tm_styling": self.styling_enabled.isChecked(),
-                "customize": self.customizing()}
+                "customize": self.customizing(), "textures": self.texture_sets.settings(),
+                "name_pattern": self.fields['name_pattern'].text()}
 
     def restore_reload_state(self, state):
         if not state:
             return
+        if 'name_pattern' in state:
+            self.fields['name_pattern'].setText(state['name_pattern'])
         self.filename_defaults = None
         self.filename_defaults_project = None
+        if "textures" in state:
+            self.texture_sets.restore_settings(state["textures"])
         self.rows = state["rows"]
         self.loaded_sheet = state["loaded_sheet"]
         self.name_originals = state.get("name_originals") or self.infer_name_originals()
@@ -828,9 +834,9 @@ class Window(W.QDialog):
         base = self.base_zip()
         signature = {"project": painter.project_path(), "base": str(base.resolve()) if base is not None else None,
                                  "base_size": base.stat().st_size if base is not None else None, "base_mtime": base.stat().st_mtime_ns if base is not None else None,
-                                 "maps": self.selections(), "preset": painter.preset_maps(), "normal_invert": False,
+                                 "maps": self.selections(), "preset": self.texture_sets.export_plan(), "normal_invert": False,
                                  "dds_headers": "BC4U_BC5U",
-                                 "normal_export": "Normal_OpenGL"}
+                                 "normal_export": "template"}
         pattern = self.export_name_pattern()
         signature["zip_name_pattern"] = pattern
         if core.name_color_fields(pattern):
@@ -849,6 +855,8 @@ class Window(W.QDialog):
         core.validate_name_pattern(self.export_name_pattern())
         if self.saved or self.recovery_path().exists():
             raise ValueError("Restore original before validating or starting a new batch.")
+        self.texture_sets.reload()
+        self.texture_sets.export_plan()
         selections = self.selections()
         if not selections:
             raise ValueError("Select at least one texture in the Textures tab.")
@@ -867,7 +875,7 @@ class Window(W.QDialog):
         self.filename_defaults = painter.filename_color_defaults(saved) if core.name_color_fields(self.export_name_pattern()) else None
         for row in self.rows or [self.current_project_row()]:
             core.format_skin_name(self.export_name_pattern(), row, self.filename_defaults)
-        maps = painter.preset_maps()
+        maps = self.texture_sets.export_plan()
         painter.preflight_exports(maps, selections, output)
         for i in range(3) if self.rows and self.customizing() else ():
             if any(r["colors"][i] for r in self.rows) and not any(t.get("index") == i for t in saved["targets"]):
@@ -1030,15 +1038,15 @@ class Window(W.QDialog):
                     for selection in selections:
                         yield from self.wait_ready(saved["project"])
                         core.check_cancel(self.cancel)
-                        filename = f"{selection['set']}_{selection['map']}"
+                        filename = __import__(__package__ + ".template_export", fromlist=["output_filename"]).output_filename(selection)[:-4]
                         self.say(f"{position + 1}/{len(indices)} — {row['name']}: exporting {filename}")
                         source = painter.export_one(maps, selection, temp)
                         yield
                         core.check_cancel(self.cancel)
                         self.say(f"{row['name']}: converting {filename} to DDS")
                         width, height = core.dimensions(selection["set"], selection["size"])
-                        dds = yield from self.await_file(core.convert, converter, source, temp / "dds",
-                                                         selection["map"], width, height, self.cancel)
+                        dds = yield from self.await_file(core.convert, converter, source, source.parent / "dds",
+                                                         selection["compression"], width, height, self.cancel)
                         replacements[filename + ".dds"] = dds
                         source.unlink(missing_ok=True)
                     core.check_cancel(self.cancel)

@@ -8,13 +8,13 @@ CREAM exports your Substance 3D Painter project into a ready-to-use **Trackmania
 
 On Painter 10.0 and newer, you can also personalize names and colors on the car and export a whole batch from one project. Enter the data directly, or import a spreadsheet when the list gets longer.
 
-**Beta 1.11.2 · Windows · Painter 9.0.0+**
+**Beta 1.12.0 · Windows · Painter 8.1.2+**
 
 [Download](https://github.com/tatauna-doesnt-code/cream/releases) · [Report a bug](https://github.com/tatauna-doesnt-code/cream/issues) · [Changelog](CHANGELOG.md) · [Contributing](CONTRIBUTING.md)
 
 ## Features
 
-- Select maps from **Details, Glass, Skin and Wheels**, with resolution controls per set and per texture.
+- Select an installed export template and discover the actual texture sets and outputs of the open project, with resolution controls per set and per texture.
 - Convert to the DDS formats Trackmania expects, package the selected textures into a ZIP. Optionally reuse a base ZIP to preserve its other files.
 - Name ZIPs with configurable patterns and an optional **Trackmania WYSIWYG editor**: bold, italic, uppercase, shadow, widths and three-digit text colors.
 - On compatible versions, change player-name font fills and up to three Base Colors. Font layout and other layer channels stay as you set them in Painter.
@@ -22,21 +22,35 @@ On Painter 10.0 and newer, you can also personalize names and colors on the car 
 
 No separate Python, Excel, image library or DDS converter installation is needed to use CREAM.
 
+## Export templates and texture overrides
+
+CREAM looks for one installed **TM2020** export template. If it cannot find an unambiguous match, choose a template in **Textures**. The dropdown identifies duplicate template names by their resource URL. Click Refresh after editing a template in Painter. No preset is installed or overwritten by CREAM.
+
+Only the current project's texture sets are listed. Each template output has an export checkbox, a suffix input, BC1/BC3/BC4/BC5 compression and a resolution control. CREAM preserves the template's channel packing and normal convention. Unknown suffixes default to **BC3** to preserve alpha and display a warning; choose the required format before exporting.
+
+The first suffix/compression edit asks for confirmation. Overrides become **_bold italic_**, with a restore icon for each value; the Textures tab gains an asterisk. Yellow icons explain unknown suffixes or combinations that differ from the TM2020 reference table. These are advisories, so intentional custom formats can export. Unsafe filenames and duplicate destinations are blocked.
+
+Open **TM2020 textures reference table** in Textures or Help for the suffix/content/compression table. Overrides and selections are saved by project, template URL, texture set and output identity; edits are retained through CREAM reloads.
+
+**Painter 8.1.2–9.x:** library templates are discovered through the older resource API. CREAM predicts output names and temporarily exports the full template for each selected output/resolution, then packages only your selections. This can be slower. The newer API for inspecting template channel definitions is available from Painter 10. Pre-8.3 builds use the host Qt application version because Adobe introduced the application-version API in 8.3. Unknown host versions fail closed with an explanation. See [Adobe’s Python API changelog](https://experienceleague.adobe.com/en/docs/substance-3d-dev/painter-python/api/changelog) for the version/API boundaries. Projects with UDIMs, material layering or template output subfolders remain unsupported.
+
+The 8.1.2–9.x paths are tested with real Qt5 and simulated Painter APIs, including real DDS/ZIP processing. Native installations still need beta testing; documentation support is not a claim that every old build has been tested.
+
 ## Painter compatibility
 
 CREAM checks the **actual application version**, including on Steam. Unsupported controls stay visible, grayed out, with an explanation. Opening CREAM on a version older than **10.1.2** shows a warning.
 
 | Painter version | Mode | What to expect |
 | --- | --- | --- |
-| Below 9.0.0 | Unsupported | Export and customization are disabled. |
-| **9.0.0–9.1.x** | Export only | Export the existing project, convert to DDS, build ZIPs and style their names. Changing names/colors on the car and customization previews/restoration are disabled. |
+| Below 8.1.2 | Unsupported | Export and customization are disabled. |
+| **8.1.2–9.1.x** | Export only | Export the existing project, convert to DDS, build ZIPs and style their names. Changing names/colors on the car and customization previews/restoration are disabled. |
 | **10.0.0–10.1.1** | Full features, with a warning | Customization is available. Upgrade to at least **10.1.2** for a more stable layer-stack API experience. |
 | **10.1.2–11.x** | Full features | Compatibility adapters handle Qt bindings and the older texture-set naming API. |
 | **12.x** | Full features | **12.1.3** is the version used for native SDK checks. |
 
 Older-version paths have automated compatibility checks, but still need real-project beta testing inside those Painter releases. This table describes feature availability, not a claim that every build has been tested.
 
-| Feature | 9.x | 10.0.0–10.1.1 | 10.1.2+ |
+| Feature | 8.1.2–9.x | 10.0.0–10.1.1 | 10.1.2+ |
 | --- | :---: | :---: | :---: |
 | Texture selection, resolutions and export | ✓ | ✓ | ✓ |
 | DDS conversion and base-ZIP packaging | ✓ | ✓ | ✓ |
@@ -56,13 +70,13 @@ In export-only mode, names and the first two colors are **filename data**. They 
 
 1. Download **CREAM-plugin.zip** from [Releases](https://github.com/tatauna-doesnt-code/cream/releases).
 2. Extract the whole ZIP. Save your work and close Painter.
-3. Run **Install.cmd**. Administrator access is not required. The installer backs up an existing installation and preserves an existing `TM2020` export preset.
+3. Run **Install.cmd**. Administrator access is not required. The installer backs up an existing installation. CREAM uses your installed templates and does not install or replace export presets.
 4. Open Painter and enable **Python → cream**. That is the plugin's package name.
 5. Open **Window → CREAM — Skin Exporter**.
 
 CREAM does **not** open its window automatically when Painter starts. Enabling the plugin adds its menu entry; open it when you need it.
 
-For manual installation, copy `cream` into Painter's `python/plugins` folder and `preset/TM2020.spexp` into `assets/export-presets`. Both are under your Windows Documents folder, inside `Adobe/Adobe Substance 3D Painter`. Keep the bundled converter and fonts in the plugin folder.
+For manual installation, copy `cream` into Painter's `python/plugins` folder; no preset installation is required. Painter’s plugins are under your Windows Documents folder, inside `Adobe/Adobe Substance 3D Painter`. Keep the bundled converter and fonts in the plugin folder.
 
 ### Upgrading from an older package name
 
@@ -141,9 +155,9 @@ TM styling is **on by default** each new session. Turning the helper off hides t
 | Emissive `_I` | BC3 / DXT5 |
 | Coat Roughness `_CoatR` / Dirt Mask `_DirtMask` | BC4 / BC4U |
 
-Normals export as OpenGL, without another green-channel flip. DDS files have no additional mipmaps. Wheels keep **1:4 proportions**; other sets use square 1024, 2048 or 4096 outputs.
+The selected template controls the normal convention; CREAM does not flip channels. DDS files have no additional mipmaps. Wheels keep **1:4 proportions**; other sets use square 1024, 2048 or 4096 outputs.
 
-Painter 9.x uses the installed `TM2020` preset directly because its API cannot read preset definitions. CREAM filters one map at a time and explicitly supplies the OpenGL normal output. Newer versions read the preset definitions. Keep the bundled preset installed in either case.
+Painter 8.1.2–9.x uses the chosen library template directly and temporarily exports all of its maps for each selection. Painter 10+ reads individual output definitions. No bundled preset is required.
 
 UDIM and material layering are not supported by this beta.
 

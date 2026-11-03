@@ -5,6 +5,7 @@ from . import core
 from .name_cell import PlayerNameDelegate
 from .name_style import NameStyleHelper
 from .texture_sets import TextureSets
+from .export_textures import ExportTextures
 from .version import VERSION
 from .controls import InstantInfo, CenteredCheckDelegate
 
@@ -185,11 +186,11 @@ def build(window, default_output):
     w.textures_page, textures = page(w, "1  Textures", "Export your current skin",
         "Check a set to include all its textures, or expand it to choose individual maps. Without a base ZIP, the output contains only selected textures. An optional base ZIP in Batch preserves its other files.")
     w.textures_heading = textures.itemAt(0).widget()
-    w.texture_sets = TextureSets()
+    w.texture_sets = ExportTextures(w)
     textures.addWidget(w.texture_sets, 1)
     textures.addWidget(note("Set resolution applies to every map in that set. Expand a set to override individual resolutions."))
-    technical = note("Trackmania 2020 · DDS compression is automatic · Wheels keep a 1:4 aspect ratio")
-    technical.setToolTip("DDS without mipmaps. OpenGL normals exported directly. Glass receives no player-name or color changes. Missing, unselected files remain absent.")
+    technical = note("Trackmania 2020 · DDS compression follows your output settings · Wheels keep a 1:4 aspect ratio")
+    technical.setToolTip("DDS without mipmaps. The selected template controls normal convention. Glass receives no player-name or color changes. Missing, unselected files remain absent.")
     textures.addWidget(technical)
 
     w.naming_page, naming = page(w, "2  Skin ZIPfile name", "Name your skin ZIPfile",

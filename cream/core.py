@@ -298,6 +298,13 @@ def inspect_base(path):
         return names
 
 
+def dds_format(value):
+    result = MAPS.get(value, value if value.endswith('_UNORM') else value + '_UNORM')
+    if result not in DDS_FOURCC:
+        raise ValueError('DDS compression must be BC1, BC3, BC4 or BC5.')
+    return result
+
+
 def validate_dds(path, suffix, width, height):
     with Path(path).open("rb") as handle:
         header = handle.read(148)
@@ -306,10 +313,10 @@ def validate_dds(path, suffix, width, height):
     actual_h, actual_w = struct.unpack_from("<II", header, 12)
     mips = struct.unpack_from("<I", header, 28)[0]
     fourcc = header[84:88]
-    expected = DDS_FOURCC[MAPS[suffix]]
+    expected = DDS_FOURCC[dds_format(suffix)]
     if (actual_w, actual_h) != (width, height) or mips not in (0, 1) or fourcc != expected:
         raise ValueError(f"DDS does not match the configuration: {Path(path).name}: {actual_w}×{actual_h}, {fourcc!r}, mips={mips}")
-    block_bytes = 8 if suffix in ("B", "AO", "CoatR", "DirtMask") else 16
+    block_bytes = 8 if dds_format(suffix) in ("BC1_UNORM", "BC4_UNORM") else 16
     expected_bytes = 128 + ((width + 3) // 4) * ((height + 3) // 4) * block_bytes
     if Path(path).stat().st_size != expected_bytes:
         raise ValueError(f"Incorrect DDS size or incomplete file: {path}")
@@ -322,7 +329,7 @@ def normalize_dds_header(path, suffix):
     verification require BC4U/BC5U. Only the four FourCC bytes may change.
     Signed formats and DX10 headers are never relabeled.
     """
-    expected = DDS_FOURCC[MAPS[suffix]]
+    expected = DDS_FOURCC[dds_format(suffix)]
     alias = {b"BC4U": b"ATI1", b"BC5U": b"ATI2"}.get(expected)
     with Path(path).open("r+b") as handle:
         header = handle.read(128)
@@ -337,9 +344,9 @@ def normalize_dds_header(path, suffix):
 
 
 def conversion_args(texconv, source, output, suffix):
-    args = [str(texconv), "-nologo", "-y", "-f", MAPS[suffix], "-m", "1", "-dx9",
+    args = [str(texconv), "-nologo", "-y", "-f", dds_format(suffix), "-m", "1", "-dx9",
             "--ignore-srgb", "-sepalpha", "-o", str(output)]
-    if suffix in ("B", "AO"):
+    if dds_format(suffix) == "BC1_UNORM":
         args.extend(["--swizzle", "rgb1"])
     args.append(str(source))
     return args

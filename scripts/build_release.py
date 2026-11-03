@@ -11,7 +11,7 @@ from cream.version import VERSION, UPDATE_RESTART
 
 
 def build():
-    files = [p for folder in ('cream', 'preset', 'scripts', 'tests', 'docs', '.github') for p in (ROOT / folder).rglob('*')
+    files = [p for folder in ('cream', 'scripts', 'tests', 'docs', '.github') for p in (ROOT / folder).rglob('*')
              if p.is_file() and '__pycache__' not in p.parts and p.suffix != '.pyc']
     files += [ROOT / p for p in ('Install.cmd', 'Install.ps1', 'Dev.cmd', 
                                 'LICENSE', 'THIRD_PARTY_NOTICES.md', 'CONTRIBUTING.md', 'SECURITY.md')]

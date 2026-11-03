@@ -1,5 +1,16 @@
 # Changes
 
+## 1.12.0 beta
+
+- Discover actual project texture sets and let users choose an installed export template, defaulting to one unambiguous TM2020 match.
+- Populate output rows from template definitions on Painter 10+, or predicted filenames on 8.1.2–9.x. Older versions export the full template temporarily and package selected outputs only.
+- Preserve template channel packing and normal convention. Add editable suffixes and BC1/BC3/BC4/BC5 compression, one-time edit confirmation, bold italic overrides and individual restore buttons.
+- Add immediate yellow warning tooltips for missing templates and reference mismatches, a modified Textures tab indicator, and TM2020 tables in Textures and Help.
+- Save overrides by project/template/set/output identity and preserve them through reloads. Block unsafe filenames, duplicate destinations, UDIM and material-layered exports.
+- Support Painter 8.1.2+ in export-only mode with Qt-based version detection before 8.3. Car customization still requires 10.0, with a stability warning below 10.1.2.
+- Stop distributing/installing the version-specific binary export preset. Existing user presets are left intact.
+- Older-version behavior has simulated-API integration coverage with real Qt/DDS/ZIP operations; native beta testing on those releases remains necessary.
+
 ## 1.11.2 beta
 
 - Make the base ZIP optional for current-project and batch exports. Without one, package only the selected textures.

@@ -24,7 +24,13 @@ sp.ui.ApplicationMenu = types.SimpleNamespace(Window=1)
 sp.ui.add_action = lambda menu, action: None
 sp.ui.delete_ui_element = lambda item: item.deleteLater()
 sys.modules['substance_painter.ui'] = sp.ui
-sp.project.is_open = lambda: False
+sp.project.is_open = lambda: True
+sp.project.is_in_edition_state = lambda: True
+sp.project.is_busy = lambda: False
+sp.textureset.all_texture_sets = lambda: [types.SimpleNamespace(name='Details',all_stacks=lambda:[types.SimpleNamespace(name=lambda:'')])]
+sp.export.list_resource_export_presets = lambda:[types.SimpleNamespace(resource_id=types.SimpleNamespace(name='TM2020',url=lambda:'resource://test/TM2020'),list_output_maps=lambda:[{'fileName':'$textureSet_B','channels':[]},{'fileName':'$textureSet_R','channels':[]}])]
+sp.export.list_predefined_export_presets = lambda:[]
+sp.export.list_project_textures = lambda config:{('Details',''):[str(Path(config['exportPath'])/(m['fileName'].replace('$textureSet','Details')+'.png')) for m in config['exportPresets'][0]['maps']]}
 
 with tempfile.TemporaryDirectory() as folder:
     root = Path(folder)
@@ -47,6 +53,7 @@ with tempfile.TemporaryDirectory() as folder:
     old.texture_sets.groups['Details'].table.item(0, 0).setCheckState(QtCore.Qt.Checked)
     details = old.texture_sets.groups['Details']
     details.resolution.setCurrentIndex(details.resolution.findData(4096))
+    details.apply_resolution()
     details.sizes[1].setCurrentIndex(details.sizes[1].findData(1024))
     old.restore_reload_state({'rows': [{'line': 2, 'id': '1', 'name': 'Joseph', 'stem': 'Joseph',
                                       'colors': ['#AABBCC', None, None]}],
@@ -82,7 +89,8 @@ with tempfile.TemporaryDirectory() as folder:
     sp.project.is_open = lambda: True
     sp.project.is_busy = lambda: True
     assert 'busy' in old.reload_block_reason()
-    sp.project.is_open = lambda: False
+    sp.project.is_open = lambda: True
+    sp.project.is_busy = lambda: False
     old_module = sys.modules['cream.ui']
     plugin.request_reload()
     app.processEvents()
