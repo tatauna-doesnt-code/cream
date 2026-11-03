@@ -76,7 +76,9 @@ class Preset:
         self.resource_id = types.SimpleNamespace(name=name,url=lambda:url)
     def list_output_maps(self): return copy.deepcopy(maps)
 sp.resource.Type = types.SimpleNamespace(EXPORT=1)
-sp.resource.search = lambda q: [types.SimpleNamespace(identifier=lambda p=p:types.SimpleNamespace(name=p['name'],url=lambda:p['url']), type=lambda:1) for p in catalog]
+def unknown_resource_type():
+    raise ValueError("'vectorial' is not a valid Type")
+sp.resource.search = lambda q: [types.SimpleNamespace(type=unknown_resource_type)] + [types.SimpleNamespace(identifier=lambda p=p:types.SimpleNamespace(name=p['name'],url=lambda:p['url']), type=lambda:1) for p in catalog]
 if version >= (10,0,0):
     sp.export.list_resource_export_presets = lambda:[Preset(**p) for p in catalog]
     sp.export.list_predefined_export_presets = lambda:[]
