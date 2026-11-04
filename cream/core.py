@@ -52,7 +52,7 @@ def atomic_json(path, value):
 
 
 def read_xlsx(path):
-    """Read plain values in Backers (or the first sheet), without dependencies.
+    """Read plain values in the first worksheet, without dependencies.
 
     Formula cells are rejected rather than trusting stale cached values.
     """
@@ -63,7 +63,7 @@ def read_xlsx(path):
             strings = ["".join(t.text or "" for t in si.iterfind(".//m:t", NS)) for si in root]
         workbook = ET.fromstring(book.read("xl/workbook.xml"))
         sheets = list(workbook.find("m:sheets", NS))
-        sheet = next((s for s in sheets if s.attrib["name"].casefold() == "backers"), sheets[0])
+        sheet = sheets[0]
         rel_id = sheet.attrib["{http://schemas.openxmlformats.org/officeDocument/2006/relationships}id"]
         rels = ET.fromstring(book.read("xl/_rels/workbook.xml.rels"))
         target = next(r.attrib["Target"] for r in rels if r.attrib["Id"] == rel_id)

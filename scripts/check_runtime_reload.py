@@ -22,6 +22,7 @@ main = W.QMainWindow()
 sp.ui.get_main_window = lambda: main
 sp.ui.ApplicationMenu = types.SimpleNamespace(Window=1)
 sp.ui.add_action = lambda menu, action: None
+sp.ui.add_plugins_toolbar_widget = lambda widget: None
 sp.ui.delete_ui_element = lambda item: item.deleteLater()
 sys.modules['substance_painter.ui'] = sp.ui
 sp.project.is_open = lambda: True

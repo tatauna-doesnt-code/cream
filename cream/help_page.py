@@ -4,11 +4,12 @@ from pathlib import Path
 
 
 from .export_textures import REFERENCE
+from .controls import set_chevron
 
 FAQ = [
     ('Which texture suffixes and DDS formats does TM2020 use?', '<p>Use the texture-set name as a prefix, for example Skin_B.dds. Renaming or changing compression can make textures unrecognizable or render incorrectly.</p>' + REFERENCE),
     ('How do export templates and texture overrides work?', '<p>Textures lists the open project’s actual texture sets. CREAM selects TM2020 when one unambiguous match is installed; otherwise choose a compatible template. Each output can be selected, resized, renamed by suffix and assigned BC1/BC3/BC4/BC5 compression. Edits appear bold italic with a restore icon. Yellow icons explain reference mismatches; an asterisk marks overrides. CREAM never changes the installed template. Template channel packing and normal convention are preserved. On Painter 8.1.2–9.x, CREAM predicts output files and exports the full template temporarily for each selected output/resolution, keeping only selected files in the ZIP.</p>'),
-    ("What spreadsheet do I need?", "<p>Use CSV or XLSX with column headers in the first row. Match any column names when loading. Only the player name is required; colors 1–3, row ID, ZIP name and active flag are optional. Colors use <code>#RRGGBB</code>. Blank or unmapped colors keep the project originals. XLSX uses the Backers sheet, or the first sheet; formulas are rejected.</p>"),
+    ("What spreadsheet do I need?", "<p>Use CSV or XLSX with column headers in the first row. Match any column names when loading. Only the player name is required; colors 1–3, row ID, ZIP name and active flag are optional. Colors use <code>#RRGGBB</code>. Blank or unmapped colors keep the project originals. XLSX reads the first worksheet, regardless of its name; formulas are rejected.</p>"),
     ("Can I edit a player's name without changing the spreadsheet?", "<p>Yes. Edit the input in the Player name column. Overrides are <b><i>bold italic</i></b>; the refresh icon resets the imported name. Names preserve case and are truncated to 20 characters. Trackmania styling codes are not accepted for the text printed on the car. Edits last for this session and survive CREAM reloads. Reloading the spreadsheet resets them.</p>"),
     ("Does the final ZIP filename support TM styling?", "<p>Yes. In <b>2 Skin ZIPfile name</b>, enable <b>Use Trackmania text styling</b>. Select text and apply bold, italic, uppercase, shadow, width or color. Text colors require exactly <b>three hex digits</b>, such as <code>$F80</code>. You can also edit raw codes. The Montserrat preview approximates in-game rendering; italic is shown normally in the editor. Styling affects ZIP names only.</p>"),
     ("How can I use each player's chosen color in the ZIP filename?", "<p>Open <b>Text color…</b> in the styling helper and choose <b>Use skin primary color</b> or <b>Use skin secondary color</b>. These insert <code>{primary}</code> or <code>{secondary}</code>, resolved independently from spreadsheet colors 1 and 2 for each skin. Example: <code>{primary}Event - {name}$z</code>. Skin colors are rounded to Trackmania's three-digit palette. Blank colors use the original project color; differing originals across sets must be resolved before export.</p>"),
@@ -59,7 +60,7 @@ def add_help(window):
     <p><b>Color Replacement &amp; Export Automation Manager.</b> CREAM is a Trackmania 2020
     skin export utility with optional batch customization.</p>
     <h3>Export your current skin</h3>
-    <ol><li>Open a saved Painter project. In <b>Settings</b>, choose your output folder. Optionally select a base ZIP in <b>Batch</b> to reuse its unselected files.</li>
+    <ol><li>Open a saved Painter project. In <b>CREAM's Settings tab</b>, choose your output folder. Optionally select a base ZIP in <b>CREAM's Batch tab</b> to reuse its unselected files.</li>
     <li>In <b>1 Textures</b>, select the maps to replace and their resolutions.
     Without a base ZIP, only selected textures are included; with one, its other files are preserved.</li>
     <li>In <b>2 Skin ZIPfile name</b>, edit the default name <code>skin</code>. The styling helper is enabled by default,
@@ -99,7 +100,7 @@ def add_help(window):
         toggle.setFixedHeight(32)
         toggle.setCheckable(True)
         toggle.setToolButtonStyle(QtCore.Qt.ToolButtonTextBesideIcon)
-        toggle.setArrowType(QtCore.Qt.RightArrow)
+        set_chevron(toggle)
         toggle.setSizePolicy(W.QSizePolicy.Expanding, W.QSizePolicy.Preferred)
         toggle.setStyleSheet("text-align: left; padding: 4px 8px; background: #222426; border: 1px solid #494c50;")
         import re
@@ -111,7 +112,7 @@ def add_help(window):
         body.setStyleSheet("padding: 8px 16px; color: #eee;")
         body.hide()
         toggle.toggled.connect(body.setVisible)
-        toggle.toggled.connect(lambda opened, t=toggle: t.setArrowType(QtCore.Qt.DownArrow if opened else QtCore.Qt.RightArrow))
+        toggle.toggled.connect(lambda opened, t=toggle: set_chevron(t, opened))
         layout.addWidget(toggle)
         layout.addWidget(body)
     layout.addStretch()

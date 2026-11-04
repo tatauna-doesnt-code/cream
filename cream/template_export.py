@@ -5,6 +5,30 @@ import substance_painter as sp
 from . import compatibility, core
 
 
+def legacy_library_templates():
+    """General resource search omits .spexp files on some older Painter hosts."""
+    resource = sp.resource
+    if not hasattr(resource, 'Shelves'):
+        return []
+    found = []
+    for shelf in resource.Shelves.all():
+        try:
+            root = Path(shelf.path())
+            # Limit filesystem discovery to registered libraries and their preset
+            # directory. Resolve through Painter's resource URL, never import files.
+            paths = list(root.glob('*.spexp'))
+            paths += list((root / 'export-presets').rglob('*.spexp'))
+            for path in paths:
+                if path.is_file():
+                    identifier = resource.ResourceID(context=shelf.name(), name=path.stem)
+                    found.append({'name': identifier.name, 'url': identifier.url(), 'kind': 'legacy'})
+        except OSError:
+            # A disconnected library must not hide presets from accessible ones.
+            # The diagnostic report records folder accessibility independently.
+            continue
+    return found
+
+
 def templates():
     found = []
     if hasattr(sp.export, 'list_resource_export_presets'):
@@ -24,7 +48,13 @@ def templates():
             if resource_type == sp.resource.Type.EXPORT:
                 identifier = resource.identifier()
                 found.append({'name': identifier.name, 'url': identifier.url(), 'kind': 'legacy'})
-    return sorted({item['url']: item for item in found}.values(), key=lambda item: (item['name'].casefold(), item['url']))
+        found.extend(legacy_library_templates())
+    # Versioned resource-search URLs and unversioned library URLs can identify
+    # the same preset. Prefer the resource-search entry when available.
+    unique = {}
+    for item in found:
+        unique.setdefault(item['url'].split('?version=', 1)[0], item)
+    return sorted(unique.values(), key=lambda item: (item['name'].casefold(), item['url']))
 
 
 def texture_sets():

@@ -106,7 +106,7 @@ class Window(W.QDialog):
         update_bar = W.QHBoxLayout()
         self.updates_layout.addLayout(update_bar)
         self.check_button = W.QPushButton("Check for updates")
-        self.access_button = W.QPushButton("Connect to GitHub…")
+        self.access_button = W.QPushButton("Connect to GitHub")
         self.access_button.hide()
         self.update_button = W.QPushButton("Download update")
         self.update_button.setEnabled(False)
@@ -121,6 +121,7 @@ class Window(W.QDialog):
         self.backers.itemChanged.connect(self.refresh_workflow)
         self.backers.currentCellChanged.connect(self.refresh_workflow)
         self.texture_sets.changed.connect(self.refresh_workflow)
+        self.texture_sets.timer.timeout.connect(self.refresh_project_gate)
         for field in self.fields.values():
             field.textChanged.connect(self.refresh_workflow)
         self.refresh_workflow()
@@ -198,6 +199,10 @@ class Window(W.QDialog):
                 package._window, package._action = window, action
         self.reload_callback = package.request_reload
 
+    def refresh_project_gate(self):
+        if bool(sp.project.is_open()) != getattr(self, '_project_gate_open', None):
+            self.refresh_workflow()
+
     def refresh_workflow(self, *args):
         if not hasattr(self, "export_button"):
             return
@@ -208,6 +213,10 @@ class Window(W.QDialog):
         busy = self.runner is not None
         preview = self.saved is not None
         self.empty_state.setVisible(not loaded)
+        for control in (self.edit_button, self.remove_button, self.clear_batch_button,
+                        self.select_all_button, self.clear_selection_button, self.resume_button,
+                        self.preview_button, self.inline_restore):
+            control.setVisible(loaded)
         self.backers.setVisible(loaded)
         self.skin_count.setText(f"{count} of {len(self.rows)} selected" if loaded else "No batch entries")
         count = count if loaded else 1
@@ -220,6 +229,7 @@ class Window(W.QDialog):
         self.textures_heading.setText('Choose textures for the batch' if loaded else 'Export your current skin')
         for control in self.batch_name_buttons:
             control.setEnabled(loaded)
+        self.batch_tokens.setVisible(loaded)
         self.batch_name_help.setVisible(loaded)
         self.name_style.allow_tokens = loaded
         self.fields['name_pattern'].setVisible(loaded or not self.styling_enabled.isChecked())
@@ -237,12 +247,11 @@ class Window(W.QDialog):
         configured = bool(self.fields["output"].text().strip())
         next_step = ("Choose an output folder in Settings." if not configured else
                      "Select skins to export." if not count else
+                     "Review the alert in Textures." if self.texture_sets.problem else
                      "Choose textures in step 1." if not maps else
                      "Check the skin ZIPfile name." if getattr(self, 'filename_error', None) else
                      "Fix or reset the invalid player name." if self.invalid_names else
                      "Restore the preview before exporting." if preview else "")
-        if next_step:
-            self.summary.setText(next_step + "  " + self.summary.text())
         self.export_button.setEnabled(bool(self.capabilities.export and not self.texture_sets.problem and count and maps and configured and not busy and not preview and not self.invalid_names and not getattr(self, 'filename_error', None)))
         self.validate_button.setEnabled(self.capabilities.export and not busy and not preview)
         self.preview_button.setEnabled(self.customizing() and loaded and self.backers.currentRow() >= 0 and not busy and not preview and not self.invalid_names)
@@ -271,6 +280,32 @@ class Window(W.QDialog):
             locked[cell.reset] = "Resetting this player name"
         self.preview_help.update(locked, preview and not busy)
         self.setup_hint.setText("Settings apply to current-project exports and every entry in a batch.")
+        self.summary.setText('Export summary · ' + self.summary.text())
+        self.status.setText('Next step: ' + next_step if next_step else
+                            'Ready to export. Check configuration to review the setup, or export now.')
+        self.apply_project_gate()
+
+    def apply_project_gate(self):
+        opened = bool(sp.project.is_open())
+        was_open = getattr(self, '_project_gate_open', None)
+        self._project_gate_open = opened
+        self.project_required_notice.setVisible(not opened)
+        self.workflow_notice.setVisible(opened)
+        allowed = (self.settings_page, self.help_page)
+        if not opened and self.tabs.currentWidget() not in allowed:
+            self.tabs.setCurrentWidget(self.settings_page)
+        for index in range(self.tabs.count()):
+            page = self.tabs.widget(index)
+            enabled = opened or page in allowed
+            self.tabs.setTabEnabled(index, enabled)
+            page.setEnabled(enabled)
+        self.action_panel.setEnabled(opened)
+        if not opened:
+            self.summary.setText('Open a Painter project to get started.')
+            self.status.setText('Settings and Help are available. Export tools unlock when a project is open.')
+            self.preview_banner.hide()
+        elif was_open is False:
+            self.status.setText('Project open. Choose textures and a ZIPfile name to export.')
 
     def refresh_update_notice(self):
         pending = bootstrap.pending_path(Path(__file__).parent).exists()
@@ -439,20 +474,21 @@ class Window(W.QDialog):
     def field(self, form, key, label, value, pattern):
         row = W.QWidget()
         row.setObjectName("pathRow")
+        row.setFixedHeight(32)
         layout = W.QHBoxLayout(row)
         layout.setContentsMargins(0, 0, 0, 0)
         text = W.QLineEdit(value)
         text.setAccessibleName(label)
         text.setFixedHeight(32)
         self.fields[key] = text
-        layout.addWidget(text)
+        layout.addWidget(text, 1, QtCore.Qt.AlignVCenter)
         button = W.QPushButton("Browse…")
         button.setAutoDefault(False)
         button.setAccessibleName("Browse for " + label)
         button.setFixedHeight(32)
         button.setFixedWidth(110)
         button.clicked.connect(lambda: self.browse(key, pattern))
-        layout.addWidget(button)
+        layout.addWidget(button, 0, QtCore.Qt.AlignVCenter)
         form.addRow(label, row)
 
     def browse(self, key, pattern):
@@ -465,7 +501,7 @@ class Window(W.QDialog):
 
     def say(self, message):
         self.log.appendPlainText(datetime.now().strftime("%H:%M:%S  ") + message)
-        self.status.setText(message)
+        self.status.setText("Last action: " + message)
         self.status.setToolTip(message)
         if self.progress and not self.cancel.is_set():
             self.progress.label.setText(message)
