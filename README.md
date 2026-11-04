@@ -4,9 +4,14 @@
 
 **Color Replacement & Export Automation Manager**
 
-CREAM exports your Substance 3D Painter project into a ready-to-use **Trackmania 2020 skin ZIP**. Choose the textures and resolutions, give it a name, and let it handle DDS conversion and packaging. The built-in Trackmania text editor lets you preview the colors and styling of the skin's in-game name.
+## TL;DR
 
-On Painter 10.0 and newer, you can also personalize names and colors on the car and export a whole batch from one project. Enter the data directly, or import a spreadsheet when the list gets longer.
+CREAM turns your Painter project into a **Trackmania 2020 skin ZIP**, handling DDS conversion, ZIP packaging and in-game filename styling. Batch export is optional.
+
+1. [Download](https://github.com/tatauna-doesnt-code/cream/releases) **CREAM-plugin.zip**, extract it, close Painter and run **Install.cmd**.
+2. Reopen Painter, enable **Python → CREAM**, open your project and click the **c** icon in the Plugins toolbar.
+3. In CREAM, choose an output folder in **Settings**, select a template, textures and resolutions in **Textures**, and set the **Skin ZIPfile name**.
+4. Click **Export current skin**. Use **Batch** only when you need multiple skins.
 
 **Beta 1.13.0 · Windows · Painter 8.1.2+**
 
