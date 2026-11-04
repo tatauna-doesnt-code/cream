@@ -71,7 +71,7 @@ function Install-Cream {
     }
     Write-Host ('Installed in: ' + $target)
     if ($moves.Count) { Write-Host ('Previous installations backed up to: ' + $backups) }
-    Write-Host 'Enable cream in the Python menu, then open Window > CREAM - Skin Exporter.'
+    Write-Host 'Enable CREAM in the Python menu, then open Window > CREAM.'
     Write-Host 'Settings and any existing TM2020 preset were preserved.'
 }
 if ($MyInvocation.InvocationName -ne '.') {

@@ -90,13 +90,13 @@ class Section(W.QWidget):
         self.setObjectName('textureSetCard')
         self.setAttribute(QtCore.Qt.WA_StyledBackground, True)
         layout = W.QVBoxLayout(self)
-        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setContentsMargins(1, 0, 1, 0)
         layout.setSpacing(0)
         header_widget = W.QWidget()
         header_widget.setObjectName('textureSetHeader')
         header_widget.setAttribute(QtCore.Qt.WA_StyledBackground, True)
         header = W.QHBoxLayout(header_widget)
-        header.setContentsMargins(0, 4, 6, 4)
+        header.setContentsMargins(0, 4, 8, 4)
         header.setSpacing(6)
         self.export = SetCheckBox()
         self.export.setTristate(True)
@@ -105,7 +105,8 @@ class Section(W.QWidget):
         self.expand.setCheckable(True)
         self.expand.setToolButtonStyle(QtCore.Qt.ToolButtonTextBesideIcon)
         self.expand.setFixedHeight(32)
-        self.expand.setStyleSheet('text-align: left; padding: 4px;')
+        self.expand.setMinimumWidth(110)
+        self.expand.setStyleSheet('QToolButton { text-align: left; padding: 4px 8px; border: none; background: transparent; font-weight: 600; } QToolButton:hover { background: #424b51; }')
         set_chevron(self.expand)
         self.summary = W.QLabel()
         self.resolution = W.QComboBox()
@@ -129,7 +130,7 @@ class Section(W.QWidget):
         header.addWidget(self.resolution)
         layout.addWidget(header_widget)
         self.table = W.QTableWidget(len(records), 5)
-        self.table.setHorizontalHeaderLabels(['', 'Template output', 'Texture suffix', 'DDS', 'Resolution'])
+        self.table.setHorizontalHeaderLabels(['', 'Output', 'Suffix', 'DDS', 'Resolution'])
         self.table.verticalHeader().hide()
         self.table.setItemDelegateForColumn(0, CenteredCheckDelegate(self.table))
         self.table.setEditTriggers(W.QAbstractItemView.NoEditTriggers)
@@ -259,6 +260,9 @@ class ExportTextures(W.QWidget):
         self.window = window
         self.groups, self.catalog = {}, []
         self.project, self.loaded_url = None, None
+        self.catalog_loaded = False
+        self.reload_status = 'Not loaded yet'
+        self.waiting_for_project = False
         self.pending = None
         self.acknowledged = False
         self.problem = MISSING
@@ -268,6 +272,7 @@ class ExportTextures(W.QWidget):
         selector = W.QHBoxLayout()
         selector.addWidget(W.QLabel('Export template'))
         self.template = W.QComboBox()
+        self.template.addItem('Loading export templates…', None)
         self.template.setFixedHeight(32)
         self.template.setMinimumWidth(240)
         selector.addWidget(self.template, 1)
@@ -317,46 +322,66 @@ class ExportTextures(W.QWidget):
 
     def reload(self, force=False):
         if self._loading or self.window.runner is not None or self.window.saved is not None:
+            self.reload_status = 'Paused: loading, export or preview active'
             return
         try:
+            # Listing library templates does not need an editable project. Older
+            # hosts can report not-ready while still exposing all preset files.
+            if force or not self.catalog_loaded:
+                self.reload_status = 'Reading template catalog'
+                self.catalog = template_export.templates()
+                self.populate_templates(self.template.currentData())
+                self.catalog_loaded = True
             if not painter.ready():
+                self.waiting_for_project = True
+                self.reload_status = 'Waiting for Painter project readiness'
+                self.problem = ('Templates are listed, but texture outputs are waiting for Painter. '
+                    'Open a saved project and finish any active import, export or processing, then click Refresh.')
+                self.update_status()
                 return
             project = painter.project_path()
             names = tuple(compatibility.texture_set_name(s) for s in template_export.texture_sets())
             identity = (project, names)
-            if not force and identity == self.project:
+            if not force and identity == self.project and not self.waiting_for_project:
                 return
+            self.waiting_for_project = False
             saved = self.settings()
             self.project = identity
-            self.catalog = template_export.templates()
-            blocker = QtCore.QSignalBlocker(self.template)
-            self.template.clear()
-            self.template.addItem('Choose an export template…', None)
-            counts = {p['name']: sum(q['name'] == p['name'] for q in self.catalog) for p in self.catalog}
-            for descriptor in self.catalog:
-                label = descriptor['name'] + (' · ' + descriptor['url'] if counts[descriptor['name']] > 1 else '')
-                self.template.addItem(label, descriptor['url'])
-            desired = None
+            desired = self.template.currentData()
             state = self.pending or saved
             if state.get('project') == project:
-                desired = state.get('template')
-            if not desired:
-                matches = [p for p in self.catalog if p['name'].casefold() == 'tm2020']
-                if len(matches) == 1:
-                    desired = matches[0]['url']
-            self.template.setCurrentIndex(max(0, self.template.findData(desired)))
-            del blocker
+                desired = state.get('template') or desired
+            self.populate_templates(desired)
+            self.reload_status = 'Reading selected template outputs'
             self.load_outputs(state)
+            self.reload_status = self.problem or 'Template and texture outputs loaded'
         except Exception as exc:
             self.problem = 'Cannot read project/templates: ' + str(exc)
+            self.reload_status = self.problem
             self.clear_groups()
             self.update_status()
+
+    def populate_templates(self, desired=None):
+        blocker = QtCore.QSignalBlocker(self.template)
+        self.template.clear()
+        self.template.addItem('Choose an export template…' if self.catalog else 'No library export templates found', None)
+        counts = {p['name']: sum(q['name'] == p['name'] for q in self.catalog) for p in self.catalog}
+        for descriptor in self.catalog:
+            label = descriptor['name'] + (' · ' + descriptor['url'] if counts[descriptor['name']] > 1 else '')
+            self.template.addItem(label, descriptor['url'])
+        if not desired:
+            matches = [p for p in self.catalog if p['name'].casefold() == 'tm2020']
+            if len(matches) == 1:
+                desired = matches[0]['url']
+        self.template.setCurrentIndex(max(0, self.template.findData(desired)))
+        del blocker
 
     def clear_groups(self):
         self.groups = {}
         content = W.QWidget()
         self.rows_layout = W.QVBoxLayout(content)
         self.rows_layout.setContentsMargins(0, 0, 0, 0)
+        self.rows_layout.setSpacing(0)
         self.scroll.setWidget(content)
 
     def load_outputs(self, state=None):
@@ -365,6 +390,13 @@ class ExportTextures(W.QWidget):
             if state is None:
                 state = self.settings()
             self.clear_groups()
+            if not painter.ready():
+                self.problem = ('Texture outputs are waiting for Painter. Open a saved project and finish '
+                    'any active import, export or processing, then click Refresh.')
+                return
+            if self.project is None:
+                self.project = (painter.project_path(), tuple(
+                    compatibility.texture_set_name(s) for s in template_export.texture_sets()))
             descriptor = next((p for p in self.catalog if p['url'] == self.template.currentData()), None)
             self.loaded_url = self.template.currentData()
             if descriptor is None:
@@ -374,6 +406,9 @@ class ExportTextures(W.QWidget):
             self.problem = ''
             for name, outputs in records.items():
                 section = Section(name, outputs, self)
+                if not self.groups:
+                    section.setStyleSheet('QWidget#textureSetCard { border-top: 1px solid #555b60; }')
+                    section.layout().setContentsMargins(1, 1, 1, 0)
                 self.groups[name] = section
                 self.rows_layout.addWidget(section)
                 section.changed.connect(self.update_status)

@@ -1,5 +1,14 @@
 # Changes
 
+## 1.13.0 beta
+
+- Find export templates in registered library folders on older Painter versions whose general resource search omits `.spexp` files. Newer versions continue using the dedicated template API.
+- Add a compact Righteous “c” launcher to Painter's Plugins toolbar. Rename the Window menu entry to CREAM. This update requires one Painter restart.
+- Disable workflow tabs and export actions until a project is open; keep Settings and Help available with a clear project-required notice.
+- Reorganize Settings, Batch and ZIP naming into cards. Hide batch filename variables during single exports, simplify the batch empty state and clarify the export summary and next step.
+- Connect texture-set headers and output tables into a compact continuous accordion. Align path inputs and buttons and use matching small arrows in Help and Textures.
+- Remove the project-specific worksheet-name preference: XLSX imports use the first worksheet. Clarify that output and update settings belong to CREAM.
+
 ## 1.12.3 beta
 
 - Keep discovering export templates on older Painter versions when an unrelated library resource has a type their Python SDK does not recognize, such as `vectorial`.

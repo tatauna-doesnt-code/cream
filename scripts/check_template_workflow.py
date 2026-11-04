@@ -55,8 +55,11 @@ if 'application' in modules: sp.application.version_info = lambda: version
 sp.ui.get_main_window = lambda: None
 sp.ui.ApplicationMenu = types.SimpleNamespace(Window=1)
 sp.ui.add_action = lambda *args: None
+toolbar_launchers = []
+sp.ui.add_plugins_toolbar_widget = toolbar_launchers.append
 sp.ui.delete_ui_element = lambda obj: obj.deleteLater()
-sp.project.is_open = lambda: True
+project_open = False
+sp.project.is_open = lambda: project_open
 sp.project.is_busy = lambda: False
 sp.project.is_in_edition_state = lambda: True
 class PropertyName(str):
@@ -79,6 +82,21 @@ sp.resource.Type = types.SimpleNamespace(EXPORT=1)
 def unknown_resource_type():
     raise ValueError("'vectorial' is not a valid Type")
 sp.resource.search = lambda q: [types.SimpleNamespace(type=unknown_resource_type)] + [types.SimpleNamespace(identifier=lambda p=p:types.SimpleNamespace(name=p['name'],url=lambda:p['url']), type=lambda:1) for p in catalog]
+library_fixture = tempfile.TemporaryDirectory(prefix='cream-library-')
+library_root = Path(library_fixture.name)
+(library_root / 'export-presets').mkdir()
+def library_shelves():
+    directory = library_root / 'export-presets'
+    for path in directory.glob('*.spexp'):
+        path.unlink()
+    for item in catalog:
+        (directory / (item['name'] + '.spexp')).write_bytes(b'fixture')
+    return [types.SimpleNamespace(name=lambda: 'test', path=lambda: str(library_root), is_crawling=lambda: False)]
+sp.resource.Shelves = types.SimpleNamespace(all=library_shelves)
+sp.resource.ResourceID = lambda context, name: types.SimpleNamespace(name=name, url=lambda: 'resource://' + context + '/' + name)
+if version < (10,0,0):
+    # Real 9.1.2 diagnostics: resource search omits every export preset.
+    sp.resource.search = lambda q: [types.SimpleNamespace(type=unknown_resource_type)]
 if version >= (10,0,0):
     sp.export.list_resource_export_presets = lambda:[Preset(**p) for p in catalog]
     sp.export.list_predefined_export_presets = lambda:[]
@@ -110,7 +128,46 @@ with tempfile.TemporaryDirectory() as folder, patch.object(ui,'DATA',Path(folder
     window=ui.Window(auto_update=False)
     window.show()
     app.processEvents()
+    assert not window.project_required_notice.isHidden()
+    assert window.tabs.currentWidget() == window.settings_page
+    for page in (window.textures_page, window.naming_page, window.skins_page, window.log_page):
+        assert not window.tabs.isTabEnabled(window.tabs.indexOf(page))
+        assert not page.isEnabled()
+    assert window.settings_page.isEnabled() and window.help_page.isEnabled()
+    assert not window.export_button.isEnabled() and not window.validate_button.isEnabled()
+    assert not hasattr(window, "diagnostics_button")
+    assert window.texture_sets.template.count() == 3
+    project_open = True
+    window.texture_sets.reload()
+    window.refresh_project_gate()
+    assert window.project_required_notice.isHidden()
+    assert all(window.tabs.isTabEnabled(i) for i in range(window.tabs.count()))
+    window.tabs.setCurrentWidget(window.textures_page)
     texture=window.texture_sets
+    # Path fields and their Browse buttons share one 32px-high row, including
+    # after Qt polishes the stylesheet. The diagnostic input follows the same rule.
+    for key, page in [('output', window.settings_page), ('base', window.skins_page)]:
+        window.tabs.setCurrentWidget(page)
+        app.processEvents()
+        field = window.fields[key]
+        browse = field.parentWidget().findChild(W.QPushButton)
+        assert field.height() == browse.height() == 32, (key, field.height(), browse.height())
+        assert field.mapToGlobal(QtCore.QPoint()).y() == browse.mapToGlobal(QtCore.QPoint()).y()
+    window.tabs.setCurrentWidget(window.settings_page)
+    app.processEvents()
+    window.grab().save(str(ROOT/'dist'/('settings-local-'+'.'.join(map(str,version))+'.png')))
+    window.tabs.setCurrentWidget(window.help_page)
+    app.processEvents()
+    faq_toggles = [b for b in window.help_page.findChildren(W.QToolButton) if b.isCheckable()]
+    assert faq_toggles
+    for toggle in faq_toggles:
+        assert toggle.arrowType() == QtCore.Qt.NoArrow
+        assert toggle.iconSize() == QtCore.QSize(8, 8)
+    faq_toggles[0].click()
+    assert faq_toggles[0].iconSize() == next(iter(texture.groups.values())).expand.iconSize()
+    window.grab().save(str(ROOT/'dist'/('help-local-'+'.'.join(map(str,version))+'.png')))
+    faq_toggles[0].click()
+    window.tabs.setCurrentWidget(window.textures_page)
     with patch.object(W.QMessageBox, 'warning') as warning:
         window.show_compatibility_warning()
         window.show_compatibility_warning()
@@ -271,6 +328,37 @@ with tempfile.TemporaryDirectory() as folder, patch.object(ui,'DATA',Path(folder
     window.grab().save(str(ROOT/'dist'/('template-workflow-'+'.'.join(map(str,version))+'.png')))
     assert not list(Path(folder).glob('cream-*'))
     assert not list(Path(folder).glob('recover-*.json'))
+    # Closing a project locks an already-open window; reopening unlocks it.
+    project_open = False
+    window.texture_sets.reload()
+    window.refresh_project_gate()
+    assert not window.textures_page.isEnabled()
+    assert not window.project_required_notice.isHidden()
+    assert window.settings_page.isEnabled() and window.help_page.isEnabled()
+    project_open = True
+    window.texture_sets.reload()
+    window.refresh_project_gate()
+    assert window.textures_page.isEnabled() and window.project_required_notice.isHidden()
+    assert not window.texture_sets.problem
+    for page, label in [(window.settings_page, 'settings'), (window.skins_page, 'batch'), (window.naming_page, 'naming'), (window.textures_page, 'textures')]:
+        window.tabs.setCurrentWidget(page)
+        app.processEvents()
+        window.grab().save(str(ROOT/'dist'/('pass6-'+label+'-'+'.'.join(map(str,version))+'.png')))
     window.stop_background_tasks()
     window.hide()
+    import cream as plugin
+    with patch.object(plugin, 'show_window') as launch:
+        plugin.start_plugin(apply_update=False)
+        launcher = plugin._toolbar_button
+        assert launcher is not None and not launcher.icon().isNull()
+        assert launcher.toolButtonStyle() == QtCore.Qt.ToolButtonIconOnly
+        assert launcher.toolTip() == 'Open CREAM'
+        assert len(toolbar_launchers) == 1
+        assert not launch.called
+        plugin.start_plugin(apply_update=False)
+        assert plugin._toolbar_button is launcher and len(toolbar_launchers) == 1
+        launcher.click()
+        assert launch.call_count == 1
+        plugin.close_plugin()
+        assert plugin._toolbar_button is None and plugin._action is None
 print('Passed:',version,'template discovery, project sets, guarded overrides/reset/persistence, DDS/ZIP, batch, collisions, missing-template alerts and legacy/native channels.')

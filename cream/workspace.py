@@ -42,13 +42,26 @@ def page(window, tab, title, description):
     return content, layout
 
 
+def card(parent, title):
+    frame = W.QFrame()
+    frame.setObjectName('sectionCard')
+    content = W.QVBoxLayout(frame)
+    content.setContentsMargins(14, 12, 14, 12)
+    content.setSpacing(10)
+    label = note(title)
+    label.setStyleSheet('font-weight: 600; font-size: 14px;')
+    content.addWidget(label)
+    parent.addWidget(frame)
+    return content
+
+
 def build(window, default_output):
     w = window
     layout = W.QVBoxLayout(w)
     layout.setContentsMargins(16, 14, 16, 14)
     layout.setSpacing(12)
     w.setStyleSheet("""
-        QPushButton, QLineEdit, QComboBox { min-height: 22px; max-height: 22px; padding: 4px 8px; border: 1px solid #55595d; border-radius: 3px; }
+        QPushButton, QLineEdit, QComboBox { padding: 4px 8px; border: 1px solid #55595d; border-radius: 3px; }
         QPushButton { background: #34373a; }
         QPushButton:hover { background: #41464b; }
         QPushButton:pressed { background: #282b2e; }
@@ -78,12 +91,17 @@ def build(window, default_output):
         QTableWidget::item:selected:disabled { color: #85888c; }
         QWidget#previewBanner { background: #263c49; border: 1px solid #537184; border-radius: 4px; }
         QFrame#actionPanel { background: #242629; border: 1px solid #494c50; border-radius: 4px; }
-        QWidget#textureSetCard { background: #222426; border: 1px solid #494c50; border-radius: 4px; }
+        QWidget#textureSetCard { background: #222426; border-left: 1px solid #555b60; border-right: 1px solid #555b60; border-bottom: 1px solid #555b60; border-radius: 0; }
+        QFrame#sectionCard { background: #222426; border: 1px solid #454a4e; border-radius: 4px; }
+        QWidget#textureSetHeader { background: #2c3033; border: none; }
     """)
     w.compatibility_notice = note(w.capabilities.warning)
     w.compatibility_notice.setStyleSheet('background: #3a3427; color: #ead9ae; border: 1px solid #6c6046; padding: 10px;')
     w.compatibility_notice.setVisible(bool(w.capabilities.warning))
     layout.addWidget(w.compatibility_notice)
+    w.project_required_notice = note('Open a Painter project to use CREAM. In Painter, choose File → Open or create a new project. Settings and Help are available while no project is open.')
+    w.project_required_notice.setStyleSheet('background: #3a3427; color: #ead9ae; border: 1px solid #6c6046; padding: 12px;')
+    layout.addWidget(w.project_required_notice)
     w.workflow_notice = note('Current project · Export the skin as it is in Painter. Batch is optional.')
     layout.addWidget(w.workflow_notice)
     # Preview recovery remains reachable from every page.
@@ -110,20 +128,22 @@ def build(window, default_output):
         "Add entries only when you need multiple versions. An empty list exports the current project as-is.")
     w.export_only_notice = note('This Painter version supports exporting existing textures and styling ZIP names. Car name/color customization requires Painter 10.0+.')
     skins.addWidget(w.export_only_notice)
+    base_card = card(skins, 'Optional base skin')
     base_form = W.QFormLayout()
     w.field(base_form, 'base', 'Base skin ZIP (optional)', '', 'Skin (*.zip)')
     w.fields['base'].setClearButtonEnabled(True)
     w.fields['base'].setPlaceholderText('None · build ZIPs from selected textures only')
-    skins.addLayout(base_form)
-    skins.addWidget(note('Optional for all exports: reuse unselected files from this ZIP. Leave empty to include only exported textures.'))
+    base_card.addLayout(base_form)
+    base_card.addWidget(note('Optional for all exports: reuse unselected files from this ZIP. Leave empty to include only exported textures.'))
+    skins = card(skins, 'Batch entries')
     tools = W.QHBoxLayout()
-    w.add_button = button("Add skin…", w.add_skin, True)
+    w.add_button = button("Add skin", w.add_skin, True)
     tools.addWidget(w.add_button)
-    w.edit_button = button("Edit skin…", w.edit_skin)
+    w.edit_button = button("Edit skin", w.edit_skin)
     tools.addWidget(w.edit_button)
     w.remove_button = button("Remove", w.remove_skin)
     tools.addWidget(w.remove_button)
-    w.clear_batch_button = button("Clear batch…", w.clear_batch)
+    w.clear_batch_button = button("Clear batch", w.clear_batch)
     tools.addWidget(w.clear_batch_button)
     tools.addStretch()
     w.load_button = button("Import CSV / XLSX…", w.import_sheet)
@@ -147,13 +167,19 @@ def build(window, default_output):
     resume_info.setToolTip("Choose a JSON report from the output folder’s _CREAM_reports directory. CREAM checks that the project and export settings match, then unchecks successfully exported rows whose ZIPs still exist. Failed or unfinished rows stay checked. Review the selection and click Export to continue.")
     tools.addWidget(resume_info)
     skins.addLayout(tools)
-    w.empty_state = W.QWidget()
+    w.empty_state = W.QFrame()
+    w.empty_state.setObjectName('sectionCard')
     empty = W.QVBoxLayout(w.empty_state)
     empty.addStretch()
-    message = note("No batch needed for a single export\nChoose textures and a ZIPfile name to export the current project.\nAdd entries here only to create variations or export several named copies.")
+    for _ in range(2):
+        skeleton = W.QLabel('')
+        skeleton.setFixedHeight(24)
+        skeleton.setStyleSheet('background: #2a2e31; border: 1px solid #34393d; border-radius: 3px;')
+        empty.addWidget(skeleton)
+    message = note("Create several skins in one export\nAdd names and colors manually, or import a spreadsheet.\nFor one skin, leave this list empty and use Textures and Skin ZIPfile Name.")
     message.setAlignment(QtCore.Qt.AlignCenter)
     empty.addWidget(message)
-    empty.addWidget(button("Add a batch entry…", w.add_skin, True))
+    empty.addWidget(button("Add a batch entry", w.add_skin, True))
     empty.addStretch()
     skins.addWidget(w.empty_state, 1)
     w.backers = W.QTableWidget(0, 8)
@@ -196,6 +222,7 @@ def build(window, default_output):
 
     w.naming_page, naming = page(w, "2  Skin ZIPfile name", "Name your skin ZIPfile",
         "Use any filename, or a pattern for batch entries. This changes the ZIP name only, not text printed on the car.")
+    naming = card(naming, 'ZIPfile name and in-game appearance')
     w.fields["name_pattern"] = W.QLineEdit(core.DEFAULT_NAME_PATTERN)
     w.fields["name_pattern"].setMaxLength(200)
     w.fields["name_pattern"].setPlaceholderText("Event - {name}")
@@ -204,7 +231,9 @@ def build(window, default_output):
     naming.addLayout(form)
     w.pattern_label = form.labelForField(w.fields["name_pattern"])
     w.batch_name_buttons = []
-    tokens = W.QHBoxLayout()
+    w.batch_tokens = W.QWidget()
+    tokens = W.QHBoxLayout(w.batch_tokens)
+    tokens.setContentsMargins(0, 0, 0, 0)
     tokens.addWidget(note("Insert:"))
     for token, label in [("name", "ZIP name"), ("player", "Player"), ("id", "ID"), ("row", "Row")]:
         control = button(label, lambda checked=False, t=token: w.fields["name_pattern"].insert("{" + t + "}"))
@@ -214,7 +243,7 @@ def build(window, default_output):
         w.batch_name_buttons.append(control)
         tokens.addWidget(control)
     tokens.addStretch()
-    naming.addLayout(tokens)
+    naming.addWidget(w.batch_tokens)
     w.batch_name_help = note("Variables use each batch entry’s data. Duplicate names receive 2, 3…")
     naming.addWidget(w.batch_name_help)
     w.naming_context = note("")
@@ -246,6 +275,7 @@ def build(window, default_output):
     logs.addWidget(w.recover_button)
 
     action_panel = W.QFrame()
+    w.action_panel = action_panel
     action_panel.setObjectName("actionPanel")
     action_layout = W.QVBoxLayout(action_panel)
     action_layout.setContentsMargins(12, 10, 12, 10)
@@ -266,18 +296,18 @@ def build(window, default_output):
     w.settings_page, settings = page(w, "Settings", "Files and updates",
         "Choose where exported ZIPs should be saved.")
     w.setup_page = w.settings_page
+    output_card = card(settings, 'Output files')
     files = W.QFormLayout()
     files.setVerticalSpacing(12)
-    settings.addLayout(files)
+    output_card.addLayout(files)
     w.field(files, 'output', 'Save ZIPs to', default_output, None)
     files.addRow('', note('Use CarSport directly for in-game uploads; subfolders can fail.'))
     w.setup_hint = note('Add skins, choose textures and export. Settings apply to every selected skin.')
-    settings.addWidget(w.setup_hint)
-    w.updates_layout = W.QVBoxLayout()
-    settings.addLayout(w.updates_layout)
+    output_card.addWidget(w.setup_hint)
+    w.updates_layout = card(settings, 'Plugin updates')
     heading = note('Updates')
     heading.setStyleSheet('font-size: 17px; font-weight: 600;')
-    w.updates_layout.addWidget(heading)
+    heading.deleteLater()
     w.updates_layout.addWidget(note('Installed: CREAM beta ' + VERSION + '\nCheck, download, then apply the update. CREAM explains when Painter must restart.'))
     settings.addStretch()
     from .help_page import add_help

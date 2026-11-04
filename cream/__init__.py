@@ -6,11 +6,12 @@ Free software under GNU GPL version 3; see LICENSE. Distributed without warranty
 """
 _window = None
 _action = None
+_toolbar_button = None
 _reload_scheduled = False
 
 
 def start_plugin(apply_update=True, show=False):
-    global _window, _action
+    global _window, _action, _toolbar_button
     from pathlib import Path
     from . import bootstrap
     import sys
@@ -27,9 +28,27 @@ def start_plugin(apply_update=True, show=False):
     from .qt import QAction
     import substance_painter.ui as ui
     if _action is None:
-        _action = QAction("CREAM — Skin Exporter", ui.get_main_window())
+        _action = QAction("CREAM", ui.get_main_window())
         _action.triggered.connect(show_window)
         ui.add_action(ui.ApplicationMenu.Window, _action)
+    if _toolbar_button is None and hasattr(ui, 'add_plugins_toolbar_widget'):
+        from .qt import QtCore, QtWidgets
+        button = QtWidgets.QToolButton(ui.get_main_window())
+        button.setObjectName('cream-launcher')
+        button.setDefaultAction(_action)
+        from .launcher_icon import make_icon
+        button.setIcon(make_icon())
+        button.setIconSize(QtCore.QSize(20, 20))
+        button.setToolButtonStyle(QtCore.Qt.ToolButtonIconOnly)
+        button.setFixedSize(28, 28)
+        button.setAccessibleName('Open CREAM')
+        button.setToolTip('Open CREAM')
+        try:
+            ui.add_plugins_toolbar_widget(button)
+            _toolbar_button = button
+        except Exception as exc:
+            button.deleteLater()
+            print('CREAM: toolbar button unavailable; use Window → CREAM:', exc)
     # Painter labels its enable/disable action from the Python package name.
     # Change only our action's presentation; keep its original callback/settings key.
     from .qt import QtCore
@@ -51,7 +70,7 @@ def _label_plugin_action():
 
 
 def show_window():
-    """Painter enables the plugin at startup; only a menu click opens its UI."""
+    """Open from the menu or toolbar; enabling the plugin never opens its UI."""
     global _window
     if _window is None:
         from .ui import Window
@@ -77,7 +96,7 @@ def request_reload():
 
 
 def _reload_now():
-    global _window, _action, _reload_scheduled
+    global _window, _action, _toolbar_button, _reload_scheduled
     import importlib
     from pathlib import Path
     import sys
@@ -103,6 +122,9 @@ def _reload_now():
         old.stop_background_tasks()
         stopped = True
         old.hide()
+        if _toolbar_button is not None:
+            ui.delete_ui_element(_toolbar_button)
+            _toolbar_button = None
         if _action is not None:
             ui.delete_ui_element(_action)
             _action = None
@@ -152,7 +174,7 @@ def _reload_now():
 
 
 def close_plugin():
-    global _window, _action
+    global _window, _action, _toolbar_button
     import substance_painter.ui as ui
     if _window is not None:
         if _window.runner is not None:
@@ -165,6 +187,9 @@ def close_plugin():
         _window.stop_background_tasks()
         ui.delete_ui_element(_window)
         _window = None
+    if _toolbar_button is not None:
+        ui.delete_ui_element(_toolbar_button)
+        _toolbar_button = None
     if _action is not None:
         ui.delete_ui_element(_action)
         _action = None

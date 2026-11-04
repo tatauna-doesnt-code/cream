@@ -25,7 +25,7 @@ class SkinDialog(W.QDialog):
             value = W.QLineEdit((row['colors'][i] or '') if row else '')
             value.setPlaceholderText("Project original · #RRGGBB")
             value.setAccessibleName(f"Color {i+1}")
-            choose = W.QPushButton("Choose…")
+            choose = W.QPushButton("Choose")
             choose.setAutoDefault(False)
             choose.clicked.connect(lambda checked=False, field=value: self.pick(field))
             line.addWidget(value, 1)

@@ -96,6 +96,16 @@ class CoreTests(unittest.TestCase):
         self.assertFalse(final.exists())
         self.assertFalse(list(self.root.glob('*.partial')))
 
+    def test_xlsx_uses_first_sheet_regardless_of_later_names(self):
+        path = self.root / 'multiple-sheets.xlsx'
+        main = 'http://schemas.openxmlformats.org/spreadsheetml/2006/main'
+        with zipfile.ZipFile(path, 'w') as archive:
+            archive.writestr('xl/workbook.xml', f'<workbook xmlns="{main}" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets><sheet name="Skins" r:id="first"/><sheet name="Backers" r:id="second"/></sheets></workbook>')
+            archive.writestr('xl/_rels/workbook.xml.rels', '<Relationships><Relationship Id="first" Target="worksheets/first.xml"/><Relationship Id="second" Target="worksheets/second.xml"/></Relationships>')
+            for sheet, text in [('first', 'Selected first worksheet'), ('second', 'Should not be selected')]:
+                archive.writestr('xl/worksheets/' + sheet + '.xml', f'<worksheet xmlns="{main}"><sheetData><row r="1"><c r="A1" t="inlineStr"><is><t>{text}</t></is></c></row></sheetData></worksheet>')
+        self.assertEqual(core.read_xlsx(path), [['Selected first worksheet']])
+
     def test_xlsx_inline_shared_and_formulas(self):
         path = self.root / 'input.xlsx'
         main = 'http://schemas.openxmlformats.org/spreadsheetml/2006/main'

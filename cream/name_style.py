@@ -259,7 +259,7 @@ class NameStyleHelper(W.QWidget):
         self.width_combo.activated.connect(lambda: self.change_style(width=self.width_combo.currentData()))
         self.width_combo.setFixedHeight(32)
         tools.addWidget(self.width_combo, 0, QtCore.Qt.AlignVCenter)
-        color = W.QPushButton("Text color…")
+        color = W.QPushButton("Text color")
         color.setFocusPolicy(QtCore.Qt.NoFocus)
         color.clicked.connect(self.pick_color)
         tools.addWidget(color)

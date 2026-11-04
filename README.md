@@ -8,7 +8,7 @@ CREAM exports your Substance 3D Painter project into a ready-to-use **Trackmania
 
 On Painter 10.0 and newer, you can also personalize names and colors on the car and export a whole batch from one project. Enter the data directly, or import a spreadsheet when the list gets longer.
 
-**Beta 1.12.3 · Windows · Painter 8.1.2+**
+**Beta 1.13.0 · Windows · Painter 8.1.2+**
 
 [Download](https://github.com/tatauna-doesnt-code/cream/releases) · [Report a bug](https://github.com/tatauna-doesnt-code/cream/issues) · [Changelog](CHANGELOG.md) · [Contributing](CONTRIBUTING.md)
 
@@ -72,7 +72,7 @@ In export-only mode, names and the first two colors are **filename data**. They 
 2. Extract the whole ZIP. Save your work and close Painter.
 3. Run **Install.cmd**. Administrator access is not required. The installer backs up an existing installation. CREAM uses your installed templates and does not install or replace export presets.
 4. Open Painter and enable **Python → cream**. That is the plugin's package name.
-5. Open **Window → CREAM — Skin Exporter**.
+5. Click **CREAM** in Painter's Plugins toolbar, or open **Window → CREAM**. Enabling the plugin adds these launchers; it does not open the window automatically.
 
 CREAM does **not** open its window automatically when Painter starts. Enabling the plugin adds its menu entry; open it when you need it.
 
@@ -87,7 +87,7 @@ The installer identifies previous CREAM installations by their repository identi
 ## First export
 
 1. Open a saved Painter project and prepare the textures you want to export.
-2. In **Settings**, select the output folder. A base ZIP is optional and can be selected in **Batch**. For in-game uploads, use **CarSport directly**; uploads from subfolders can fail. The base ZIP's files must be at its root.
+2. In **CREAM's Settings tab**, select the output folder. A base ZIP is optional and can be selected in **CREAM's Batch tab**. For in-game uploads, use **CarSport directly**; uploads from subfolders can fail. The base ZIP's files must be at its root.
 3. In **1 Textures**, choose maps and resolutions. Without a base ZIP, only selected textures are included. With a base ZIP, unselected files are preserved.
 4. In **2 Skin ZIPfile name**, edit the plain default name `skin` in the styling editor. Trackmania styling is enabled by default; no style is applied until you choose one.
 5. Click **Export current skin**. CREAM checks the configuration, exports the textures, converts to DDS and packages the ZIP.
@@ -127,7 +127,7 @@ For larger batches, **Import CSV / XLSX…** appends spreadsheet rows. The first
 | Row ID | No | Your own identifier |
 | Export / active | No | Which entries to select |
 
-XLSX reads the **Backers** sheet, or the first sheet. Formula cells are rejected. Source spreadsheets are never modified.
+XLSX reads the **first worksheet**, regardless of its name. Formula cells are rejected. Source spreadsheets are never modified.
 
 Manual and mixed lists are saved locally. Spreadsheet-only lists must be imported again after restarting Painter. A CREAM-only reload preserves the current list and editor state.
 
@@ -169,7 +169,7 @@ To resume, choose **Resume a previous batch…** and a JSON report from `_CREAM_
 
 After an interrupted customization run, use **Logs → Restore original / recover project** with the original project open. Restoring layer values requires Painter 10.0+.
 
-Updates are in **Settings**. Check, download and follow the apply/restart instructions. Some Python changes only need CREAM to reopen; loader or resource changes need a Painter restart. **This compatibility update requires one Painter restart.**
+Updates are in **CREAM's Settings tab**. Check, download and follow the apply/restart instructions. Some Python changes only need CREAM to reopen; loader or resource changes need a Painter restart. **This compatibility update requires one Painter restart.**
 
 Public releases need no token. While the repository is private, testers need access and a fine-grained GitHub token with **Contents: Read-only** for this repository. CREAM asks when needed and protects the saved credential with Windows encryption.
 
@@ -179,7 +179,7 @@ No commits or online releases are needed to test changes:
 
 1. Clone the repository or download its source ZIP, then install once with **Install.cmd**.
 2. Open Painter and CREAM. Edit the source and run **Dev.cmd**.
-3. In **Settings → Check for updates**, apply the local build or restart Painter when requested.
+3. In **CREAM's Settings tab → Check for updates**, apply the local build or restart Painter when requested.
 
 See [the development guide](docs/development.md). To run core tests and build a package with a separate Python installation:
 
