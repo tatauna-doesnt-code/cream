@@ -121,9 +121,31 @@ def export(config):
 sp.export.list_project_textures=paths
 sp.export.export_project_textures=export
 sp.export.ExportStatus=types.SimpleNamespace(Success='success')
-from cream import ui, bootstrap, template_export, compatibility, core
+from cream import ui, bootstrap, template_export, compatibility, core, painter
 
 with tempfile.TemporaryDirectory() as folder, patch.object(ui,'DATA',Path(folder)), patch.object(bootstrap,'DATA',Path(folder)):
+    if version >= (10, 0, 0):
+        from enum import Enum
+        channel_type = Enum('ChannelType', ['BaseColor', 'Specular'])
+        plan = {'template': template_export.templates()[-1]}
+        with patch.object(sp.textureset, 'ChannelType', channel_type, create=True), \
+             patch.object(stack, 'has_channel', lambda channel: channel != channel_type.Specular, create=True), \
+             patch.dict(maps[0]['channels'][0], srcMapName='specular'):
+            record = template_export.discover(plan['template'], folder)['Body'][0]
+            selection = dict(record, set='Body', map=record['id'], size=1024)
+            try:
+                template_export.preflight(plan, [selection], folder)
+            except ValueError as exc:
+                assert 'Body_B.dds' in str(exc) and 'needs specular' in str(exc)
+            else:
+                raise AssertionError('Missing Specular was not caught before export')
+        with patch.object(sp.export, 'export_project_textures', side_effect=RuntimeError('Error during the export (see logs).')):
+            try:
+                template_export.export_one(plan, selection, folder)
+            except RuntimeError as exc:
+                assert 'Body_B.png' in str(exc) and 'MapExporter' in str(exc)
+            else:
+                raise AssertionError('Expected a contextual Painter export error')
     sp.project.file_path=lambda:str(Path(folder)/'skin.spp')
     window=ui.Window(auto_update=False)
     window.show()
@@ -269,6 +291,35 @@ with tempfile.TemporaryDirectory() as folder, patch.object(ui,'DATA',Path(folder
     # Batch with unchanged model and arbitrary project set names.
     window.restore_reload_state({'rows':[{'id':'1','line':1,'name':'Player','stem':'Player','colors':[None,None,None]}, {'id':'2','line':2,'name':'Second','stem':'Second','colors':[None,None,None]}],
                                  'loaded_sheet':None,'checked':[True,True],'selected':0,'log':''})
+    if window.capabilities.customization:
+        window.rows[0]['colors'][1] = '#123456'
+        with patch.object(painter, 'available_customization_targets', return_value={'PLAYER_NAME'}):
+            window.refresh_batch_setup()
+            header = window.backers.horizontalHeader()
+            assert set(header.warnings) == {4} and 'PLAYER_COLOR2' in header.warnings[4]
+            assert not window.tabs.tabIcon(window.tabs.indexOf(window.skins_page)).isNull()
+        window.rows[0]['colors'][1] = None
+        recovery = window.recovery_path()
+        saved = {'project': painter.project_path(), 'targets': []}
+        core.atomic_json(recovery, saved)
+        window.saved = saved
+        with patch.object(painter, 'apply') as apply, patch.object(window, 'error') as error:
+            window.restore()
+            apply.assert_called_once_with(saved)
+            error.assert_not_called()
+        assert window.saved is None and not recovery.exists()
+        core.atomic_json(recovery, saved)  # Recovery left on disk after restart.
+        window.refresh_recovery_controls()
+        assert not window.detach_button.isHidden()
+        with patch.object(W.QMessageBox, 'warning', return_value=W.QMessageBox.Cancel):
+            window.detach_preview()
+        assert recovery.exists()
+        with patch.object(W.QMessageBox, 'warning', return_value=W.QMessageBox.Yes), \
+             patch.object(painter, 'apply') as apply, patch.object(window, 'error') as error:
+            window.detach_preview()
+            apply.assert_not_called()
+            error.assert_not_called()
+        assert not recovery.exists() and len(list(Path(folder).glob('detached-*.json'))) == 1
     window.check_rows(False)
     assert window.export_button.text() == 'Export 0 skins' and not window.export_button.isEnabled()
     window.tabs.setCurrentWidget(window.skins_page)

@@ -7,6 +7,7 @@ import shutil
 import tempfile
 import threading
 import traceback
+from uuid import uuid4
 
 from .qt import QtCore, QtGui, QtWidgets as W, exec_dialog
 import substance_painter as sp
@@ -202,6 +203,46 @@ class Window(W.QDialog):
     def refresh_project_gate(self):
         if bool(sp.project.is_open()) != getattr(self, '_project_gate_open', None):
             self.refresh_workflow()
+        elif self.tabs.currentWidget() == self.skins_page:
+            self.refresh_batch_setup()
+            self.refresh_recovery_controls()
+
+    def refresh_batch_setup(self):
+        warnings = {}
+        if self.rows and self.customizing() and self.runner is None and painter.ready():
+            try:
+                available = painter.available_customization_targets()
+            except (RuntimeError, ValueError):
+                return
+            if 'PLAYER_NAME' not in available and any(row.get('name') for row in self.rows):
+                warnings[2] = ('Player name needs a PLAYER_NAME Fill effect inside a layer mask, '
+                               'with a Font resource as its input.')
+            for index in range(3):
+                if f'PLAYER_COLOR{index + 1}' not in available and any(row['colors'][index] for row in self.rows):
+                    warnings[index + 3] = (f'Color {index + 1} needs a PLAYER_COLOR{index + 1} Fill Layer '
+                                           'with a solid Base Color.')
+        header = self.backers.horizontalHeader()
+        if warnings == header.warnings:
+            return
+        icon = self.style().standardIcon(W.QStyle.SP_MessageBoxWarning)
+        header.warnings = warnings
+        for column in range(2, 6):
+            self.backers.horizontalHeaderItem(column).setIcon(icon if column in warnings else QtGui.QIcon())
+        tab = self.tabs.indexOf(self.skins_page)
+        self.tabs.setTabIcon(tab, icon if warnings else QtGui.QIcon())
+        self.tabs.setTabToolTip(tab, '\n'.join(warnings.values()))
+
+    def refresh_recovery_controls(self):
+        pending = self.saved is not None
+        try:
+            if sp.project.is_open():
+                pending = pending or self.recovery_path().exists()
+        except (OSError, ValueError, RuntimeError):
+            pass
+        active = pending and self.runner is None and sp.project.is_open()
+        self.inline_restore.setVisible(bool(self.rows) or active)
+        self.inline_restore.setEnabled(active)
+        self.detach_button.setVisible(active)
 
     def refresh_workflow(self, *args):
         if not hasattr(self, "export_button"):
@@ -232,8 +273,7 @@ class Window(W.QDialog):
         self.batch_tokens.setVisible(loaded)
         self.batch_name_help.setVisible(loaded)
         self.name_style.allow_tokens = loaded
-        self.fields['name_pattern'].setVisible(loaded or not self.styling_enabled.isChecked())
-        self.pattern_label.setVisible(loaded or not self.styling_enabled.isChecked())
+        self.pattern_row.setVisible(loaded or not self.styling_enabled.isChecked())
         self.clear_batch_button.setEnabled(loaded and not busy and not preview)
         self.select_all_button.setEnabled(loaded and not busy and not preview)
         self.clear_selection_button.setEnabled(loaded and not busy and not preview)
@@ -269,7 +309,8 @@ class Window(W.QDialog):
         self.edit_button.setEnabled(loaded and self.backers.currentRow() >= 0 and not busy and not preview)
         self.remove_button.setEnabled(loaded and self.backers.currentRow() >= 0 and not busy and not preview)
         self.resume_button.setEnabled(loaded and not busy and not preview)
-        self.inline_restore.setEnabled(preview and not busy)
+        self.refresh_batch_setup()
+        self.refresh_recovery_controls()
         locked = {self.export_button: "Export", self.validate_button: "Configuration checking",
                   self.clear_batch_button: "Clearing the batch", self.select_all_button: "Selecting batch entries",
                   self.clear_selection_button: "Changing the batch selection", self.add_button: "Adding a skin", self.edit_button: "Editing skin data", self.remove_button: "Removing a skin",
@@ -973,6 +1014,45 @@ class Window(W.QDialog):
         except Exception as exc:
             self.error(exc)
 
+    def detach_preview(self):
+        if self.runner is not None:
+            return
+        try:
+            path = self.recovery_path()
+            saved = self.saved
+            if saved is not None and saved['project'].casefold() != painter.project_path().casefold():
+                raise ValueError('Open the project with the active preview before detaching.')
+            if saved is None and not path.exists():
+                self.refresh_recovery_controls()
+                return
+            answer = W.QMessageBox.warning(
+                self, 'Detach CREAM from this project?',
+                'This clears the preview or recovery lock and keeps the layers as they look now. '
+                'Previewed names and colors can become part of the project if you save it. '
+                'Restore original will no longer use this recovery record. CREAM will keep a copy '
+                'of the record and use the current layer values as the starting point for future previews.',
+                W.QMessageBox.Yes | W.QMessageBox.Cancel, W.QMessageBox.Cancel)
+            if answer != W.QMessageBox.Yes:
+                return
+            if self.runner is not None or self.recovery_path() != path or self.saved is not saved:
+                raise ValueError('The active project or preview changed. Review its state before detaching.')
+            archive = path.with_name(f'detached-{path.stem}-{uuid4().hex}.json')
+            if path.exists():
+                path.rename(archive)
+            elif saved is not None:
+                core.atomic_json(archive, saved)
+            else:
+                self.refresh_recovery_controls()
+                return
+            self.saved = None
+            self.filename_defaults = None
+            self.filename_defaults_project = None
+            self.sync_name_editing()
+            self.naming_changed()
+            self.say(f'Detached from project. Current layer values kept. Archived recovery record: {archive}')
+        except Exception as exc:
+            self.error(exc)
+
     def resume(self):
         try:
             self.ensure_rows()
@@ -1107,7 +1187,7 @@ class Window(W.QDialog):
                     entry.update(status="failed", error=str(exc))
                     if index is not None:
                         self.backers.item(index, 7).setText("Failed")
-                    self.say(f"Failed for {row['name']}: {exc}. See the report.")
+                    self.say(f"Failed for {row['name']}: {exc}")
                 finally:
                     try:
                         yield from self.wait_ready(saved["project"])

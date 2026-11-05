@@ -12,6 +12,27 @@ class InstantInfo(W.QLabel):
         super().leaveEvent(event)
 
 
+class InstantWarningHeader(W.QHeaderView):
+    def __init__(self, parent):
+        super().__init__(QtCore.Qt.Horizontal, parent)
+        self.setMouseTracking(True)
+        self.viewport().setMouseTracking(True)
+        self.warnings = {}
+
+    def mouseMoveEvent(self, event):
+        warning = self.warnings.get(self.logicalIndexAt(event.pos()))
+        if warning:
+            W.QToolTip.showText(self.viewport().mapToGlobal(event.pos()), warning, self)
+        elif self.warnings:
+            W.QToolTip.hideText()
+        super().mouseMoveEvent(event)
+
+    def leaveEvent(self, event):
+        if self.warnings:
+            W.QToolTip.hideText()
+        super().leaveEvent(event)
+
+
 def set_chevron(button, expanded=False):
     pixmap = QtGui.QPixmap(8, 8)
     pixmap.fill(QtCore.Qt.transparent)

@@ -13,7 +13,7 @@ CREAM turns your Painter project into a **Trackmania 2020 skin ZIP**, handling D
 3. In CREAM, choose an output folder in **Settings**, select a template, textures and resolutions in **Textures**, and set the **Skin ZIPfile name**.
 4. Click **Export current skin**. Use **Batch** only when you need multiple skins.
 
-**Beta 1.13.0 · Windows · Painter 8.1.2+**
+**Beta 1.13.1 · Windows · Painter 8.1.2+**
 
 [Download](https://github.com/tatauna-doesnt-code/cream/releases) · [Report a bug](https://github.com/tatauna-doesnt-code/cream/issues) · [Changelog](CHANGELOG.md) · [Contributing](CONTRIBUTING.md)
 
