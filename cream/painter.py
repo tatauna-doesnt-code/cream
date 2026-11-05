@@ -44,34 +44,53 @@ def nodes():
             yield from walk(sp.layerstack.get_root_layer_nodes(stack), [compatibility.texture_set_name(texture_set), stack.name()])
 
 
+def customization_source(node, location, name):
+    if name == 'PLAYER_NAME':
+        if not isinstance(node, sp.layerstack.FillEffectNode) or not node.is_in_mask_stack():
+            raise ValueError(f"{location}: PLAYER_NAME must be a mask Fill using a Font resource.")
+        source = node.get_source()
+        if not isinstance(source, sp.source.SourceFont):
+            raise ValueError(f"{location}: PLAYER_NAME does not use a Font.")
+    else:
+        if not isinstance(node, sp.layerstack.FillLayerNode):
+            raise ValueError(f"{location}: the color must be in a Fill Layer.")
+        source = node.get_source(sp.textureset.ChannelType.BaseColor)
+        if not isinstance(source, sp.source.SourceUniformColor):
+            raise ValueError(f"{location}: Base Color must be an independent uniform color, not a material.")
+    return source
+
+
+def customization_nodes():
+    for node, location in nodes():
+        name = node.get_name()
+        if name == 'PLAYER_NAME' or (name in ('PLAYER_COLOR1', 'PLAYER_COLOR2', 'PLAYER_COLOR3')
+                                     and isinstance(node, sp.layerstack.LayerNode)):
+            yield node, location, name
+
+
+def available_customization_targets():
+    names = set()
+    for node, location, name in customization_nodes():
+        try:
+            customization_source(node, location, name)
+        except (ValueError, RuntimeError):
+            continue
+        names.add(name)
+    return names
+
+
 def snapshot(customize=True):
     result = {"project": project_path(), "targets": []}
     if not customize or not compatibility.current().customization:
         result['mode'] = 'export_only'
         return result
-    for node, location in nodes():
-        name = node.get_name()
-        if name not in ("PLAYER_NAME", "PLAYER_COLOR1", "PLAYER_COLOR2", "PLAYER_COLOR3"):
-            continue
-        # Anchor points commonly inherit their parent layer's name. Only color
-        # layers are targets; never mistake an identically named anchor for one.
-        if name.startswith("PLAYER_COLOR") and not isinstance(node, sp.layerstack.LayerNode):
-            continue
+    for node, location, name in customization_nodes():
         entry = {"location": location, "name": name, "uid": node.uid()}
+        source = customization_source(node, location, name)
         if name == "PLAYER_NAME":
-            if not isinstance(node, sp.layerstack.FillEffectNode) or not node.is_in_mask_stack():
-                raise ValueError(f"{location}: PLAYER_NAME must be a mask Fill using a Font resource.")
-            source = node.get_source()
-            if not isinstance(source, sp.source.SourceFont):
-                raise ValueError(f"{location}: PLAYER_NAME does not use a Font.")
             entry.update(kind="font", text=source.get_parameters().text,
                          resource=source.resource_id.url())
         else:
-            if not isinstance(node, sp.layerstack.FillLayerNode):
-                raise ValueError(f"{location}: the color must be in a Fill Layer.")
-            source = node.get_source(sp.textureset.ChannelType.BaseColor)
-            if not isinstance(source, sp.source.SourceUniformColor):
-                raise ValueError(f"{location}: Base Color must be an independent uniform color, not a material.")
             color = source.get_color()
             space = color.color_space
             entry.update(kind="color", index=int(name[-1]) - 1, value=list(color.value_raw),

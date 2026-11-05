@@ -1,5 +1,11 @@
 # Changes
 
+## 1.13.1 beta
+
+- Explain Batch setup in the tab and flag requested names or colors that have no compatible layer targets.
+- Fix the preview restore UI refresh and add a confirmed detach action that archives pending recovery while keeping current layer values.
+- Detect missing document channels during export validation when template mappings are available. Name the failed output and direct users to Painter's MapExporter log when Painter returns a generic error.
+
 ## 1.13.0 beta
 
 - Find export templates in registered library folders on older Painter versions whose general resource search omits `.spexp` files. Newer versions continue using the dedicated template API.

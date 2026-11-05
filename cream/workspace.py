@@ -7,7 +7,7 @@ from .name_style import NameStyleHelper
 from .texture_sets import TextureSets
 from .export_textures import ExportTextures
 from .version import VERSION
-from .controls import InstantInfo, CenteredCheckDelegate, WorkflowTabBar
+from .controls import InstantInfo, InstantWarningHeader, CenteredCheckDelegate, WorkflowTabBar, set_chevron
 
 
 def note(text):
@@ -128,6 +128,27 @@ def build(window, default_output):
         "Add entries only when you need multiple versions. An empty list exports the current project as-is.")
     w.export_only_notice = note('This Painter version supports exporting existing textures and styling ZIP names. Car name/color customization requires Painter 10.0+.')
     skins.addWidget(w.export_only_notice)
+    setup_row = W.QHBoxLayout()
+    setup_icon = W.QLabel()
+    setup_icon.setPixmap(w.style().standardIcon(W.QStyle.SP_MessageBoxInformation).pixmap(16, 16))
+    setup_row.addWidget(setup_icon)
+    setup_toggle = W.QToolButton()
+    setup_toggle.setText('How to set up your project for batch exports')
+    setup_toggle.setCheckable(True)
+    setup_toggle.setToolButtonStyle(QtCore.Qt.ToolButtonTextBesideIcon)
+    set_chevron(setup_toggle)
+    setup_row.addWidget(setup_toggle)
+    setup_row.addStretch()
+    skins.addLayout(setup_row)
+    setup = note('Colors\nUse Fill Layers named PLAYER_COLOR1, PLAYER_COLOR2 and PLAYER_COLOR3 with a solid Base Color. '
+                 'Paint layers cannot receive custom colors. Mask each Fill Layer to the area you want to recolor.\n\n'
+                 'Text\nUse editable Text (a Font resource) in a Fill effect inside a layer mask. '
+                 'Name the Fill effect PLAYER_NAME and set the text position and font in Painter.\n\n'
+                 'Add a Batch entry and preview it in Painter. Select the texture outputs that contain the changes before exporting.')
+    setup.hide()
+    setup_toggle.toggled.connect(setup.setVisible)
+    setup_toggle.toggled.connect(lambda opened: set_chevron(setup_toggle, opened))
+    skins.addWidget(setup)
     base_card = card(skins, 'Optional base skin')
     base_form = W.QFormLayout()
     w.field(base_form, 'base', 'Base skin ZIP (optional)', '', 'Skin (*.zip)')
@@ -183,6 +204,7 @@ def build(window, default_output):
     empty.addStretch()
     skins.addWidget(w.empty_state, 1)
     w.backers = W.QTableWidget(0, 8)
+    w.backers.setHorizontalHeader(InstantWarningHeader(w.backers))
     w.backers.setHorizontalHeaderLabels(["Export", "Row / ID", "Player name", "Color 1", "Color 2", "Color 3", "ZIP filename", "Status"])
     w.backers.verticalHeader().hide()
     w.backers.setShowGrid(False)
@@ -206,6 +228,10 @@ def build(window, default_output):
     preview.addWidget(w.preview_button)
     w.inline_restore = button("Restore original", w.restore)
     preview.addWidget(w.inline_restore)
+    w.detach_button = button('Detach from project', w.detach_preview)
+    w.detach_button.setStyleSheet('QPushButton { color: #ffe0e0; background: #723232; border: 1px solid #ad6262; } '
+                                 'QPushButton:hover { background: #913e3e; }')
+    preview.addWidget(w.detach_button)
     preview.addStretch()
     preview.addWidget(button("Choose textures →", lambda: w.tabs.setCurrentWidget(w.textures_page)))
     skins.addLayout(preview)
@@ -226,10 +252,12 @@ def build(window, default_output):
     w.fields["name_pattern"] = W.QLineEdit(core.DEFAULT_NAME_PATTERN)
     w.fields["name_pattern"].setMaxLength(200)
     w.fields["name_pattern"].setPlaceholderText("Event - {name}")
-    form = W.QFormLayout()
-    form.addRow("Filename pattern", w.fields["name_pattern"])
-    naming.addLayout(form)
-    w.pattern_label = form.labelForField(w.fields["name_pattern"])
+    w.pattern_row = W.QWidget()
+    pattern_layout = W.QHBoxLayout(w.pattern_row)
+    pattern_layout.setContentsMargins(0, 0, 0, 0)
+    pattern_layout.addWidget(W.QLabel('Filename pattern', w.pattern_row))
+    pattern_layout.addWidget(w.fields['name_pattern'], 1)
+    naming.addWidget(w.pattern_row)
     w.batch_name_buttons = []
     w.batch_tokens = W.QWidget()
     tokens = W.QHBoxLayout(w.batch_tokens)

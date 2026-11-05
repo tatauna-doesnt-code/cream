@@ -153,6 +153,9 @@ def output_filename(selection):
 
 def preflight(plan, selections, directory):
     actual = discover(plan['template'], directory)
+    stacks = {compatibility.texture_set_name(item): item.all_stacks()[0] for item in texture_sets()}
+    channel_type = getattr(sp.textureset, 'ChannelType', None)
+    channel_types = {name.casefold(): value for name, value in getattr(channel_type, '__members__', {}).items()}
     occupied = set()
     for selection in selections:
         name = selection['set']
@@ -160,10 +163,32 @@ def preflight(plan, selections, directory):
         if record is None or any(record.get(k) != selection.get(k) for k in ('source', 'prefix', 'separator', 'definition')):
             raise ValueError('The project or export template changed. Refresh the Textures tab and review your selections.')
         filename = output_filename(selection)
+        stack = stacks[name]
+        missing = set()
+        if hasattr(stack, 'has_channel'):
+            for source in (record['definition'] or {}).get('channels', []):
+                if source.get('srcMapType') != 'documentMap':
+                    continue
+                source_name = source.get('srcMapName', '')
+                source_type = channel_types.get(source_name.casefold())
+                if source_type is not None and not stack.has_channel(source_type):
+                    missing.add(source_name)
+        if missing:
+            channels = ', '.join(sorted(missing, key=str.casefold))
+            raise ValueError(f'{filename}: the export template needs {channels} in texture set "{name}". '
+                             'Add the required channel in Painter, use a compatible template, '
+                             'or deselect this output in CREAM.')
         if filename.casefold() in occupied:
             raise ValueError('Two selected outputs have the same ZIP filename: ' + filename)
         occupied.add(filename.casefold())
         core.dds_format(selection['compression'])
+
+
+def painter_export_error(selection, detail):
+    if 'see logs' in detail.casefold():
+        detail = 'Open Substance 3D Painter’s Log panel and look for the MapExporter error.'
+    return RuntimeError(f'Painter could not export {selection["source"]} from texture set '
+                        f'"{selection["set"]}": {detail}')
 
 
 def export_one(plan, selection, directory):
@@ -173,9 +198,12 @@ def export_one(plan, selection, directory):
     definition = selection.get('definition')
     export = config(plan['template'], selection['set'], target, selection['size'], definition)
     expected = target / ('cream_output.png' if definition is not None else selection['source'])
-    result = sp.export.export_project_textures(export)
+    try:
+        result = sp.export.export_project_textures(export)
+    except RuntimeError as exc:
+        raise painter_export_error(selection, str(exc)) from exc
     if result.status != sp.export.ExportStatus.Success:
-        raise RuntimeError('Painter export failed: ' + str(getattr(result, 'message', result.status)))
+        raise painter_export_error(selection, str(getattr(result, 'message', '') or result.status))
     paths = [Path(p).resolve() for items in result.textures.values() for p in items]
     if expected.resolve() not in paths or not expected.is_file():
         raise RuntimeError('Painter did not produce the selected template output: ' + expected.name)
