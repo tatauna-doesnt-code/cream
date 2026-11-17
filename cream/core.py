@@ -127,8 +127,8 @@ def validate_columns(headers, mapping):
     for field, index in result.items():
         if index is not None and (type(index) is not int or not 0 <= index < len(headers)):
             raise ValueError(f"Invalid column for {field}. Select the columns again.")
-    if result["nome_player"] is None:
-        raise ValueError("Select the column containing the player name.")
+    if all(result[field] is None for field in ("nome_player", "cor_1", "cor_2", "cor_3")):
+        raise ValueError("Select a player name or color column.")
     return result
 
 
@@ -137,6 +137,8 @@ def read_rows(path, mapping=None):
 
 
 def normalize_player_name(value, number):
+    if not value:
+        return "", []
     name = unicodedata.normalize("NFC", value)
     if not name.strip() or any(unicodedata.category(c) == "Cc" for c in name):
         raise ValueError(f"Row {number}: name is empty or contains control characters.")
@@ -153,14 +155,14 @@ def name_originals(rows, table=None, filename_column=None):
             cells = table[row["line"] - 1]
             explicit = filename_column is not None and filename_column < len(cells) and bool(str(cells[filename_column]).strip())
         else:
-            explicit = row["stem"] != safe_stem(row["name"])
+            explicit = row["stem"] != safe_stem(row["name"] or "skin")
         originals.append({"name": row["name"], "stem": row["stem"], "zip_from_player": not explicit})
     return originals
 
 
 def edited_player_name(row, original, value):
     name, warnings = normalize_player_name(value, row["line"])
-    return dict(row, name=name, stem=safe_stem(name) if original["zip_from_player"] else original["stem"]), warnings
+    return dict(row, name=name, stem=safe_stem(name or "skin") if original["zip_from_player"] else original["stem"]), warnings
 
 
 def rows_from_table(table, mapping=None):
@@ -186,11 +188,13 @@ def rows_from_table(table, mapping=None):
             if color and not re.fullmatch(r"#[0-9a-fA-F]{6}", color):
                 raise ValueError(f"Row {number}: color_{index} must be #RRGGBB or blank.")
             colors.append(color.upper() or None)
+        if not name and not any(colors):
+            raise ValueError(f"Row {number}: enter text or at least one color.")
         identifier = record.get("id", "").strip() or str(number)
         if identifier in ids:
             raise ValueError(f"Row {number}: duplicate ID ({identifier}). Names may repeat; IDs must be unique.")
         ids.add(identifier)
-        filename = record.get("nome_arquivo", "").strip() or name
+        filename = record.get("nome_arquivo", "").strip() or name or "skin"
         clean = safe_stem(filename)
         if clean != filename:
             warnings.append(f"Row {number}: filename adjusted to {clean!r}.")
@@ -269,6 +273,14 @@ def next_destination(folder, stem, occupied=None, existing_names=None):
             occupied.add(name.casefold())
             return Path(folder) / name
     raise ValueError("Could not reserve a ZIP filename.")
+
+
+def png_dimensions(path):
+    with Path(path).open('rb') as image:
+        header = image.read(24)
+    if len(header) != 24 or header[:16] != b'\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR':
+        raise ValueError('Painter returned an invalid PNG: ' + str(path))
+    return struct.unpack('>II', header[16:24])
 
 
 def dimensions(texture_set, size):

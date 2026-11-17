@@ -63,7 +63,6 @@ with tempfile.TemporaryDirectory() as folder, patch.object(ui, "DATA", Path(fold
     window = ui.Window(auto_update=False)
     assert 'converter' not in window.fields
     assert window.fields["name_pattern"].text() == "skin"
-    assert window.styling_enabled.isChecked()
     window.fields["name_pattern"].setText("{name}")
     window.fields["sheet"].setText(str(path))
     window.fields["output"].setText(str(Path(folder) / 'skins'))
@@ -102,17 +101,14 @@ with tempfile.TemporaryDirectory() as folder, patch.object(ui, "DATA", Path(fold
     window.sync_name_editing()
     assert not cell.editor.isReadOnly()
     assert path.read_bytes() == original_sheet
-    window.styling_enabled.setChecked(True)
     assert not window.name_style.isHidden()
     window.fields["name_pattern"].setText("{primary}{name}$g - {secondary}Event")
-    assert window.name_preview.text() == "$ABCJoseph$g - $DEFEvent.zip"
+    assert window.refresh_destinations() == "$ABCJoseph$g - $DEFEvent.zip"
     assert window.name_style.preview.toPlainText() == "Joseph - Event.zip"
-    raw = window.fields["name_pattern"].text()
-    window.styling_enabled.setChecked(False)
-    assert window.fields["name_pattern"].text() == raw
+    assert window.fields["name_pattern"] is window.name_style
     window.fields["name_pattern"].setText("Community - {name} - {id}")
     assert window.backers.item(0, 6).text() == "Community - Joseph - 2.zip"
-    assert window.name_preview.text() == window.backers.item(0, 6).text()
+    assert window.refresh_destinations() == window.backers.item(0, 6).text()
     window.fields["name_pattern"].setText("{unknown}")
     assert window.backers.item(0, 6).text() == "Invalid name pattern"
     window.fields["name_pattern"].setText("Community - {name}")
@@ -138,7 +134,6 @@ with tempfile.TemporaryDirectory() as folder, patch.object(ui, "DATA", Path(fold
     (Path(folder) / "settings.json").write_text(json.dumps(settings))
     legacy = ui.Window(auto_update=False)
     assert legacy.fields["name_pattern"].text() == "skin"
-    assert legacy.styling_enabled.isChecked()
     assert 'converter' not in legacy.fields and ui.CONVERTER == Path(ui.__file__).parent / 'bin/texconv.exe'
     for item in (window, second, legacy):
         item.stop_updater()

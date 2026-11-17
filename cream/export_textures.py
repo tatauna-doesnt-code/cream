@@ -87,6 +87,10 @@ class Section(W.QWidget):
     def __init__(self, name, records, owner):
         super().__init__()
         self.texture_set, self.records = name, records
+        self.default_size = 2048 if name == 'Wheels' else 'source'
+        self.aspect_warning = warning_icon(
+            'Trackmania expects Wheels textures at 1:4. A different aspect ratio can stretch '
+            'generated details such as shadows and bevels. Source / template uses Painter’s dimensions.')
         self.setObjectName('textureSetCard')
         self.setAttribute(QtCore.Qt.WA_StyledBackground, True)
         layout = W.QVBoxLayout(self)
@@ -113,8 +117,9 @@ class Section(W.QWidget):
         self.resolution.setFixedHeight(32)
         self.resolution.addItem('Mixed', None)
         self.resolution.model().item(0).setEnabled(False)
+        self.resolution.addItem('Source / template', 'source')
         add_resolutions(self.resolution, name)
-        self.resolution.setCurrentIndex(self.resolution.findData(2048))
+        self.resolution.setCurrentIndex(self.resolution.findData(self.default_size))
         self.check_cell = W.QWidget()
         self.check_cell.setFixedSize(40, 40)
         check_layout = W.QHBoxLayout(self.check_cell)
@@ -127,6 +132,7 @@ class Section(W.QWidget):
         header.addStretch(1)
         self.resolution.setFixedWidth(140)
         self.resolution.setAccessibleName(name + ' resolution for all textures')
+        header.addWidget(self.aspect_warning)
         header.addWidget(self.resolution)
         layout.addWidget(header_widget)
         self.table = W.QTableWidget(len(records), 5)
@@ -165,8 +171,9 @@ class Section(W.QWidget):
             self.compressions.append(compression)
             size = W.QComboBox()
             size.setFixedHeight(32)
+            size.addItem('Source / template', 'source')
             add_resolutions(size, name)
-            size.setCurrentIndex(size.findData(2048))
+            size.setCurrentIndex(size.findData(self.default_size))
             self.sizes.append(size)
             for column, widget in ((2, suffix), (3, compression), (4, size)):
                 if column == 4:
@@ -185,7 +192,7 @@ class Section(W.QWidget):
         layout.addWidget(self.table)
         self.table.hide()
         self.expand.toggled.connect(self.set_expanded)
-        self.export.stateChanged.connect(self.toggle_all)
+        self.export.clicked.connect(self.toggle_all)
         self.resolution.activated.connect(self.apply_resolution)
         self.table.itemChanged.connect(self.update)
         self.update()
@@ -217,6 +224,10 @@ class Section(W.QWidget):
         del blocker
         self.summary.setText(f'{count} / {len(self.records)} selected')
         values = {size.currentData() for size in self.sizes}
+        self.aspect_warning.setVisible(self.texture_set == 'Wheels' and 'source' in values)
+        if self.texture_set == 'Wheels':
+            for size in self.sizes:
+                size.setToolTip(self.aspect_warning.toolTip() if size.currentData() == 'source' else '')
         blocker = QtCore.QSignalBlocker(self.resolution)
         self.resolution.setCurrentIndex(self.resolution.findData(next(iter(values))) if len(values) == 1 else 0)
         del blocker
@@ -242,7 +253,7 @@ class Section(W.QWidget):
             compression = saved.get('compression', record['compression'])
             if compression in ('BC1', 'BC3', 'BC4', 'BC5'):
                 self.compressions[i].set_value(compression)
-            size = self.sizes[i].findData(saved.get('size', 2048))
+            size = self.sizes[i].findData(saved.get('size', self.default_size))
             self.sizes[i].setCurrentIndex(max(0, size))
             self.table.item(i, 0).setCheckState(QtCore.Qt.Checked if saved.get('checked') else QtCore.Qt.Unchecked)
         self.update()
@@ -389,6 +400,7 @@ class ExportTextures(W.QWidget):
         try:
             if state is None:
                 state = self.settings()
+            expanded = {name for name, section in self.groups.items() if section.expand.isChecked()}
             self.clear_groups()
             if not painter.ready():
                 self.problem = ('Texture outputs are waiting for Painter. Open a saved project and finish '
@@ -405,7 +417,14 @@ class ExportTextures(W.QWidget):
             records = template_export.discover(descriptor, Path(self.window.fields['output'].text() or '.').resolve())
             self.problem = ''
             for name, outputs in records.items():
-                section = Section(name, outputs, self)
+                available = [record for record in outputs if not record['missing_channels']]
+                section = Section(name, available, self)
+                section.expand.setChecked(name in expanded)
+                unavailable = [record['source'] + ': ' + ', '.join(record['missing_channels'])
+                               for record in outputs if record['missing_channels']]
+                if unavailable:
+                    section.summary.setToolTip('Outputs omitted because channels are missing:\n' + '\n'.join(unavailable))
+                section.export.setEnabled(bool(available))
                 if not self.groups:
                     section.setStyleSheet('QWidget#textureSetCard { border-top: 1px solid #555b60; }')
                     section.layout().setContentsMargins(1, 1, 1, 0)

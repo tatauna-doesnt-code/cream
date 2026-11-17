@@ -62,7 +62,7 @@ class Window(W.QDialog):
         super().__init__(sp.ui.get_main_window())
         self.capabilities = compatibility.current()
         self._compatibility_warned = False
-        self.setWindowTitle("CREAM beta " + VERSION)
+        self.setWindowTitle("CREAM " + VERSION)
         self.resize(1040, 820)
         self.rows = []
         self.name_originals = []
@@ -90,7 +90,6 @@ class Window(W.QDialog):
         self.load_settings()
         self.texture_sets.reload()
         self.fields["name_pattern"].setText("skin")
-        self.styling_enabled.setChecked(True)
         self.fields["name_pattern"].textChanged.connect(self.naming_changed)
         self.fields["output"].textChanged.connect(self.naming_changed)
         self.backers.currentCellChanged.connect(lambda *args: self.naming_changed())
@@ -272,14 +271,10 @@ class Window(W.QDialog):
             control.setEnabled(loaded)
         self.batch_tokens.setVisible(loaded)
         self.batch_name_help.setVisible(loaded)
-        self.name_style.allow_tokens = loaded
-        self.pattern_row.setVisible(loaded or not self.styling_enabled.isChecked())
+        self.name_style.set_token_mode(loaded)
         self.clear_batch_button.setEnabled(loaded and not busy and not preview)
         self.select_all_button.setEnabled(loaded and not busy and not preview)
         self.clear_selection_button.setEnabled(loaded and not busy and not preview)
-        self.naming_context.setText(
-            'Filename preview · highlighted batch entry' if loaded else
-            'Filename preview · current project')
         self.summary.setText(f"{count} skins selected  ·  {maps} textures per skin  ·  {count * maps} texture exports")
         if not loaded:
             self.summary.setText(f"Current project  ·  {maps} textures  ·  1 ZIP")
@@ -474,7 +469,7 @@ class Window(W.QDialog):
                 "checked": [self.backers.item(i, 0).checkState() == QtCore.Qt.Checked
                             for i in range(self.backers.rowCount())],
                 "selected": self.backers.currentRow(), "log": self.log.toPlainText(),
-                "page": self.tabs.currentIndex(), "tm_styling": self.styling_enabled.isChecked(),
+                "page": self.tabs.currentIndex(),
                 "customize": self.customizing(), "textures": self.texture_sets.settings(),
                 "name_pattern": self.fields['name_pattern'].text()}
 
@@ -498,7 +493,6 @@ class Window(W.QDialog):
             for column, value in enumerate(values, 1):
                 self.backers.setItem(i, column, W.QTableWidgetItem(str(value)))
         self.install_name_cells()
-        self.styling_enabled.setChecked(bool(state.get("tm_styling", self.styling_enabled.isChecked())))
         if state["selected"] >= 0:
             self.backers.selectRow(state["selected"])
         self.log.setPlainText(state["log"])
@@ -522,6 +516,23 @@ class Window(W.QDialog):
         text.setAccessibleName(label)
         text.setFixedHeight(32)
         self.fields[key] = text
+        if key == "base":
+            text.setStyleSheet("QLineEdit { padding: 0 6px; min-height: 30px; max-height: 30px; }")
+            text.setTextMargins(0, 0, 24, 0)
+            inside = W.QHBoxLayout(text)
+            inside.setContentsMargins(1, 0, 4, 0)
+            inside.addStretch()
+            clear = W.QToolButton()
+            clear.setIcon(self.style().standardIcon(W.QStyle.SP_LineEditClearButton))
+            clear.setIconSize(QtCore.QSize(14, 14))
+            clear.setAccessibleName("Clear base skin ZIP")
+            clear.setToolTip("Clear base skin ZIP")
+            clear.setFixedSize(22, 22)
+            clear.setStyleSheet("QToolButton { min-height: 0; border: none; padding: 0; background: transparent; }")
+            clear.clicked.connect(lambda: text.clear() if text.isEnabled() and not text.isReadOnly() else None)
+            clear.setVisible(bool(value))
+            text.textChanged.connect(lambda path: clear.setVisible(bool(path)))
+            inside.addWidget(clear, 0, QtCore.Qt.AlignVCenter)
         layout.addWidget(text, 1, QtCore.Qt.AlignVCenter)
         button = W.QPushButton("Browse…")
         button.setAutoDefault(False)
@@ -760,7 +771,8 @@ class Window(W.QDialog):
             self.backers.item(index, 7).setText("Invalid name")
             self.backers.item(index, 6).setText("Invalid player name")
             if self.backers.currentRow() == index:
-                self.name_preview.setText(str(exc))
+                self.name_style.message.setText(str(exc))
+                self.name_style.message.show()
                 self.name_style.set_preview("", {})
             self.status.setText(str(exc))
         else:
@@ -789,9 +801,10 @@ class Window(W.QDialog):
         occupied = set()
         folder = Path(self.fields["output"].text())
         existing = {path.name.casefold() for path in folder.glob("*")} if folder.exists() else set()
+        preview_name = ""
         if not self.rows:
             path = core.next_destination(folder, core.format_skin_name(pattern, self.current_project_row(), defaults), occupied, existing)
-            self.name_preview.setText(path.name)
+            preview_name = path.name
         for i, row in enumerate(self.rows):
             if i in self.invalid_names:
                 self.backers.item(i, 6).setText("Invalid player name")
@@ -799,7 +812,9 @@ class Window(W.QDialog):
             path = core.next_destination(folder, core.format_skin_name(pattern, row, defaults), occupied, existing)
             self.backers.item(i, 6).setText(path.name)
             if i == max(0, self.backers.currentRow()):
-                self.name_preview.setText(path.name)
+                preview_name = path.name
+
+        return preview_name
 
     def get_filename_defaults(self, refresh=False):
         try:
@@ -813,12 +828,6 @@ class Window(W.QDialog):
         except (ValueError, RuntimeError):
             return None
 
-    def toggle_name_helper(self, enabled):
-        self.name_style.setVisible(enabled)
-        if enabled and hasattr(self, "backers"):
-            self.get_filename_defaults(refresh=True)
-            self.naming_changed()
-
     def refresh_name_colors(self):
         self.get_filename_defaults(refresh=True)
         self.naming_changed()
@@ -826,28 +835,29 @@ class Window(W.QDialog):
     def naming_changed(self):
         self.filename_error = None
         pattern = self.export_name_pattern()
-        self.name_style.allow_tokens = bool(self.rows)
-        self.name_style.set_source(self.fields['name_pattern'].text())
+        self.name_style.set_token_mode(bool(self.rows))
         selected = max(0, self.backers.currentRow())
         if selected in self.invalid_names:
-            self.name_preview.setText(self.invalid_names[selected])
+            self.name_style.message.setText(self.invalid_names[selected])
+            self.name_style.message.show()
             self.name_style.set_preview("", {})
             return
         try:
             example = self.rows[max(0, self.backers.currentRow())] if self.rows else self.current_project_row()
             defaults = self.get_filename_defaults() if core.name_color_fields(pattern) else self.filename_defaults
-            self.name_preview.setText(core.format_skin_name(pattern, example, defaults) + ".zip")
-            self.refresh_destinations()
+            preview_name = self.refresh_destinations()
+            self.name_style.message.hide()
             colors = {}
             for key in ("primary", "secondary"):
                 try:
                     colors[key] = core.resolve_name_color(example, key, defaults)
                 except ValueError:
                     colors[key] = None
-            self.name_style.set_preview(self.name_preview.text(), colors)
+            self.name_style.set_preview(preview_name, colors)
         except ValueError as exc:
             self.filename_error = str(exc)
-            self.name_preview.setText(str(exc))
+            self.name_style.message.setText(str(exc))
+            self.name_style.message.show()
             self.name_style.set_preview("", {})
             for i in range(self.backers.rowCount()):
                 if self.backers.item(i, 6) is not None:
@@ -870,8 +880,6 @@ class Window(W.QDialog):
             # Before configurable naming every export had this prefix. Preserve it on upgrade.
             self.fields["name_pattern"].setText(settings.get("fields", {}).get("name_pattern", core.DEFAULT_NAME_PATTERN))
             self.column_profile = settings.get("column_profile")
-            # The visual helper is opt-in for each session, including old saved preferences.
-            self.styling_enabled.setChecked(True)
             for key, value in settings.get("fields", {}).items():
                 if key in self.fields:
                     self.fields[key].setText(value)
@@ -1160,7 +1168,10 @@ class Window(W.QDialog):
                         yield
                         core.check_cancel(self.cancel)
                         self.say(f"{row['name']}: converting {filename} to DDS")
-                        width, height = core.dimensions(selection["set"], selection["size"])
+                        if selection["size"] == "source":
+                            width, height = core.png_dimensions(source)
+                        else:
+                            width, height = core.dimensions(selection["set"], selection["size"])
                         dds = yield from self.await_file(core.convert, converter, source, source.parent / "dds",
                                                          selection["compression"], width, height, self.cancel)
                         replacements[filename + ".dds"] = dds

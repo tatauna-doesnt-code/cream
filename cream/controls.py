@@ -19,6 +19,12 @@ class InstantWarningHeader(W.QHeaderView):
         self.viewport().setMouseTracking(True)
         self.warnings = {}
 
+    def viewportEvent(self, event):
+        if event.type() == QtCore.QEvent.ToolTip and self.warnings.get(self.logicalIndexAt(event.pos())):
+            event.accept()
+            return True
+        return super().viewportEvent(event)
+
     def mouseMoveEvent(self, event):
         warning = self.warnings.get(self.logicalIndexAt(event.pos()))
         if warning:

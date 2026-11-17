@@ -1,5 +1,14 @@
 # Changes
 
+## 1.14.0
+
+- Place batch variables under the filename editor and replace the width dropdown with three adjacent controls.
+- Align the base ZIP field and clear action with Browse, and put the setup icon inside its accordion button.
+
+- Use one visual filename editor for single and batch exports. Batch entries unlock variables and per-entry text colors.
+- Default Wheels to 512 × 2048 and explain the recommended aspect ratio when using source dimensions. Other sets inherit source dimensions.
+- Support palette-only entries, filter outputs with known missing channels, and improve texture selection, text styling and warning tooltips.
+
 ## 1.13.1 beta
 
 - Explain Batch setup in the tab and flag requested names or colors that have no compatible layer targets.

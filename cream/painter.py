@@ -149,7 +149,7 @@ def apply(saved, row=None):
         for target, source in resolved:
             if target["kind"] == "font":
                 params = source.get_parameters()
-                params.text = target["text"] if row is None else row["name"]
+                params.text = row["name"] if row and row["name"] else target["text"]
                 source.set_parameters(params)
             else:
                 hex_color = row["colors"][target["index"]] if row else None

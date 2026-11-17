@@ -23,7 +23,7 @@ app.setFont(QtGui.QFont('Segoe UI', 10))
 helper = NameStyleHelper()
 helper.resize(1000, 320)
 emitted = []
-helper.pattern_changed.connect(emitted.append)
+helper.textChanged.connect(emitted.append)
 raw = '$oCUP - {name}$z'
 helper.set_source(raw)
 assert helper.editor.toPlainText() == 'CUP - {name}'

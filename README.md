@@ -1,209 +1,144 @@
 <p align="center">
-  <img src="docs/assets/cream-logo.png" width="240" alt="cream — CREAM logo in Righteous">
+  <img src="docs/assets/cream-logo.png" width="240" alt="CREAM">
 </p>
 
 **Color Replacement & Export Automation Manager**
 
-## TL;DR
+CREAM turns your Substance 3D Painter textures into a **Trackmania 2020 skin ZIP** on Windows.
 
-CREAM turns your Painter project into a **Trackmania 2020 skin ZIP**, handling DDS conversion, ZIP packaging and in-game filename styling. Batch export is optional.
+| Workflow | Painter version |
+| --- | --- |
+| Style the in-game skin name and export a ZIP with DDS textures in one click | **8.1.2+** |
+| Batch-export versions of a skin with custom text and colors | **10.0+** · **10.1.2+ recommended** for more stable layer editing |
 
-1. [Download](https://github.com/tatauna-doesnt-code/cream/releases) **CREAM-plugin.zip**, extract it, close Painter and run **Install.cmd**.
-2. Reopen Painter, enable **Python → CREAM**, open your project and click the **c** icon in the Plugins toolbar.
-3. In CREAM, choose an output folder in **Settings**, select a template, textures and resolutions in **Textures**, and set the **Skin ZIPfile name**.
-4. Click **Export current skin**. Use **Batch** only when you need multiple skins.
+## Quick start
 
-**Beta 1.13.1 · Windows · Painter 8.1.2+**
+1. **Install.** Download **CREAM-plugin.zip** from [Releases](https://github.com/tatauna-doesnt-code/cream/releases) and extract it. Save your work, close Painter and run **Install.cmd**.
+2. **Open.** Reopen Painter, enable **Python → cream** and open your saved project. Click the **c** in Painter’s Plugins toolbar or choose **Window → CREAM**.
+3. **Choose a folder.** In **CREAM → Settings → Save ZIPs to**, choose where to save your skin. For game uploads, use `Trackmania/Skins/Models/CarSport` directly.
+4. **Export.** In **Textures**, choose an export template and check the images you want. In **Skin ZIPfile name**, enter a name and click **Export current skin**.
 
-[Download](https://github.com/tatauna-doesnt-code/cream/releases) · [Report a bug](https://github.com/tatauna-doesnt-code/cream/issues) · [Changelog](CHANGELOG.md) · [Contributing](CONTRIBUTING.md)
+Leave **Batch** empty to export the car as it looks in Painter. A single export needs no special layers.
 
-## Features
+<details>
+<summary>Updates and manual installation</summary>
 
-- Select an installed export template and discover the actual texture sets and outputs of the open project, with resolution controls per set and per texture.
-- Convert to the DDS formats Trackmania expects, package the selected textures into a ZIP. Optionally reuse a base ZIP to preserve its other files.
-- Name ZIPs with configurable patterns and an optional **Trackmania WYSIWYG editor**: bold, italic, uppercase, shadow, widths and three-digit text colors.
-- On compatible versions, change player-name font fills and up to three Base Colors. Font layout and other layer channels stay as you set them in Painter.
-- Export batches with safe cancellation, reports, resume and original-value recovery.
+Choose **CREAM → Settings → Check for updates** and follow the restart prompt if one appears. To upgrade from an older package name, close Painter and run the new **Install.cmd** once. It backs up the old installation.
 
-No separate Python, Excel, image library or DDS converter installation is needed to use CREAM.
+To install manually, copy the entire `cream` folder, including its fonts and DDS converter, to `Documents/Adobe/Adobe Substance 3D Painter/python/plugins`.
 
-## Export templates and texture overrides
+</details>
 
-CREAM looks for one installed **TM2020** export template. If it cannot find an unambiguous match, choose a template in **Textures**. The dropdown identifies duplicate template names by their resource URL. Click Refresh after editing a template in Painter. No preset is installed or overwritten by CREAM.
+## Export settings
 
-Only the current project's texture sets are listed. Each template output has an export checkbox, a suffix input, BC1/BC3/BC4/BC5 compression and a resolution control. CREAM preserves the template's channel packing and normal convention. Unknown suffixes default to **BC3** to preserve alpha and display a warning; choose the required format before exporting.
+### Textures and resolution
 
-The first suffix/compression edit asks for confirmation. Overrides become **_bold italic_**, with a restore icon for each value; the Textures tab gains an asterisk. Yellow icons explain unknown suffixes or combinations that differ from the TM2020 reference table. These are advisories, so intentional custom formats can export. Unsafe filenames and duplicate destinations are blocked.
+An **export template** defines the images Painter produces. CREAM selects **TM2020** when it finds one match. Check a texture set to export all its images, or expand it to pick individual maps.
 
-Open **TM2020 textures reference table** in Textures or Help for the suffix/content/compression table. Overrides and selections are saved by project, template URL, texture set and output identity; edits are retained through CREAM reloads.
+Choose a resolution for the whole set or for any map inside it. **Source / template** uses Painter’s dimensions. **Wheels** defaults to **512 × 2048** because its 1:4 proportions keep shadows and bevels from stretching.
 
-**Painter 8.1.2–9.x:** library templates are discovered through the older resource API. CREAM predicts output names and temporarily exports the full template for each selected output/resolution, then packages only your selections. This can be slower. The newer API for inspecting template channel definitions is available from Painter 10. Pre-8.3 builds use the host Qt application version because Adobe introduced the application-version API in 8.3. Unknown host versions fail closed with an explanation. See [Adobe’s Python API changelog](https://experienceleague.adobe.com/en/docs/substance-3d-dev/painter-python/api/changelog) for the version/API boundaries. Projects with UDIMs, material layering or template output subfolders remain unsupported.
+To reuse an existing skin, choose **Batch → Base skin ZIP (optional)**. Its textures must sit at the top level of the ZIP. CREAM replaces the selected textures and keeps the other files. This also works for a single export.
 
-The 8.1.2–9.x paths are tested with real Qt5 and simulated Painter APIs, including real DDS/ZIP processing. Native installations still need beta testing; documentation support is not a claim that every old build has been tested.
+<details>
+<summary>Texture suffixes and DDS compression</summary>
+
+The template controls channel packing and normal direction. CREAM writes DDS textures without mipmaps.
+
+| Filename suffix | Texture contents | DDS |
+| --- | --- | --- |
+| `_B` | Base color | BC1 |
+| `_R` | Roughness in red, metallic in green | BC5 |
+| `_I` | Emissive color and alpha | BC3 |
+| `_N` | Normals | BC5 |
+| `_CoatR` | Coat roughness | BC4 |
+| `_DirtMask` | Dirt mask | BC4 |
+| `_AO` | Ambient occlusion | BC1 |
+
+Unknown suffixes default to BC3. Hover over a warning to see how an output differs from the table. Use the restore icon to undo a suffix or compression edit.
+
+</details>
+
+### In-game skin name
+
+In **Skin ZIPfile name**, replace `skin` with your filename. Select text to style it and check the in-game preview below. Text colors use three hex digits, such as `$F80`. CREAM numbers duplicate filenames automatically.
+
+## Batch export
+
+### Prepare the Painter project
+
+Set up only the parts of the car you want to change. CREAM uses the same texture selection for every entry.
+
+| To customize | Set this up in Painter |
+| --- | --- |
+| Text on the car | Add a **Fill effect** to a layer mask. Choose a **Font** as its grayscale input and name the effect `PLAYER_NAME`. Set the size and placement in Painter. CREAM updates every matching effect. |
+| Theme colors | Create a **Fill layer** with a solid **Base Color** and name it `PLAYER_COLOR1`. For additional colors, use `PLAYER_COLOR2` and `PLAYER_COLOR3`. |
+
+CREAM skips **Glass** when applying text or colors. A warning beside a Batch column identifies a missing layer or effect.
+
+### Add entries and export
+
+1. In **Batch**, click **Add a batch entry**. Enter custom text (up to 20 characters), a color such as `#FF8030`, or both. Blank fields keep the project’s original values.
+2. In the filename editor, insert **ZIP name** to use each entry’s name. For example, `Team - {name}` produces `Team - Joseph.zip`. The text color picker can use each entry’s first or second color.
+3. To check a variation in Painter, highlight its row and click **Preview highlighted skin**. Click **Restore original** to finish previewing.
+4. Check the rows you want and export. Each checked row produces one ZIP. **Clear batch** returns to single-skin export.
+
+<details>
+<summary>Import entries from CSV or XLSX</summary>
+
+Choose **Import CSV / XLSX…**. Use column headers and one row per skin. Match a text column, a color column, or both. For color palettes, leave **Player name** blank. You can also map a ZIP name, row ID and export selection.
+
+For XLSX, use the first worksheet and enter values instead of formulas. Reimport spreadsheet-only lists after restarting Painter.
+
+</details>
+
+<details>
+<summary>Cancel or resume a batch</summary>
+
+**Cancel safely** finishes the current operation and keeps completed ZIPs. To continue, reopen the same project with the same batch and settings. Choose **Resume a previous batch…** and select its report from `_CREAM_reports` in your output folder. CREAM unchecks completed entries whose ZIPs still exist. Review the remaining rows and export.
+
+</details>
 
 ## Painter compatibility
 
-CREAM checks the **actual application version**, including on Steam. Unsupported controls stay visible, grayed out, with an explanation. Opening CREAM on a version older than **10.1.2** shows a warning.
+The minimum versions above apply to Adobe and Steam editions. On Painter 8–9, use a template saved in a library. These versions may render the whole template for each selected map, which takes longer. CREAM supports single-tile projects and templates that export directly to one folder. UDIMs and material layering are unsupported.
 
-| Painter version | Mode | What to expect |
-| --- | --- | --- |
-| Below 8.1.2 | Unsupported | Export and customization are disabled. |
-| **8.1.2–9.1.x** | Export only | Export the existing project, convert to DDS, build ZIPs and style their names. Changing names/colors on the car and customization previews/restoration are disabled. |
-| **10.0.0–10.1.1** | Full features, with a warning | Customization is available. Upgrade to at least **10.1.2** for a more stable layer-stack API experience. |
-| **10.1.2–11.x** | Full features | Compatibility adapters handle Qt bindings and the older texture-set naming API. |
-| **12.x** | Full features | **12.1.3** is the version used for native SDK checks. |
+### Tested in Painter
 
-Older-version paths have automated compatibility checks, but still need real-project beta testing inside those Painter releases. This table describes feature availability, not a claim that every build has been tested.
+Results cover tests inside Painter across CREAM releases.
 
-| Feature | 8.1.2–9.x | 10.0.0–10.1.1 | 10.1.2+ |
-| --- | :---: | :---: | :---: |
-| Texture selection, resolutions and export | ✓ | ✓ | ✓ |
-| DDS conversion and base-ZIP packaging | ✓ | ✓ | ✓ |
-| Filename patterns and TM styling editor | ✓ | ✓ | ✓ |
-| Manual entries, CSV/XLSX import and column mapping | ✓ | ✓ | ✓ |
-| Logs, reports, cancellation, resume and updates | ✓ | ✓ | ✓ |
-| Change `PLAYER_NAME` font fills | — | ✓* | ✓ |
-| Change `PLAYER_COLOR1–3` Base Colors | — | ✓* | ✓ |
-| Preview and restore customization | — | ✓* | ✓ |
-| Read original layer colors for filename tokens | — | ✓* | ✓ |
+**✓** confirmed · **✓\*** expected to work, awaiting confirmation · **–** untested · **✗** unsupported or confirmed failure
 
-\* Available with the stability warning. Adobe introduced layer editing and font APIs in [Painter 10.0](https://experienceleague.adobe.com/en/docs/substance-3d-painter/using/release-notes/old-versions/version-10-0), and switched to PySide6 in [10.1](https://adobedocs.github.io/painter-python-api/guides/qt6-migration/).
+| Major feature | 9.1.2 | 10.0.0 | 10.1.2 | 11.1.3 | 12.1.3 |
+| --- | :---: | :---: | :---: | :---: | :---: |
+| Export a finished Trackmania skin ZIP | [✓\*](https://github.com/tatauna-doesnt-code/cream/issues/new?template=compatibility_test.yml&title=%5BCompatibility%5D+Export+a+finished+Trackmania+skin+ZIP+%E2%80%94+Painter+9.1.2&feature=Export+a+finished+Trackmania+skin+ZIP&painter=9.1.2) | [✓\*](https://github.com/tatauna-doesnt-code/cream/issues/new?template=compatibility_test.yml&title=%5BCompatibility%5D+Export+a+finished+Trackmania+skin+ZIP+%E2%80%94+Painter+10.0.0&feature=Export+a+finished+Trackmania+skin+ZIP&painter=10.0.0) | [✓\*](https://github.com/tatauna-doesnt-code/cream/issues/new?template=compatibility_test.yml&title=%5BCompatibility%5D+Export+a+finished+Trackmania+skin+ZIP+%E2%80%94+Painter+10.1.2&feature=Export+a+finished+Trackmania+skin+ZIP&painter=10.1.2) | [✓\*](https://github.com/tatauna-doesnt-code/cream/issues/new?template=compatibility_test.yml&title=%5BCompatibility%5D+Export+a+finished+Trackmania+skin+ZIP+%E2%80%94+Painter+11.1.3&feature=Export+a+finished+Trackmania+skin+ZIP&painter=11.1.3) | [✓](https://github.com/tatauna-doesnt-code/cream/issues/new?template=compatibility_test.yml&title=%5BCompatibility%5D+Export+a+finished+Trackmania+skin+ZIP+%E2%80%94+Painter+12.1.3&feature=Export+a+finished+Trackmania+skin+ZIP&painter=12.1.3) |
+| Style and preview the in-game skin name | [✓\*](https://github.com/tatauna-doesnt-code/cream/issues/new?template=compatibility_test.yml&title=%5BCompatibility%5D+Style+and+preview+the+in-game+skin+name+%E2%80%94+Painter+9.1.2&feature=Style+and+preview+the+in-game+skin+name&painter=9.1.2) | [✓\*](https://github.com/tatauna-doesnt-code/cream/issues/new?template=compatibility_test.yml&title=%5BCompatibility%5D+Style+and+preview+the+in-game+skin+name+%E2%80%94+Painter+10.0.0&feature=Style+and+preview+the+in-game+skin+name&painter=10.0.0) | [✓\*](https://github.com/tatauna-doesnt-code/cream/issues/new?template=compatibility_test.yml&title=%5BCompatibility%5D+Style+and+preview+the+in-game+skin+name+%E2%80%94+Painter+10.1.2&feature=Style+and+preview+the+in-game+skin+name&painter=10.1.2) | [✓\*](https://github.com/tatauna-doesnt-code/cream/issues/new?template=compatibility_test.yml&title=%5BCompatibility%5D+Style+and+preview+the+in-game+skin+name+%E2%80%94+Painter+11.1.3&feature=Style+and+preview+the+in-game+skin+name&painter=11.1.3) | [✓](https://github.com/tatauna-doesnt-code/cream/issues/new?template=compatibility_test.yml&title=%5BCompatibility%5D+Style+and+preview+the+in-game+skin+name+%E2%80%94+Painter+12.1.3&feature=Style+and+preview+the+in-game+skin+name&painter=12.1.3) |
+| Reuse a base skin ZIP and replace selected textures | [✓\*](https://github.com/tatauna-doesnt-code/cream/issues/new?template=compatibility_test.yml&title=%5BCompatibility%5D+Reuse+a+base+skin+ZIP+and+replace+selected+textures+%E2%80%94+Painter+9.1.2&feature=Reuse+a+base+skin+ZIP+and+replace+selected+textures&painter=9.1.2) | [✓\*](https://github.com/tatauna-doesnt-code/cream/issues/new?template=compatibility_test.yml&title=%5BCompatibility%5D+Reuse+a+base+skin+ZIP+and+replace+selected+textures+%E2%80%94+Painter+10.0.0&feature=Reuse+a+base+skin+ZIP+and+replace+selected+textures&painter=10.0.0) | [✓\*](https://github.com/tatauna-doesnt-code/cream/issues/new?template=compatibility_test.yml&title=%5BCompatibility%5D+Reuse+a+base+skin+ZIP+and+replace+selected+textures+%E2%80%94+Painter+10.1.2&feature=Reuse+a+base+skin+ZIP+and+replace+selected+textures&painter=10.1.2) | [✓\*](https://github.com/tatauna-doesnt-code/cream/issues/new?template=compatibility_test.yml&title=%5BCompatibility%5D+Reuse+a+base+skin+ZIP+and+replace+selected+textures+%E2%80%94+Painter+11.1.3&feature=Reuse+a+base+skin+ZIP+and+replace+selected+textures&painter=11.1.3) | [✓](https://github.com/tatauna-doesnt-code/cream/issues/new?template=compatibility_test.yml&title=%5BCompatibility%5D+Reuse+a+base+skin+ZIP+and+replace+selected+textures+%E2%80%94+Painter+12.1.3&feature=Reuse+a+base+skin+ZIP+and+replace+selected+textures&painter=12.1.3) |
+| Batch-export skins with custom text and colors | [✗](https://github.com/tatauna-doesnt-code/cream/issues/new?template=compatibility_test.yml&title=%5BCompatibility%5D+Batch-export+skins+with+custom+text+and+colors+%E2%80%94+Painter+9.1.2&feature=Batch-export+skins+with+custom+text+and+colors&painter=9.1.2) | [✓\*](https://github.com/tatauna-doesnt-code/cream/issues/new?template=compatibility_test.yml&title=%5BCompatibility%5D+Batch-export+skins+with+custom+text+and+colors+%E2%80%94+Painter+10.0.0&feature=Batch-export+skins+with+custom+text+and+colors&painter=10.0.0) | [✓\*](https://github.com/tatauna-doesnt-code/cream/issues/new?template=compatibility_test.yml&title=%5BCompatibility%5D+Batch-export+skins+with+custom+text+and+colors+%E2%80%94+Painter+10.1.2&feature=Batch-export+skins+with+custom+text+and+colors&painter=10.1.2) | [✓\*](https://github.com/tatauna-doesnt-code/cream/issues/new?template=compatibility_test.yml&title=%5BCompatibility%5D+Batch-export+skins+with+custom+text+and+colors+%E2%80%94+Painter+11.1.3&feature=Batch-export+skins+with+custom+text+and+colors&painter=11.1.3) | [✓](https://github.com/tatauna-doesnt-code/cream/issues/new?template=compatibility_test.yml&title=%5BCompatibility%5D+Batch-export+skins+with+custom+text+and+colors+%E2%80%94+Painter+12.1.3&feature=Batch-export+skins+with+custom+text+and+colors&painter=12.1.3) |
+| Import batch entries from CSV or XLSX | [–](https://github.com/tatauna-doesnt-code/cream/issues/new?template=compatibility_test.yml&title=%5BCompatibility%5D+Import+batch+entries+from+CSV+or+XLSX+%E2%80%94+Painter+9.1.2&feature=Import+batch+entries+from+CSV+or+XLSX&painter=9.1.2) | [✓\*](https://github.com/tatauna-doesnt-code/cream/issues/new?template=compatibility_test.yml&title=%5BCompatibility%5D+Import+batch+entries+from+CSV+or+XLSX+%E2%80%94+Painter+10.0.0&feature=Import+batch+entries+from+CSV+or+XLSX&painter=10.0.0) | [✓\*](https://github.com/tatauna-doesnt-code/cream/issues/new?template=compatibility_test.yml&title=%5BCompatibility%5D+Import+batch+entries+from+CSV+or+XLSX+%E2%80%94+Painter+10.1.2&feature=Import+batch+entries+from+CSV+or+XLSX&painter=10.1.2) | [–](https://github.com/tatauna-doesnt-code/cream/issues/new?template=compatibility_test.yml&title=%5BCompatibility%5D+Import+batch+entries+from+CSV+or+XLSX+%E2%80%94+Painter+11.1.3&feature=Import+batch+entries+from+CSV+or+XLSX&painter=11.1.3) | [✓](https://github.com/tatauna-doesnt-code/cream/issues/new?template=compatibility_test.yml&title=%5BCompatibility%5D+Import+batch+entries+from+CSV+or+XLSX+%E2%80%94+Painter+12.1.3&feature=Import+batch+entries+from+CSV+or+XLSX&painter=12.1.3) |
 
-In export-only mode, names and the first two colors are **filename data**. They do not change the car. Color tokens need explicit entry values because layer-color lookup is unavailable in this mode.
+Click a symbol to report your result on GitHub. Written evidence is required. Attachments are optional.
 
-## Installation
+On **11.1.3**, testing confirmed DDS conversion before a missing channel interrupted export. CREAM now checks for known missing channels. A completed ZIP still awaits confirmation on this version.
 
-1. Download **CREAM-plugin.zip** from [Releases](https://github.com/tatauna-doesnt-code/cream/releases).
-2. Extract the whole ZIP. Save your work and close Painter.
-3. Run **Install.cmd**. Administrator access is not required. The installer backs up an existing installation. CREAM uses your installed templates and does not install or replace export presets.
-4. Open Painter and enable **Python → cream**. That is the plugin's package name.
-5. Click **CREAM** in Painter's Plugins toolbar, or open **Window → CREAM**. Enabling the plugin adds these launchers; it does not open the window automatically.
+## Troubleshooting
 
-CREAM does **not** open its window automatically when Painter starts. Enabling the plugin adds its menu entry; open it when you need it.
+- **Missing template?** Check its name in Painter’s **Export Textures** window, then click **Refresh** in **CREAM → Textures**. On Painter 8–9, save the template to a library first.
+- **Missing channel?** Check the map named in the error. If your skin has no glowing parts, you can uncheck the emissive map (`_I`). If you need it, check the template mapping and add its required channel to the texture set. Painter’s **Log** panel shows the **MapExporter** error.
+- **Stuck in a preview?** Open the original project and choose **CREAM → Logs → Restore original / recover project**. To keep the current values, use **Batch → Detach from project**. Detaching ends recovery for that preview. Saving afterward keeps the changes on the car.
+- **Skin previews but won’t upload?** Move the ZIP directly into `Trackmania/Skins/Models/CarSport` and try again. Uploads from subfolders can fail.
 
-For manual installation, copy `cream` into Painter's `python/plugins` folder; no preset installation is required. Painter’s plugins are under your Windows Documents folder, inside `Adobe/Adobe Substance 3D Painter`. Keep the bundled converter and fonts in the plugin folder.
+## Project information
 
-### Upgrading from an older package name
+### Development and support
 
-For this migration, download the release ZIP, close Painter and run **Install.cmd** once. Older versions cannot apply the renamed package through their built-in updater. Enable **Python → cream** after installation.
+Use **Dev.cmd** to test changes locally. [Development guide](docs/development.md) · [Contributing](CONTRIBUTING.md) · [Changelog](CHANGELOG.md)
 
-The installer identifies previous CREAM installations by their repository identity, moves them outside Painter's plugins folder into `cream-backups`, and installs one copy under `cream`. It copies settings, protected GitHub access and recovery records into `%LOCALAPPDATA%/CREAM` without overwriting newer values. Previous data stays intact; pending updates are not carried over. Future updates use the new package normally.
+For bugs, include your CREAM and Painter versions, the steps you took and the relevant log message. Remove personal paths and private data. [Report a bug](https://github.com/tatauna-doesnt-code/cream/issues) · [Report a security issue privately](SECURITY.md)
 
-## First export
+### Special thanks
 
-1. Open a saved Painter project and prepare the textures you want to export.
-2. In **CREAM's Settings tab**, select the output folder. A base ZIP is optional and can be selected in **CREAM's Batch tab**. For in-game uploads, use **CarSport directly**; uploads from subfolders can fail. The base ZIP's files must be at its root.
-3. In **1 Textures**, choose maps and resolutions. Without a base ZIP, only selected textures are included. With a base ZIP, unselected files are preserved.
-4. In **2 Skin ZIPfile name**, edit the plain default name `skin` in the styling editor. Trackmania styling is enabled by default; no style is applied until you choose one.
-5. Click **Export current skin**. CREAM checks the configuration, exports the textures, converts to DDS and packages the ZIP.
+Thanks to our beta testers **LTW**, **devdabomber**, **Lvyathan**, **notavailablenam**, **Mordecai**, and **panth**.
 
-**You don't need a batch entry.** Leave Batch empty to export the open project exactly as it is, without changing names or colors on the car. No specially named layers are required.
+### License
 
-Existing output ZIPs are preserved. Duplicate names receive numeric suffixes.
-
-## Customizing the car
-
-**Requires Painter 10.0.0+.** Adding batch entries automatically enables customization. With no entries, CREAM exports the project as-is.
-
-- **Names:** use Font resources in mask Fill effects named `PLAYER_NAME`. CREAM changes only Text. Set the font, size, placement and alignment in Painter.
-- **Colors:** use Fill layers named `PLAYER_COLOR1`, `PLAYER_COLOR2` and optionally `PLAYER_COLOR3`. Base Color must be an independent uniform color. Only that channel changes. Existing anchor points can reuse those colors elsewhere.
-- **Optional targets:** color-only projects don't need a name fill. Projects without customization targets can still be exported.
-- **Glass:** can be exported, but is excluded from name and color changes.
-
-Colors use `#RRGGBB`; blank fields keep the project original. Names preserve case, normalize to NFC and are limited to 20 characters. TM formatting codes belong in ZIP filenames, not the text printed on the car.
-
-Use **Preview highlighted skin** to check a variation in Painter, then **Restore original**. Other actions explain why they are locked while a preview is active.
-
-## Batch exports
-
-Batch is optional. Add entries when you need several versions of the same project. Once the list contains entries, CREAM exports **only checked entries**. Selecting none does not fall back to a current-project export.
-
-**Clear batch…** removes the entries after confirmation and returns to exporting the current project. **Clear selection** only unchecks them. The filename tab becomes **Skin ZIPfile names** when there is more than one entry.
-
-Use **Add skin…**, **Edit skin…** and **Remove** to manage entries. Names are editable directly in the list. Overrides become **_bold italic_**; the refresh icon resets the original entry.
-
-For larger batches, **Import CSV / XLSX…** appends spreadsheet rows. The first row must contain headers. Match your columns in the import dialog:
-
-| Field | Required | Format |
-| --- | --- | --- |
-| Player name | Yes | Text, up to 20 characters |
-| Colors 1–3 | No | `#RRGGBB` |
-| ZIP name | No | Separate filename value; otherwise player name |
-| Row ID | No | Your own identifier |
-| Export / active | No | Which entries to select |
-
-XLSX reads the **first worksheet**, regardless of its name. Formula cells are rejected. Source spreadsheets are never modified.
-
-Manual and mixed lists are saved locally. Spreadsheet-only lists must be imported again after restarting Painter. A CREAM-only reload preserves the current list and editor state.
-
-## ZIP filenames and TM styling
-
-Single exports use a literal filename, initially `skin`. Variables and per-player text colors are available only when Batch contains entries. For example, `Event - {name}` adds a shared prefix.
-
-| Token | Value |
-| --- | --- |
-| `{name}` | ZIP-name value, or player name if none is provided |
-| `{player}` | Player name |
-| `{id}` / `{row}` | Entry ID / source row number |
-| `{primary}` / `{secondary}` | Colors 1 / 2, converted to three-digit TM text colors |
-
-The editor supports bold, italic, uppercase, shadow, normal/narrow/wide text and **three-digit** colors, including each entry's primary/secondary color. Montserrat previews approximate game rendering.
-
-TM styling is **on by default** each new session. Turning the helper off hides the editor; it doesn't remove codes already in the pattern.
-
-## Texture formats
-
-| Map | DDS compression |
-| --- | --- |
-| Base Color `_B` / Ambient Occlusion `_AO` | BC1 / DXT1 |
-| Roughness + Metallic `_R` / Normals `_N` | BC5 / BC5U |
-| Emissive `_I` | BC3 / DXT5 |
-| Coat Roughness `_CoatR` / Dirt Mask `_DirtMask` | BC4 / BC4U |
-
-The selected template controls the normal convention; CREAM does not flip channels. DDS files have no additional mipmaps. Wheels keep **1:4 proportions**; other sets use square 1024, 2048 or 4096 outputs.
-
-Painter 8.1.2–9.x uses the chosen library template directly and temporarily exports all of its maps for each selection. Painter 10+ reads individual output definitions. No bundled preset is required.
-
-UDIM and material layering are not supported by this beta.
-
-## Cancellation, recovery and updates
-
-**Cancel safely** waits for the current operation. Completed ZIPs remain available; partial ZIPs aren't published. Customization runs restore original values. Export-only runs don't edit layers or create customization recovery records. No per-player SPP is saved; temporary textures are cleaned up after processing.
-
-To resume, choose **Resume a previous batch…** and a JSON report from `_CREAM_reports` in the output folder. Matching successful entries whose ZIPs still exist are unchecked. Review the remaining selection and export again. The project, settings and customization mode must match.
-
-After an interrupted customization run, use **Logs → Restore original / recover project** with the original project open. Restoring layer values requires Painter 10.0+.
-
-Updates are in **CREAM's Settings tab**. Check, download and follow the apply/restart instructions. Some Python changes only need CREAM to reopen; loader or resource changes need a Painter restart. **This compatibility update requires one Painter restart.**
-
-Public releases need no token. While the repository is private, testers need access and a fine-grained GitHub token with **Contents: Read-only** for this repository. CREAM asks when needed and protects the saved credential with Windows encryption.
-
-## Local development
-
-No commits or online releases are needed to test changes:
-
-1. Clone the repository or download its source ZIP, then install once with **Install.cmd**.
-2. Open Painter and CREAM. Edit the source and run **Dev.cmd**.
-3. In **CREAM's Settings tab → Check for updates**, apply the local build or restart Painter when requested.
-
-See [the development guide](docs/development.md). To run core tests and build a package with a separate Python installation:
-
-```sh
-python -m pip install Pillow
-python -m unittest discover -s tests -p "test_*.py"
-python scripts/build_release.py
-```
-
-Qt integration checks also exercise the interface and batch controller with Painter API stubs. Native Painter testing remains necessary for real project behavior on each supported version.
-
-## Contributing and support
-
-Issues and pull requests are welcome. See [CONTRIBUTING.md](CONTRIBUTING.md). For bugs, include your Painter version, reproduction steps and relevant Logs. A small reproducible example helps a lot. Keep private spreadsheets, tokens and personal paths out of public reports.
-
-Report security issues privately as described in [SECURITY.md](SECURITY.md).
-
-## License
-
-CREAM's original code is **GPL-3.0-only**. You can modify and redistribute it under GPLv3, including corresponding source and notices. It comes without warranty. See [LICENSE](LICENSE).
-
-Microsoft texconv uses MIT; Montserrat and the Righteous logo font use the SIL Open Font License. See [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
+CREAM is licensed under [GPL-3.0-only](LICENSE). Bundled fonts and Microsoft texconv have their own [third-party notices](THIRD_PARTY_NOTICES.md).
