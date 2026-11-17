@@ -1,0 +1,55 @@
+name: Compatibility test
+description: Tell us whether a CREAM feature works in your Painter version.
+title: "[Compatibility] "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Test the feature inside Painter and describe what happened. Reports are public.
+        Remove personal paths, private project data and access tokens before sharing.
+  - type: input
+    id: feature
+    attributes:
+      label: Feature tested
+    validations:
+      required: true
+  - type: input
+    id: painter
+    attributes:
+      label: Substance 3D Painter version
+      description: "Enter the full version number, such as 9.1.2 or 11.1.3. Find it under Help → About Substance 3D Painter. A year such as 2023, or an edition such as Steam or Adobe, is insufficient."
+      placeholder: "11.1.3"
+    validations:
+      required: true
+  - type: input
+    id: cream
+    attributes:
+      label: CREAM version
+      description: Copy the version shown in CREAM’s window title, including any RC number.
+      placeholder: "1.14.0-rc.3"
+    validations:
+      required: true
+  - type: dropdown
+    id: result
+    attributes:
+      label: Result
+      options:
+        - Works
+        - Doesn’t work
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Written evidence
+      description: Describe what you tested, the steps you took and what happened. Include relevant settings, output details or error messages so we can assess the result.
+      placeholder: "I selected… Then I clicked… The result was…"
+    validations:
+      required: true
+  - type: upload
+    id: attachments
+    attributes:
+      label: Attachments (optional)
+      description: Add screenshots, a recording, logs or an exported result to support your description.
+    validations:
+      required: false

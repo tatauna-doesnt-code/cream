@@ -44,8 +44,14 @@ class ColumnMappingTests(unittest.TestCase):
         self.assertEqual(core.suggest_columns([" Nome_Player ", "COR_1", "cor_2", "cor_2"]),
                          dict(zip(core.HEADERS, [None, None, 0, None, 1, None, None])))
 
+    def test_palette_only_import(self):
+        rows, _ = core.rows_from_table([["Paint"], ["#123456"]], {"cor_2": 0})
+        self.assertEqual(rows[0]["name"], "")
+        self.assertEqual(rows[0]["stem"], "skin")
+        self.assertEqual(rows[0]["colors"], [None, "#123456", None])
+
     def test_mapped_values_still_validate(self):
-        for name, color in [("", "#123456"), ("Player", "bad"), ("$oPlayer", "")]:
+        for name, color in [("", "bad"), ("Player", "bad"), ("$oPlayer", "")]:
             with self.subTest(name=name, color=color), self.assertRaises(ValueError):
                 core.rows_from_table([["Nickname", "Paint"], [name, color]],
                                      {"nome_player": 0, "cor_2": 1})

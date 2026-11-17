@@ -62,9 +62,11 @@ def texture_sets():
 
 
 def parameters(name, size):
-    width, height = core.dimensions(name, size)
-    return {'fileFormat': 'png', 'bitDepth': '8', 'dithering': False,
-            'paddingAlgorithm': 'infinite', 'sizeLog2': [width.bit_length()-1, height.bit_length()-1]}
+    params = {'fileFormat': 'png', 'bitDepth': '8', 'dithering': False, 'paddingAlgorithm': 'infinite'}
+    if size != 'source':
+        width, height = core.dimensions(name, size)
+        params['sizeLog2'] = [width.bit_length()-1, height.bit_length()-1]
+    return params
 
 
 def config(template, name, directory, size=1024, definition=None):
@@ -93,6 +95,20 @@ def definitions(template, stack):
     presets = sp.export.list_predefined_export_presets()
     matches = [p for p in presets if p.url == template['url']]
     return matches[0].list_output_maps(stack) if len(matches) == 1 else None
+
+
+def missing_channels(stack, definition):
+    if not hasattr(stack, 'has_channel') or not definition:
+        return []
+    channel_type = getattr(sp.textureset, 'ChannelType', None)
+    known = {name.casefold(): value for name, value in getattr(channel_type, '__members__', {}).items()}
+    missing = set()
+    for source in definition.get('channels', []):
+        name = source.get('srcMapName', '')
+        channel = known.get(name.casefold())
+        if source.get('srcMapType') == 'documentMap' and channel is not None and not stack.has_channel(channel):
+            missing.add(name)
+    return sorted(missing, key=str.casefold)
 
 
 def discover(template, directory):
@@ -134,7 +150,7 @@ def discover(template, directory):
             if not separator:
                 prefix, suffix = '', path.stem
             records.append({'id': identity, 'source': path.name, 'definition': definition, 'separator': bool(separator),
-                            'prefix': prefix, 'suffix': suffix,
+                            'prefix': prefix, 'suffix': suffix, 'missing_channels': missing_channels(stacks[0], definition),
                             'compression': core.MAPS.get(suffix, 'BC3_UNORM').split('_')[0]})
         result[name] = records
     return result
@@ -153,9 +169,6 @@ def output_filename(selection):
 
 def preflight(plan, selections, directory):
     actual = discover(plan['template'], directory)
-    stacks = {compatibility.texture_set_name(item): item.all_stacks()[0] for item in texture_sets()}
-    channel_type = getattr(sp.textureset, 'ChannelType', None)
-    channel_types = {name.casefold(): value for name, value in getattr(channel_type, '__members__', {}).items()}
     occupied = set()
     for selection in selections:
         name = selection['set']
@@ -163,16 +176,7 @@ def preflight(plan, selections, directory):
         if record is None or any(record.get(k) != selection.get(k) for k in ('source', 'prefix', 'separator', 'definition')):
             raise ValueError('The project or export template changed. Refresh the Textures tab and review your selections.')
         filename = output_filename(selection)
-        stack = stacks[name]
-        missing = set()
-        if hasattr(stack, 'has_channel'):
-            for source in (record['definition'] or {}).get('channels', []):
-                if source.get('srcMapType') != 'documentMap':
-                    continue
-                source_name = source.get('srcMapName', '')
-                source_type = channel_types.get(source_name.casefold())
-                if source_type is not None and not stack.has_channel(source_type):
-                    missing.add(source_name)
+        missing = record['missing_channels']
         if missing:
             channels = ', '.join(sorted(missing, key=str.casefold))
             raise ValueError(f'{filename}: the export template needs {channels} in texture set "{name}". '

@@ -34,7 +34,9 @@ class PlayerNameEditTests(unittest.TestCase):
 
     def test_manual_names_use_the_same_validation_and_unicode_limit(self):
         original = core.name_originals([self.row])[0]
-        for invalid in ('', '  ', 'A\nB', '$oPlayer', '$F80Player'):
+        palette, _ = core.edited_player_name(self.row, original, '')
+        self.assertEqual((palette['name'], palette['stem']), ('', 'skin'))
+        for invalid in ('  ', 'A\nB', '$oPlayer', '$F80Player'):
             with self.subTest(name=invalid), self.assertRaises(ValueError):
                 core.edited_player_name(self.row, original, invalid)
         edited, warnings = core.edited_player_name(self.row, original, '😀' * 21)

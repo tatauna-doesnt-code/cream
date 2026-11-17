@@ -25,10 +25,11 @@ class AccessRequired(RuntimeError):
 
 
 def version_tuple(value):
-    match = re.fullmatch(r"v?(\d+)\.(\d+)\.(\d+)", value)
+    match = re.fullmatch(r"v?(\d+)\.(\d+)\.(\d+)(?:-rc\.(\d+))?", value)
     if not match:
         raise ValueError("Invalid version: " + str(value))
-    return tuple(map(int, match.groups()))
+    major, minor, patch, rc = match.groups()
+    return int(major), int(minor), int(patch), rc is None, int(rc or 0)
 
 
 class _Blob(ctypes.Structure):

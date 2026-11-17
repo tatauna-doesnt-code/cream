@@ -5,7 +5,7 @@ from . import core
 
 
 FIELDS = [
-    ("nome_player", "Player name *", "Select a column"),
+    ("nome_player", "Player name", "Keep original text"),
     ("cor_1", "Color 1 (optional)", "Project original"),
     ("cor_2", "Color 2 (optional)", "Project original"),
     ("cor_3", "Color 3 (optional)", "Project original"),
@@ -40,7 +40,7 @@ class ColumnDialog(W.QDialog):
         layout.addWidget(heading)
         description = W.QLabel(
             "Choose a column for each field. The first spreadsheet row contains the headers.\n"
-            "Only the name is required. Colors must be #RRGGBB; blank cells use the project original.")
+            "Choose a name or at least one color. Colors must be #RRGGBB; blank cells use the project original.")
         description.setWordWrap(True)
         if not customize:
             description.setText(description.text() + '\nExport-only mode: names and colors 1–2 are filename data. They do not change the car.')
@@ -53,6 +53,7 @@ class ColumnDialog(W.QDialog):
             initial = saved.get("mapping", initial)
         for field, label, empty in FIELDS:
             combo = W.QComboBox()
+            combo.setFixedHeight(32)
             combo.setAccessibleName(label)
             if field.startswith("cor_"):
                 combo.setToolTip("Changes Base Color on PLAYER_COLOR" + field[-1] + ". Leave unmapped to keep the project original.")
@@ -86,6 +87,8 @@ class ColumnDialog(W.QDialog):
         self.buttons.addButton("Cancel", W.QDialogButtonBox.RejectRole)
         self.buttons.accepted.connect(self.accept_mapping)
         self.buttons.rejected.connect(self.reject)
+        for button in self.buttons.buttons():
+            button.setFixedHeight(32)
         layout.addWidget(self.buttons)
         self.validate_selection()
 
@@ -96,9 +99,9 @@ class ColumnDialog(W.QDialog):
         # Signals may fire while the form is being constructed.
         if not hasattr(self, "buttons"):
             return
-        valid = self.combos["nome_player"].currentData() is not None
+        valid = any(self.combos[field].currentData() is not None for field in ("nome_player", "cor_1", "cor_2", "cor_3"))
         self.import_button.setEnabled(valid)
-        self.message.setText("" if valid else "Select the player name column to continue.")
+        self.message.setText("" if valid else "Select a player name or color column to continue.")
 
     def accept_mapping(self):
         try:

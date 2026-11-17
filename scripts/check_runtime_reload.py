@@ -50,7 +50,6 @@ with tempfile.TemporaryDirectory() as folder:
     old = plugin._window
     old.fields['output'].setText(str(root / 'skins'))
     old.fields['name_pattern'].setText('Community - {name}')
-    old.styling_enabled.setChecked(True)
     old.texture_sets.groups['Details'].table.item(0, 0).setCheckState(QtCore.Qt.Checked)
     details = old.texture_sets.groups['Details']
     details.resolution.setCurrentIndex(details.resolution.findData(4096))
@@ -99,7 +98,6 @@ with tempfile.TemporaryDirectory() as folder:
     assert current is not old and sys.modules['cream.ui'] is not old_module
     assert '99.0.0' in current.windowTitle()
     assert current.fields['name_pattern'].text() == 'Community - {name}'
-    assert current.styling_enabled.isChecked() and not current.name_style.isHidden()
     assert current.backers.item(0, 6).text() == 'Community - Bompi.zip'
     assert current.rows[0]['name'] == 'Bompi'
     assert current.name_cells[0].editor.font().bold() and current.name_cells[0].editor.font().italic()

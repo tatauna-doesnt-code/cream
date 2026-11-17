@@ -54,7 +54,6 @@ with tempfile.TemporaryDirectory() as folder, patch.object(ui, 'DATA', Path(fold
     reopened = ui.Window(auto_update=False)
     assert reopened.rows == window.rows
     assert reopened.name_originals == window.name_originals
-    assert reopened.styling_enabled.isChecked()
     reopened.ensure_rows()
     window.saved = {'project': 'test'}
     with patch.object(SkinDialog, 'exec') as dialog:

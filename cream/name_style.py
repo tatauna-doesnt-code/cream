@@ -134,6 +134,22 @@ def document_runs(document):
     return runs
 
 
+class ColorSlider(W.QSlider):
+    def mousePressEvent(self, event):
+        if event.button() == QtCore.Qt.LeftButton:
+            option = W.QStyleOptionSlider()
+            self.initStyleOption(option)
+            style = self.style()
+            groove = style.subControlRect(W.QStyle.CC_Slider, option, W.QStyle.SC_SliderGroove, self)
+            handle = style.subControlRect(W.QStyle.CC_Slider, option, W.QStyle.SC_SliderHandle, self)
+            if not handle.contains(event.pos()):
+                pos = event.pos().x() - groove.left() - handle.width() // 2
+                span = max(1, groove.width() - handle.width())
+                self.setValue(W.QStyle.sliderValueFromPosition(
+                    self.minimum(), self.maximum(), pos, span, option.upsideDown))
+        super().mousePressEvent(event)
+
+
 class TextColorDialog(W.QDialog):
     def __init__(self, colors, parent=None, allow_tokens=True):
         super().__init__(parent)
@@ -150,7 +166,7 @@ class TextColorDialog(W.QDialog):
         layout.addLayout(form)
         self.sliders = []
         for index, channel in enumerate(("Red", "Green", "Blue")):
-            slider = W.QSlider(QtCore.Qt.Horizontal)
+            slider = ColorSlider(QtCore.Qt.Horizontal)
             slider.setRange(0, 15)
             slider.setValue(15)
             slider.valueChanged.connect(self.slider_changed)
@@ -223,7 +239,7 @@ class TextColorDialog(W.QDialog):
 
 
 class NameStyleHelper(W.QWidget):
-    pattern_changed = QtCore.Signal(str)
+    textChanged = QtCore.Signal(str)
     color_requested = QtCore.Signal()
 
     def __init__(self, parent=None):
@@ -247,25 +263,39 @@ class NameStyleHelper(W.QWidget):
             button.setCheckable(True)
             button.setToolTip(key.capitalize() + " (" + code + ")")
             button.setFocusPolicy(QtCore.Qt.NoFocus)
-            button.clicked.connect(lambda checked=False, field=key: self.change_style(**{field: checked}))
+            button.clicked[bool].connect(lambda checked, field=key: self.change_style(**{field: checked}))
             button.setFixedHeight(32)
             if key in ("bold", "italic"):
                 button.setFixedWidth(32)
             tools.addWidget(button)
             self.toggles[key] = button
-        self.width_combo = W.QComboBox()
-        for label, value in (("Normal ($m)", "normal"), ("Narrow ($n)", "narrow"), ("Wide ($w)", "wide")):
-            self.width_combo.addItem(label, value)
-        self.width_combo.activated.connect(lambda: self.change_style(width=self.width_combo.currentData()))
-        self.width_combo.setFixedHeight(32)
-        tools.addWidget(self.width_combo, 0, QtCore.Qt.AlignVCenter)
+        widths = W.QHBoxLayout()
+        widths.setSpacing(0)
+        self.width_buttons = {}
+        self.width_group = W.QButtonGroup(self)
+        for width, code in (("narrow", "$n"), ("normal", "$m"), ("wide", "$w")):
+            control = W.QToolButton()
+            control.setText(width.title())
+            control.setToolTip(width.title() + " text (" + code + ")")
+            control.setCheckable(True)
+            control.setChecked(width == "normal")
+            control.setFocusPolicy(QtCore.Qt.NoFocus)
+            control.setFixedHeight(32)
+            control.setStyleSheet("QToolButton { border-radius: 0; } QToolButton:checked { background: #365568; color: white; }")
+            control.clicked.connect(lambda checked=False, value=width: self.change_style(width=value))
+            self.width_group.addButton(control)
+            self.width_buttons[width] = control
+            widths.addWidget(control)
+        tools.addLayout(widths)
         color = W.QPushButton("Text color")
         color.setFocusPolicy(QtCore.Qt.NoFocus)
         color.clicked.connect(self.pick_color)
+        color.setFixedHeight(32)
         tools.addWidget(color)
         reset = W.QPushButton("Reset style")
         reset.setFocusPolicy(QtCore.Qt.NoFocus)
         reset.clicked.connect(lambda: self.change_style(reset=True))
+        reset.setFixedHeight(32)
         tools.addWidget(reset)
         dollar = W.QPushButton("$")
         dollar.setToolTip("Insert a literal dollar ($$ in the filename)")
@@ -278,11 +308,14 @@ class NameStyleHelper(W.QWidget):
         self.editor = StyledLine()
         self.editor.setAccessibleName("Styled ZIP name pattern")
         layout.addWidget(self.editor)
+        self.variables_layout = W.QVBoxLayout()
+        self.variables_layout.setContentsMargins(0, 0, 0, 0)
+        layout.addLayout(self.variables_layout)
         self.message = W.QLabel()
         self.message.setWordWrap(True)
         self.message.hide()
         layout.addWidget(self.message)
-        instruction = W.QLabel("Select text to style it, or choose a style and type. Name tokens are resolved in the preview below.")
+        instruction = W.QLabel("Select text to style part of the name. B, I, Aa and Shadow apply to the whole name when nothing is selected. Name tokens are resolved in the preview below.")
         instruction.setWordWrap(True)
         layout.addWidget(instruction)
         self.preview = StyledLine()
@@ -326,6 +359,26 @@ class NameStyleHelper(W.QWidget):
         widget.document().clearUndoRedoStacks()
         del blocker
 
+    def text(self):
+        return self.source or ""
+
+    def setText(self, source):
+        if self.source != source:
+            self.set_source(source)
+            self.textChanged.emit(source)
+
+    def insert_token(self, token):
+        if self.allow_tokens:
+            self.editor.insertPlainText("{" + token + "}")
+            self.editor.setFocus()
+
+    def set_token_mode(self, enabled):
+        if self.allow_tokens != enabled:
+            self.allow_tokens = enabled
+            source = self.text()
+            self.source = None
+            self.set_source(source)
+
     def set_source(self, source):
         if source == self.source:
             return
@@ -365,12 +418,13 @@ class NameStyleHelper(W.QWidget):
         style = style_from_format(self.editor.currentCharFormat())
         for key, button in self.toggles.items():
             button.setChecked(getattr(style, key))
-        blocker = QtCore.QSignalBlocker(self.width_combo)
-        self.width_combo.setCurrentIndex(self.width_combo.findData(style.width))
-        del blocker
+        self.width_buttons[style.width].setChecked(True)
 
     def change_style(self, reset=False, **values):
         cursor = self.editor.textCursor()
+        if values.keys() & self.toggles.keys() and not cursor.hasSelection() and not self.editor.document().isEmpty():
+            cursor.select(QtGui.QTextCursor.Document)
+            self.editor.setTextCursor(cursor)
         if cursor.hasSelection():
             start, end = cursor.selectionStart(), cursor.selectionEnd()
             # Snapshot fragment boundaries; formatting may merge fragments during the edit.
@@ -417,4 +471,4 @@ class NameStyleHelper(W.QWidget):
         self.message.clear()
         self.message.hide()
         self.source = source
-        self.pattern_changed.emit(source)
+        self.textChanged.emit(source)

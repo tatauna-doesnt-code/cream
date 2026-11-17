@@ -9,7 +9,7 @@ class SkinDialog(W.QDialog):
         self.setWindowTitle("Edit skin" if row else "Add skin")
         self.setMinimumWidth(430)
         layout = W.QVBoxLayout(self)
-        layout.addWidget(W.QLabel("Enter a player name and up to three skin colors.\nLeave a color blank to keep the project original."))
+        layout.addWidget(W.QLabel("Enter text or up to three skin colors. Leave text blank for a palette-only skin.\nLeave a color blank to keep the project original."))
         if not customize:
             layout.addWidget(W.QLabel('Export-only mode: names and colors style ZIP filenames only.\nThe car stays unchanged. Color 3 has no filename token.'))
         form = W.QFormLayout()

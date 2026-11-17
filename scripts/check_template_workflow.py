@@ -114,7 +114,7 @@ def png(path,w,h):
 exports=[]
 def export(config):
     exports.append(copy.deepcopy(config))
-    size=config['exportParameters'][0]['parameters']['sizeLog2']
+    size=config['exportParameters'][0]['parameters'].get('sizeLog2', [9, 8])
     output=paths(config)
     for filename in next(iter(output.values())): png(filename,2**size[0],2**size[1])
     return types.SimpleNamespace(status='success',textures=output)
@@ -166,6 +166,26 @@ with tempfile.TemporaryDirectory() as folder, patch.object(ui,'DATA',Path(folder
     assert all(window.tabs.isTabEnabled(i) for i in range(window.tabs.count()))
     window.tabs.setCurrentWidget(window.textures_page)
     texture=window.texture_sets
+    from cream.export_textures import Section
+    wheel = Section('Wheels', texture.groups['Body'].records, texture)
+    assert all(size.currentData() == 2048 for size in wheel.sizes)
+    assert wheel.aspect_warning.isHidden()
+    wheel.sizes[0].setCurrentIndex(wheel.sizes[0].findData('source'))
+    assert not wheel.aspect_warning.isHidden() and '1:4' in wheel.aspect_warning.toolTip()
+    wheel.sizes[0].setCurrentIndex(wheel.sizes[0].findData(1024))
+    assert wheel.aspect_warning.isHidden()
+    assert window.fields['name_pattern'] is window.name_style
+    helper = window.name_style
+    helper.insert_token('row')
+    assert helper.text() == 'skin'
+
+    for field, code in [('bold', '$o'), ('italic', '$i'), ('uppercase', '$t'), ('shadow', '$s')]:
+        helper = window.name_style
+        helper.set_source('skin')
+        helper.toggles[field].click()
+        assert code in helper.source, (field, helper.source)
+        helper.toggles[field].click()
+        assert helper.source == 'skin', (field, helper.source)
     # Path fields and their Browse buttons share one 32px-high row, including
     # after Qt polishes the stylesheet. The diagnostic input follows the same rule.
     for key, page in [('output', window.settings_page), ('base', window.skins_page)]:
@@ -175,6 +195,17 @@ with tempfile.TemporaryDirectory() as folder, patch.object(ui,'DATA',Path(folder
         browse = field.parentWidget().findChild(W.QPushButton)
         assert field.height() == browse.height() == 32, (key, field.height(), browse.height())
         assert field.mapToGlobal(QtCore.QPoint()).y() == browse.mapToGlobal(QtCore.QPoint()).y()
+        if key == 'base':
+            field.setText('test.zip')
+            clear = field.findChild(W.QToolButton)
+            assert abs(clear.geometry().center().y() - field.rect().center().y()) <= 1
+            clear.click()
+            assert not field.text()
+    helper.editor.selectAll()
+    for width in ('wide', 'narrow', 'normal'):
+        helper.width_buttons[width].click()
+        assert helper.width_buttons[width].isChecked()
+    assert window.batch_tokens.isHidden()
     window.tabs.setCurrentWidget(window.settings_page)
     app.processEvents()
     window.grab().save(str(ROOT/'dist'/('settings-local-'+'.'.join(map(str,version))+'.png')))
@@ -209,6 +240,13 @@ with tempfile.TemporaryDirectory() as folder, patch.object(ui,'DATA',Path(folder
     assert window.capabilities.customization==(version >= (10,0,0))
     window.fields['output'].setText(folder)
     group=texture.groups['Body']
+    assert group.sizes[0].currentData() == 'source'
+    group.export.click()
+    checks = [item['checked'] for item in group.state()]
+    assert all(checks)
+    group.sizes[0].setCurrentIndex(group.sizes[0].findData(1024))
+    assert [item['checked'] for item in group.state()] == checks
+    group.export.click()
     group.set_expanded(True)
     suffix, compression=group.suffixes[0],group.compressions[0]
     suffix.input.setText('CoatR')
@@ -238,7 +276,7 @@ with tempfile.TemporaryDirectory() as folder, patch.object(ui,'DATA',Path(folder
     W.QToolTip.hideText()
     compression.input.setCurrentText('BC4');compression.edited()
     group.table.item(0,0).setCheckState(QtCore.Qt.Checked)
-    group.sizes[0].setCurrentIndex(group.sizes[0].findData(1024))
+    group.sizes[0].setCurrentIndex(group.sizes[0].findData('source'))
     assert window.export_button.isEnabled()
     saved=texture.settings()
     window.save_settings()
@@ -254,7 +292,9 @@ with tempfile.TemporaryDirectory() as folder, patch.object(ui,'DATA',Path(folder
     window.start();finish()
     with zipfile.ZipFile(window.report['rows'][0]['output']) as archive:
         assert archive.namelist()==['Body_CoatR.dds']
-        assert archive.read('Body_CoatR.dds')[84:88]==b'BC4U'
+        dds = archive.read('Body_CoatR.dds')
+        assert dds[84:88] == b'BC4U'
+        assert struct.unpack_from('<II', dds, 12) == (256, 512)
     if version < (10,0,0):
         assert 'exportPresets' not in exports[0]
         assert len(paths(exports[0])[('Body','')])==3
